@@ -865,50 +865,6 @@
         ]
       }
     },
-    "/prompts/{name}/activate/{versionId}": {
-      "patch": {
-        "operationId": "PromptController_activateVersion",
-        "parameters": [
-          {
-            "name": "name",
-            "required": true,
-            "in": "path",
-            "description": "Nombre del prompt",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "versionId",
-            "required": true,
-            "in": "path",
-            "description": "ID de la PromptVersion a activar",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Versión activada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatePromptDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Prompt o Versión no encontrada."
-          }
-        },
-        "summary": "Activa una versión específica para un prompt",
-        "tags": [
-          "Prompts"
-        ]
-      }
-    },
     "/prompts/{promptId}/versions": {
       "post": {
         "operationId": "PromptController_createVersion",

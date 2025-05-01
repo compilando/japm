@@ -66,27 +66,11 @@ export class ServePromptService {
             if (!versionToUse) {
                 throw new NotFoundException(`Version "${versionTag}" for prompt "${promptName}" not found.`);
             }
-        } else if (targetPrompt.activeVersionId) {
-            // Si no se especifica versión, usar la activa
-            versionToUse = await this.prisma.promptVersion.findUnique({
-                where: { id: targetPrompt.activeVersionId },
-                include: {
-                    prompt: true,
-                    translations: true,
-                    assets: {
-                        include: {
-                            assetVersion: { include: { asset: true, translations: true } }
-                        }
-                    }
-                }
-            });
-            if (!versionToUse) {
-                // Esto sería un estado inconsistente (activeVersionId apunta a algo inexistente)
-                throw new Error(`Active version ID "${targetPrompt.activeVersionId}" for prompt "${promptName}" is invalid.`);
-            }
         } else {
-            // Si no hay versión activa, no podemos servir el prompt
-            throw new NotFoundException(`Prompt "${promptName}" does not have an active version and no specific version was requested.`);
+            // Si no se especifica versión Y NO HAY lógica para determinar una por defecto (p.ej. via Environment),
+            // lanzamos un error.
+            // TODO: Implementar lógica para obtener la versión activa según un Environment (requiere pasar envId/name)
+            throw new BadRequestException(`No specific version tag provided for prompt "${promptName}", and automatic selection based on environment is not yet implemented.`);
         }
 
         // 3. Obtener el texto base del prompt (traducido si es posible)

@@ -91,16 +91,6 @@ export class PromptController {
         return this.service.remove(name);
     }
 
-    @Patch(':name/activate/:versionId')
-    @ApiOperation({ summary: 'Activa una versión específica para un prompt' })
-    @ApiParam({ name: 'name', description: 'Nombre del prompt' })
-    @ApiParam({ name: 'versionId', description: 'ID de la PromptVersion a activar' })
-    @ApiResponse({ status: 200, description: 'Versión activada.', type: CreatePromptDto })
-    @ApiResponse({ status: 404, description: 'Prompt o Versión no encontrada.' })
-    activateVersion(@Param('name') name: string, @Param('versionId') versionId: string): Promise<Prompt> {
-        return this.service.activateVersion(name, versionId);
-    }
-
     @Post(':promptId/versions')
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
     @ApiOperation({ summary: 'Crear una nueva versión para un prompt existente.' })

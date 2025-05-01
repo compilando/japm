@@ -11,7 +11,7 @@ type PromptWithRelations = Prisma.PromptGetPayload<{
     include: {
         tactic: true;
         tags: true;
-        activeVersion: {
+        versions: {
             include: {
                 translations: true;
                 assets: {
@@ -23,11 +23,9 @@ type PromptWithRelations = Prisma.PromptGetPayload<{
                             }
                         }
                     }
-                }
-            }
-        };
-        versions: {
-            select: { id: true, versionTag: true, createdAt: true, changeMessage: true }
+                },
+                activeInEnvironments: { select: { id: true, name: true } }
+            },
             orderBy: { createdAt: 'desc' }
         }
     }
@@ -38,8 +36,7 @@ type PromptWithInitialVersionAndTags = Prisma.PromptGetPayload<{
     include: {
         tactic: true;
         tags: true;
-        versions: { include: { translations: true } }; // Incluimos todas las versiones inicialmente (solo será 1)
-        activeVersion: { include: { translations: true } };
+        versions: { include: { translations: true, activeInEnvironments: { select: { id: true, name: true } } } }; // Incluimos todas las versiones inicialmente (solo será 1)
     }
 }>;
 
@@ -111,19 +108,29 @@ export class PromptService {
             throw new ConflictException(`Failed to create initial version or translations for prompt: ${error.message}`);
         }
 
-        // 3. Marcar la nueva versión como activa y obtener el resultado final
-        const finalPrompt = await this.prisma.prompt.update({
+        // 3. ///// Ya NO se marca la versión como activa aquí. Se gestiona con Environments //////
+        // const finalPrompt = await this.prisma.prompt.update({
+        //     where: { name: newPrompt.name },
+        //     data: { activeVersion: { connect: { id: newVersion.id } } },
+        //     include: { // Incluir todo lo necesario para el tipo de retorno
+        //         tactic: true,
+        //         tags: true,
+        //         versions: { where: { id: newVersion.id }, include: { translations: true, activeInEnvironments: { select: { id: true, name: true } } } },
+        //         // activeVersion: { include: { translations: true } }, // Eliminado
+        //     }
+        // });
+
+        // Devolvemos el prompt recién creado con su única versión
+        const createdPrompt = await this.prisma.prompt.findUniqueOrThrow({
             where: { name: newPrompt.name },
-            data: { activeVersion: { connect: { id: newVersion.id } } },
-            include: { // Incluir todo lo necesario para el tipo de retorno
+            include: {
                 tactic: true,
                 tags: true,
-                versions: { where: { id: newVersion.id }, include: { translations: true } },
-                activeVersion: { include: { translations: true } },
+                versions: { where: { id: newVersion.id }, include: { translations: true, /*activeInEnvironments: { select: { id: true, name: true } }*/ } }
             }
         });
 
-        return finalPrompt as PromptWithInitialVersionAndTags;
+        return createdPrompt as PromptWithInitialVersionAndTags;
     }
 
     // Refactorizado para incluir tags
@@ -132,7 +139,7 @@ export class PromptService {
             include: {
                 tactic: { select: { name: true } }, // Solo nombre de la táctica
                 tags: { select: { name: true } }, // Solo nombres de tags
-                activeVersion: { select: { id: true, versionTag: true } } // Solo ID y tag de la versión activa
+                versions: { select: { id: true, versionTag: true, /* status: true */ } } // Info básica de versiones - REVISAR status
             },
         });
     }
@@ -144,7 +151,8 @@ export class PromptService {
             include: {
                 tactic: true,
                 tags: true, // Incluir objeto Tag completo
-                activeVersion: {
+                versions: { // Incluir historial completo
+                    orderBy: { createdAt: 'desc' },
                     include: {
                         translations: true,
                         assets: {
@@ -157,12 +165,9 @@ export class PromptService {
                                     }
                                 }
                             }
-                        }
+                        },
+                        activeInEnvironments: { select: { id: true, name: true } }
                     }
-                },
-                versions: { // Incluir historial completo
-                    orderBy: { createdAt: 'desc' },
-                    select: { id: true, versionTag: true, createdAt: true, changeMessage: true } // Solo metadata
                 }
             }
         });
@@ -264,88 +269,48 @@ export class PromptService {
         }
     }
 
-    // --- Gestión de Versiones (sin cambios directos por tags) ---
+    // Refactorizado: Crea una nueva versión, NO la activa
     async createVersion(promptName: string, createVersionDto: CreatePromptVersionDto): Promise<PromptVersion> {
-        const { promptText, versionTag, changeMessage, assetLinks, initialTranslations } = createVersionDto;
+        const { promptText, versionTag, changeMessage, initialTranslations } = createVersionDto;
 
+        // 1. Verificar que el prompt padre existe
         const promptExists = await this.prisma.prompt.findUnique({ where: { name: promptName }, select: { name: true } });
         if (!promptExists) {
             throw new NotFoundException(`Prompt with NAME "${promptName}" not found.`);
         }
 
+        // 2. Verificar que la versión no exista ya para este prompt
+        const versionExists = await this.prisma.promptVersion.findUnique({
+            where: { promptId_versionTag: { promptId: promptName, versionTag } },
+        });
+        if (versionExists) {
+            throw new ConflictException(`Version "${versionTag}" already exists for prompt "${promptName}".`);
+        }
+
+        // 3. Crear la nueva versión con traducciones opcionales
         try {
-            const newVersion = await this.prisma.promptVersion.create({
+            return this.prisma.promptVersion.create({
                 data: {
+                    prompt: { connect: { name: promptName } },
                     promptText,
                     versionTag,
                     changeMessage,
-                    prompt: { connect: { name: promptName } },
-                    assets: assetLinks && assetLinks.length > 0 ? {
-                        create: assetLinks.map(link => ({
-                            position: link.position,
-                            usageContext: link.usageContext,
-                            assetVersion: { connect: { id: link.assetVersionId } }
-                        }))
-                    } : undefined,
                     translations: initialTranslations && initialTranslations.length > 0 ? {
                         createMany: { data: initialTranslations }
                     } : undefined,
                 },
-                include: {
-                    assets: { include: { assetVersion: { select: { id: true, versionTag: true, asset: { select: { key: true } } } } } },
-                    translations: true,
-                }
+                include: { translations: true, /* activeInEnvironments: true */ } // Devolver con traducciones y entornos activos - REVISAR status
             });
-            return newVersion;
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError) {
-                if (error.code === 'P2002') {
-                    throw new ConflictException(`Version with tag "${versionTag}" already exists for prompt "${promptName}".`);
-                } else if (error.code === 'P2025') {
-                    // Puede ocurrir si un assetVersionId no existe
-                    throw new NotFoundException(`One or more specified AssetVersion IDs in assetLinks not found, or the base prompt ${promptName} was deleted mid-operation.`);
+                if (error.code === 'P2002') { // Unique constraint failed
+                    throw new ConflictException(`Version "${versionTag}" already exists for prompt "${promptName}".`);
+                } else if (error.code === 'P2025') { // Referenced record not found
+                    throw new NotFoundException(`Prompt with NAME "${promptName}" not found.`);
                 }
             }
-            console.error(`Failed to create version for prompt ${promptName}`, error);
+            console.error(`Failed to create version ${versionTag} for prompt ${promptName}`, error);
             throw new ConflictException(`Failed to create version: ${error.message}`);
-        }
-    }
-
-    // --- Activar/Desactivar Versión (sin cambios directos por tags) ---
-    async activateVersion(promptName: string, versionId: string): Promise<PromptWithRelations> {
-        const versionExists = await this.prisma.promptVersion.findUnique({
-            where: { id: versionId, promptId: promptName }
-        });
-        if (!versionExists) {
-            throw new NotFoundException(`Version with ID "${versionId}" not found for Prompt "${promptName}"`);
-        }
-
-        try {
-            await this.prisma.prompt.update({
-                where: { name: promptName },
-                data: { activeVersion: { connect: { id: versionId } } },
-            });
-            return this.findOne(promptName);
-        } catch (error) {
-            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException(`Prompt with NAME "${promptName}" not found.`);
-            }
-            throw error;
-        }
-    }
-
-    async deactivate(promptName: string): Promise<PromptWithRelations> {
-        try {
-            await this.prisma.prompt.update({
-                where: { name: promptName },
-                data: { activeVersion: { disconnect: true } },
-            });
-            return this.findOne(promptName);
-        } catch (error) {
-            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException(`Prompt with NAME "${promptName}" not found.`);
-            }
-            throw error;
         }
     }
 

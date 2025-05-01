@@ -51,7 +51,7 @@ export class TacticService {
     async findOne(name: string): Promise<Tactic> {
         const tactic = await this.prisma.tactic.findUnique({
             where: { name },
-            include: { region: true, culturalData: true, project: true, prompts: { select: { name: true, activeVersionId: true } } }
+            include: { region: true, culturalData: true, project: true, prompts: { select: { name: true, description: true } } }
         });
         if (!tactic) {
             throw new NotFoundException(`Tactic with name "${name}" not found.`);
