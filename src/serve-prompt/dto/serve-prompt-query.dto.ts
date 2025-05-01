@@ -5,7 +5,6 @@ import { Transform } from 'class-transformer';
 export class ServePromptQueryDto {
     @ApiPropertyOptional({ description: 'ID del prompt específico a servir (ignora otros filtros si se provee).' })
     @IsString()
-    @IsOptional()
     promptId?: string;
 
     @ApiPropertyOptional({ description: 'ID de la táctica para filtrar prompts (requerido si no se da promptId).' })
@@ -18,7 +17,6 @@ export class ServePromptQueryDto {
         example: 'es-ES'
     })
     @IsString()
-    @IsOptional()
     languageCode?: string;
 
     @ApiPropertyOptional({

@@ -18,7 +18,8 @@ model User {
   password  String
   createdAt DateTime? @default(now())
 
-  projects Project[] // Relación inversa con Project
+  projects            Project[]
+  promptExecutionLogs PromptExecutionLog[] // Relación inversa añadida
 }
 
 model Region {
@@ -30,7 +31,7 @@ model Region {
   defaultFormalityLevel    String?
   notes                    String                @default("")
   culturalData             CulturalData[]        @relation("CulturalData_region")
-  conversationTactics      ConversationTactic[]  @relation("ConversationTactic_region")
+  tactics                  Tactic[]              @relation("Tactic_region")
   from_Region_parentRegion Region[]              @relation("Region_parentRegion")
   from_RagDocumentMetadata RagDocumentMetadata[] @relation("RagDocumentMetadata_region")
 
@@ -45,112 +46,124 @@ model CulturalData {
   style               String               @default("")
   considerations      String               @default("")
   notes               String               @default("")
-  conversationTactics ConversationTactic[] @relation("ConversationTactic_culturalData")
+  tactics             Tactic[]             @relation("Tactic_culturalData")
 
   @@index([regionId])
 }
 
-model ConversationTactic {
-  name           String               @id
-  region         Region?              @relation("ConversationTactic_region", fields: [regionId], references: [languageCode])
-  regionId       String?              @map("region")
-  culturalData   CulturalData?        @relation("ConversationTactic_culturalData", fields: [culturalDataId], references: [id])
-  culturalDataId String?
-  tacticsConfig  String?
-  prompts        ConversationPrompt[] @relation("ConversationPrompt_tactic")
-
-  @@index([regionId])
-  @@index([culturalDataId])
-}
-
-model ConversationPrompt {
-  name            String                      @id
-  description     String                      @default("")
-  tactic          ConversationTactic?         @relation("ConversationPrompt_tactic", fields: [tacticId], references: [name])
-  tacticId        String?                     @map("tactic")
-  versions        ConversationPromptVersion[] @relation("ConversationPromptVersion_prompt")
-  activeVersion   ConversationPromptVersion?  @relation("ConversationPrompt_activeVersion", fields: [activeVersionId], references: [id])
-  activeVersionId String?                     @unique
-  tags            Tag[]                       @relation("PromptTags")
+model Prompt {
+  name            String            @id
+  description     String            @default("")
+  tactic          Tactic? @relation("Prompt_tactic", fields: [tacticId], references: [name])
+  tacticId        String?           @map("tactic")
+  versions        PromptVersion[]   @relation("PromptVersion_prompt")
+  tags            Tag[]             @relation("PromptTags")
+  project         Project?          @relation("ProjectPrompts", fields: [projectId], references: [id])
+  projectId       String?           @map("project")
 
   @@index([tacticId])
+  @@index([projectId])
 }
 
-model ConversationPromptVersion {
-  id              String                        @id @default(cuid())
-  prompt          ConversationPrompt            @relation("ConversationPromptVersion_prompt", fields: [promptId], references: [name])
-  promptId        String                        @map("prompt")
-  promptText      String                        @default("")
-  versionTag      String                        @default("v1.0.0")
-  changeMessage   String?
-  createdAt       DateTime                      @default(now())
-  translations    PromptTranslation[]           @relation("PromptTranslation_version")
-  assets          ConversationPromptAssetLink[] @relation("ConversationPromptAssetLink_promptVersion")
-  activeForPrompt ConversationPrompt?           @relation("ConversationPrompt_activeVersion")
+model PromptVersion {
+  id                  String             @id @default(cuid())
+  prompt              Prompt             @relation("PromptVersion_prompt", fields: [promptId], references: [name])
+  promptId            String             @map("prompt")
+  promptText          String             @default("")
+  versionTag          String             @default("v1.0.0")
+  changeMessage       String?
+  status              String             @default("draft")
+  createdAt           DateTime           @default(now())
+  translations        PromptTranslation[] @relation("PromptTranslation_version")
+  assets              PromptAssetLink[]  @relation("PromptAssetLink_promptVersion")
+  activeInEnvironments Environment[]      @relation("ActivePromptsInEnvironment")
+  executionLogs       PromptExecutionLog[] // Relación inversa añadida
 
   @@unique([promptId, versionTag])
   @@index([promptId])
 }
 
+model Tactic {
+  name           String               @id
+  region         Region?              @relation("Tactic_region", fields: [regionId], references: [languageCode])
+  regionId       String?              @map("region")
+  culturalData   CulturalData?        @relation("Tactic_culturalData", fields: [culturalDataId], references: [id])
+  culturalDataId String?
+  tacticsConfig  String?
+  prompts        Prompt[]             @relation("Prompt_tactic")
+  project        Project?             @relation("ProjectTactics", fields: [projectId], references: [id])
+  projectId      String?
+
+  @@index([regionId])
+  @@index([culturalDataId])
+  @@index([projectId])
+}
+
 model PromptTranslation {
-  id           String                    @id @default(cuid())
-  version      ConversationPromptVersion @relation("PromptTranslation_version", fields: [versionId], references: [id])
-  versionId    String                    @map("version")
+  id           String        @id @default(cuid())
+  version      PromptVersion @relation("PromptTranslation_version", fields: [versionId], references: [id])
+  versionId    String        @map("version")
   languageCode String
-  promptText   String                    @default("")
+  promptText   String        @default("")
 
   @@unique([versionId, languageCode])
   @@index([versionId])
   @@index([languageCode])
 }
 
-model ConversationPromptAsset {
-  key             String                           @id
-  name            String                           @default("")
+model PromptAsset {
+  key             String                @id
+  name            String                @default("")
   type            String?
-  description     String                           @default("")
+  description     String                @default("")
   category        String?
-  versions        ConversationPromptAssetVersion[] @relation("ConversationPromptAssetVersion_asset")
-  activeVersion   ConversationPromptAssetVersion?  @relation("ConversationPromptAsset_activeVersion", fields: [activeVersionId], references: [id])
-  activeVersionId String?                          @unique
+  enabled         Boolean               @default(true)
+  versions        PromptAssetVersion[]  @relation("PromptAssetVersion_asset")
+  project         Project?              @relation("ProjectAssets", fields: [projectId], references: [id])
+  projectId       String?               @map("project")
+
+  @@index([projectId])
 }
 
-model ConversationPromptAssetVersion {
-  id             String                        @id @default(cuid())
-  asset          ConversationPromptAsset       @relation("ConversationPromptAssetVersion_asset", fields: [assetId], references: [key])
-  assetId        String                        @map("asset")
-  value          String                        @default("")
-  versionTag     String                        @default("v1.0.0")
-  changeMessage  String?
-  createdAt      DateTime                      @default(now())
-  translations   AssetTranslation[]            @relation("AssetTranslation_version")
-  links          ConversationPromptAssetLink[] @relation("ConversationPromptAssetLink_assetVersion")
-  activeForAsset ConversationPromptAsset?      @relation("ConversationPromptAsset_activeVersion")
+model PromptAssetVersion {
+  id                  String             @id @default(cuid())
+  asset               PromptAsset        @relation("PromptAssetVersion_asset", fields: [assetId], references: [key])
+  assetId             String             @map("asset")
+  value               String             @default("")
+  versionTag          String             @default("v1.0.0")
+  changeMessage       String?
+  status              String             @default("draft")
+  createdAt           DateTime           @default(now())
+  translations        AssetTranslation[] @relation("AssetTranslation_version")
+  links               PromptAssetLink[]  @relation("PromptAssetLink_assetVersion")
+  activeInEnvironments Environment[]      @relation("ActiveAssetsInEnvironment")
 
   @@unique([assetId, versionTag])
   @@index([assetId])
 }
 
 model AssetTranslation {
-  id           String                         @id @default(cuid())
-  version      ConversationPromptAssetVersion @relation("AssetTranslation_version", fields: [versionId], references: [id])
-  versionId    String                         @map("version")
+  id           String             @id @default(cuid())
+  version      PromptAssetVersion @relation("AssetTranslation_version", fields: [versionId], references: [id])
+  versionId    String             @map("version")
   languageCode String
-  value        String                         @default("")
+  value        String             @default("")
 
   @@unique([versionId, languageCode])
   @@index([versionId])
   @@index([languageCode])
 }
 
-model ConversationPromptAssetLink {
-  id              String                         @id @default(cuid())
-  promptVersion   ConversationPromptVersion      @relation("ConversationPromptAssetLink_promptVersion", fields: [promptVersionId], references: [id])
-  promptVersionId String                         @map("promptVersion")
-  assetVersion    ConversationPromptAssetVersion @relation("ConversationPromptAssetLink_assetVersion", fields: [assetVersionId], references: [id])
-  assetVersionId  String                         @map("assetVersion")
-  usageContext    String                         @default("")
+model PromptAssetLink {
+  id              String             @id @default(cuid())
+  promptVersion   PromptVersion      @relation("PromptAssetLink_promptVersion", fields: [promptVersionId], references: [id])
+  promptVersionId String             @map("promptVersion")
+  assetVersion    PromptAssetVersion @relation("PromptAssetLink_assetVersion", fields: [assetVersionId], references: [id])
+  assetVersionId  String             @map("assetVersion")
+  usageContext    String             @default("")
   position        Int?
+  insertionLogic  String?
+  isRequired      Boolean            @default(true)
 
   @@index([promptVersionId])
   @@index([assetVersionId])
@@ -173,20 +186,22 @@ model Tag {
   id          String    @id @default(cuid())
   name        String    @unique
   description String?
-  prompts     ConversationPrompt[] @relation("PromptTags")
+  prompts     Prompt[] @relation("PromptTags")
 }
 
 model Project {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
-  ownerUserId String?   @map("ownerUser") // Mapea al campo de la FK en la BD
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                  String               @id @default(cuid())
+  name                String
+  description         String?
+  ownerUserId         String?              @map("ownerUser")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
-  owner       User?     @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
-  // prompts     ConversationPrompt[] // Relación potencial a añadir después
-  // assets      ConversationPromptAsset[] // Relación potencial a añadir después
+  owner               User?                @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  tactics             Tactic[]             @relation("ProjectTactics")
+  prompts             Prompt[]             @relation("ProjectPrompts")
+  assets              PromptAsset[]        @relation("ProjectAssets")
+  aiModels            AIModel[]            @relation("ProjectModels")
 
   @@index([ownerUserId])
 }
@@ -198,7 +213,53 @@ model AIModel {
   description   String?
   apiIdentifier String?   // Identificador para llamadas API
   createdAt     DateTime  @default(now())
+  maxTokens     Int?
+  supportsJson  Boolean @default(false)
+  contextWindow Int?   // Tamaño máximo de contexto
 
-  // promptVersions ConversationPromptVersion[] // Relación potencial a añadir después
-  // assetVersions  ConversationPromptAssetVersion[] // Relación potencial a añadir después
+  projects Project[] @relation("ProjectModels")
+  // promptVersions PromptVersion[] // Relación potencial a añadir después
+  // assetVersions  PromptAssetVersion[] // Relación potencial a añadir después
+}
+
+model Environment {
+  id                  String             @id @default(cuid())
+  name                String             @unique
+  description         String?
+  activePromptVersions PromptVersion[]    @relation("ActivePromptsInEnvironment")
+  activeAssetVersions PromptAssetVersion[] @relation("ActiveAssetsInEnvironment")
+  promptExecutionLogs PromptExecutionLog[] // Relación inversa añadida
+}
+
+// --- LOGGING --- //
+
+model PromptExecutionLog {
+  id            String        @id @default(cuid())
+  timestamp     DateTime      @default(now())
+
+  // --- Contexto del Prompt ---
+  promptVersion PromptVersion @relation(fields: [promptVersionId], references: [id])
+  promptVersionId String      // FK explícita para PromptVersion
+
+  // --- Contexto de Ejecución ---
+  environment   Environment?  @relation(fields: [environmentId], references: [id]) // Entorno de ejecución
+  environmentId String?
+  user          User?         @relation(fields: [userId], references: [id])       // Usuario que ejecutó (si aplica)
+  userId        String?
+  // Podríamos añadir sessionId, requestId, etc. si son relevantes
+
+  // --- Datos de Entrada/Salida ---
+  input         String        // Input completo proporcionado (Considerar tipo Json si es complejo)
+  output        String        // Output completo generado (Considerar tipo Json si es complejo)
+
+  // --- Resultado y Métricas ---
+  success       Boolean       // ¿Fue exitosa la ejecución?
+  durationMs    Int?          // Duración de la ejecución en milisegundos
+  errorMessage  String?       // Mensaje de error si success = false
+  // Podríamos añadir métricas como tokenCount, cost, etc.
+
+  @@index([promptVersionId])
+  @@index([environmentId])
+  @@index([userId])
+  @@index([timestamp]) // Indexar timestamp para búsquedas por fecha
 }

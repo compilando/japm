@@ -7,7 +7,7 @@ import { UpdatePromptTranslationDto } from './dto/update-prompt-translation.dto'
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { PromptTranslation } from '@prisma/client';
 
-@ApiTags('prompt-translation')
+@ApiTags('Prompt Translation')
 @Controller('prompt-translation')
 export class PromptTranslationController {
   constructor(private readonly service: PromptTranslationService) { }

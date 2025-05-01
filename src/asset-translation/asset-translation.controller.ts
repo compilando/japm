@@ -7,7 +7,7 @@ import { UpdateAssetTranslationDto } from './dto/update-asset-translation.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { AssetTranslation } from '@prisma/client';
 
-@ApiTags('asset-translation')
+@ApiTags('Asset Translation')
 @Controller('asset-translation')
 export class AssetTranslationController {
   constructor(private readonly service: AssetTranslationService) { }

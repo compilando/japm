@@ -53,7 +53,7 @@
         },
         "summary": "Crear un nuevo usuario",
         "tags": [
-          "users"
+          "Users"
         ]
       },
       "get": {
@@ -76,7 +76,7 @@
         },
         "summary": "Obtener todos los usuarios",
         "tags": [
-          "users"
+          "Users"
         ]
       }
     },
@@ -111,7 +111,7 @@
         },
         "summary": "Obtener un usuario por ID",
         "tags": [
-          "users"
+          "Users"
         ]
       },
       "patch": {
@@ -157,7 +157,7 @@
         },
         "summary": "Actualizar un usuario por ID",
         "tags": [
-          "users"
+          "Users"
         ]
       },
       "delete": {
@@ -183,7 +183,7 @@
         },
         "summary": "Eliminar un usuario por ID",
         "tags": [
-          "users"
+          "Users"
         ]
       }
     },
@@ -224,7 +224,7 @@
         },
         "summary": "Crear una nueva región (identificada por languageCode)",
         "tags": [
-          "regions"
+          "Regions"
         ]
       },
       "get": {
@@ -247,7 +247,7 @@
         },
         "summary": "Obtener todas las regiones",
         "tags": [
-          "regions"
+          "Regions"
         ]
       }
     },
@@ -283,7 +283,7 @@
         },
         "summary": "Obtener una región por languageCode",
         "tags": [
-          "regions"
+          "Regions"
         ]
       },
       "patch": {
@@ -330,7 +330,7 @@
         },
         "summary": "Actualizar una región por languageCode",
         "tags": [
-          "regions"
+          "Regions"
         ]
       },
       "delete": {
@@ -357,7 +357,7 @@
         },
         "summary": "Eliminar una región (y su CulturalData asociado) por languageCode",
         "tags": [
-          "regions"
+          "Regions"
         ]
       }
     },
@@ -392,7 +392,7 @@
         },
         "summary": "Crear nuevos datos culturales",
         "tags": [
-          "cultural-data"
+          "Cultural Data"
         ]
       },
       "get": {
@@ -415,7 +415,7 @@
         },
         "summary": "Obtener todos los datos culturales",
         "tags": [
-          "cultural-data"
+          "Cultural Data"
         ]
       }
     },
@@ -450,7 +450,7 @@
         },
         "summary": "Obtener datos culturales por ID",
         "tags": [
-          "cultural-data"
+          "Cultural Data"
         ]
       },
       "patch": {
@@ -496,7 +496,7 @@
         },
         "summary": "Actualizar datos culturales por ID",
         "tags": [
-          "cultural-data"
+          "Cultural Data"
         ]
       },
       "delete": {
@@ -522,20 +522,20 @@
         },
         "summary": "Eliminar datos culturales por ID",
         "tags": [
-          "cultural-data"
+          "Cultural Data"
         ]
       }
     },
-    "/conversation-tactics": {
+    "/tactics": {
       "post": {
-        "operationId": "ConversationTacticController_create",
+        "operationId": "TacticController_create",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateConversationTacticDto"
+                "$ref": "#/components/schemas/CreateTacticDto"
               }
             }
           }
@@ -546,22 +546,28 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConversationTacticResponse"
+                  "$ref": "#/components/schemas/CreateTacticDto"
                 }
               }
             }
           },
           "400": {
             "description": "Datos inválidos."
+          },
+          "404": {
+            "description": "Región o CulturalData no encontrada."
+          },
+          "409": {
+            "description": "Conflicto, ya existe una táctica con ese nombre."
           }
         },
-        "summary": "Crear una nueva táctica de conversación",
+        "summary": "Crea una nueva táctica conversacional",
         "tags": [
-          "conversation-tactics"
+          "Tactics"
         ]
       },
       "get": {
-        "operationId": "ConversationTacticController_findAll",
+        "operationId": "TacticController_findAll",
         "parameters": [],
         "responses": {
           "200": {
@@ -571,28 +577,28 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ConversationTacticResponse"
+                    "$ref": "#/components/schemas/CreateTacticDto"
                   }
                 }
               }
             }
           }
         },
-        "summary": "Obtener todas las tácticas de conversación",
+        "summary": "Obtiene todas las tácticas conversacionales",
         "tags": [
-          "conversation-tactics"
+          "Tactics"
         ]
       }
     },
-    "/conversation-tactics/{id}": {
+    "/tactics/{name}": {
       "get": {
-        "operationId": "ConversationTacticController_findOne",
+        "operationId": "TacticController_findOne",
         "parameters": [
           {
-            "name": "id",
+            "name": "name",
             "required": true,
             "in": "path",
-            "description": "ID de la táctica",
+            "description": "Nombre único de la táctica",
             "schema": {
               "type": "string"
             }
@@ -604,7 +610,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConversationTacticResponse"
+                  "$ref": "#/components/schemas/CreateTacticDto"
                 }
               }
             }
@@ -613,19 +619,19 @@
             "description": "Táctica no encontrada."
           }
         },
-        "summary": "Obtener una táctica por ID",
+        "summary": "Obtiene una táctica por su nombre (ID)",
         "tags": [
-          "conversation-tactics"
+          "Tactics"
         ]
       },
       "patch": {
-        "operationId": "ConversationTacticController_update",
+        "operationId": "TacticController_update",
         "parameters": [
           {
-            "name": "id",
+            "name": "name",
             "required": true,
             "in": "path",
-            "description": "ID a actualizar",
+            "description": "Nombre único de la táctica a actualizar",
             "schema": {
               "type": "string"
             }
@@ -636,7 +642,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateConversationTacticDto"
+                "$ref": "#/components/schemas/UpdateTacticDto"
               }
             }
           }
@@ -647,7 +653,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConversationTacticResponse"
+                  "$ref": "#/components/schemas/CreateTacticDto"
                 }
               }
             }
@@ -656,22 +662,22 @@
             "description": "Datos inválidos."
           },
           "404": {
-            "description": "Táctica no encontrada."
+            "description": "Táctica, Región o CulturalData no encontrada."
           }
         },
-        "summary": "Actualizar una táctica por ID",
+        "summary": "Actualiza una táctica existente",
         "tags": [
-          "conversation-tactics"
+          "Tactics"
         ]
       },
       "delete": {
-        "operationId": "ConversationTacticController_remove",
+        "operationId": "TacticController_remove",
         "parameters": [
           {
-            "name": "id",
+            "name": "name",
             "required": true,
             "in": "path",
-            "description": "ID a eliminar",
+            "description": "Nombre único de la táctica a eliminar",
             "schema": {
               "type": "string"
             }
@@ -685,65 +691,82 @@
             "description": "Táctica no encontrada."
           }
         },
-        "summary": "Eliminar una táctica por ID",
+        "summary": "Elimina una táctica",
         "tags": [
-          "conversation-tactics"
+          "Tactics"
         ]
       }
     },
-    "/conversation-prompts": {
+    "/prompts": {
       "post": {
-        "operationId": "ConversationPromptController_create",
+        "operationId": "PromptController_create",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateConversationPromptDto"
+                "$ref": "#/components/schemas/CreatePromptDto"
               }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Prompt creado."
+            "description": "Prompt creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePromptDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Datos inválidos."
           },
           "409": {
-            "description": "Conflicto (e.g., nombre ya existe)."
+            "description": "Conflicto, ya existe un prompt con ese nombre."
           }
         },
-        "summary": "Crear un nuevo prompt y su primera versión (v1.0.0, marcada como activa)",
+        "summary": "Crea un nuevo prompt lógico",
         "tags": [
-          "conversation-prompts"
+          "Prompts"
         ]
       },
       "get": {
-        "operationId": "ConversationPromptController_findAll",
+        "operationId": "PromptController_findAll",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Lista de prompts."
+            "description": "Lista de prompts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CreatePromptDto"
+                  }
+                }
+              }
+            }
           }
         },
-        "summary": "Obtener todos los prompts (con su versión activa)",
+        "summary": "Obtiene todos los prompts lógicos",
         "tags": [
-          "conversation-prompts"
+          "Prompts"
         ]
       }
     },
-    "/conversation-prompts/{id}": {
+    "/prompts/{name}": {
       "get": {
-        "operationId": "ConversationPromptController_findOne",
+        "operationId": "PromptController_findOne",
         "parameters": [
           {
-            "name": "id",
+            "name": "name",
             "required": true,
             "in": "path",
-            "description": "ID del prompt",
+            "description": "Nombre único del prompt",
             "schema": {
               "type": "string"
             }
@@ -751,25 +774,32 @@
         ],
         "responses": {
           "200": {
-            "description": "Prompt encontrado."
+            "description": "Prompt encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePromptDto"
+                }
+              }
+            }
           },
           "404": {
             "description": "Prompt no encontrado."
           }
         },
-        "summary": "Obtener un prompt por ID (con detalles de versión activa y historial opcional)",
+        "summary": "Obtiene un prompt lógico por su nombre (ID)",
         "tags": [
-          "conversation-prompts"
+          "Prompts"
         ]
       },
       "patch": {
-        "operationId": "ConversationPromptController_update",
+        "operationId": "PromptController_update",
         "parameters": [
           {
-            "name": "id",
+            "name": "name",
             "required": true,
             "in": "path",
-            "description": "ID del prompt a actualizar",
+            "description": "Nombre único del prompt a actualizar",
             "schema": {
               "type": "string"
             }
@@ -780,14 +810,21 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateConversationPromptDto"
+                "$ref": "#/components/schemas/UpdatePromptDto"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Prompt actualizado."
+            "description": "Prompt actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePromptDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Datos inválidos."
@@ -796,19 +833,19 @@
             "description": "Prompt no encontrado."
           }
         },
-        "summary": "Actualizar metadatos de un prompt (nombre, descripción, táctica). No crea nueva versión.",
+        "summary": "Actualiza un prompt lógico",
         "tags": [
-          "conversation-prompts"
+          "Prompts"
         ]
       },
       "delete": {
-        "operationId": "ConversationPromptController_remove",
+        "operationId": "PromptController_remove",
         "parameters": [
           {
-            "name": "id",
+            "name": "name",
             "required": true,
             "in": "path",
-            "description": "ID del prompt a eliminar",
+            "description": "Nombre único del prompt a eliminar",
             "schema": {
               "type": "string"
             }
@@ -822,21 +859,21 @@
             "description": "Prompt no encontrado."
           }
         },
-        "summary": "Eliminar un prompt y todas sus versiones/traducciones/links asociados.",
+        "summary": "Elimina un prompt lógico (y posiblemente sus versiones?)",
         "tags": [
-          "conversation-prompts"
+          "Prompts"
         ]
       }
     },
-    "/conversation-prompts/{promptId}/versions/{versionId}/activate": {
+    "/prompts/{name}/activate/{versionId}": {
       "patch": {
-        "operationId": "ConversationPromptController_activateVersion",
+        "operationId": "PromptController_activateVersion",
         "parameters": [
           {
-            "name": "promptId",
+            "name": "name",
             "required": true,
             "in": "path",
-            "description": "ID del prompt padre",
+            "description": "Nombre del prompt",
             "schema": {
               "type": "string"
             }
@@ -845,7 +882,7 @@
             "name": "versionId",
             "required": true,
             "in": "path",
-            "description": "ID de la versión a activar",
+            "description": "ID de la PromptVersion a activar",
             "schema": {
               "type": "string"
             }
@@ -853,49 +890,28 @@
         ],
         "responses": {
           "200": {
-            "description": "Versión activada."
-          },
-          "404": {
-            "description": "Prompt o Versión no encontrados."
-          }
-        },
-        "summary": "Activar una versión específica de un prompt",
-        "tags": [
-          "conversation-prompts"
-        ]
-      }
-    },
-    "/conversation-prompts/{promptId}/deactivate": {
-      "patch": {
-        "operationId": "ConversationPromptController_deactivate",
-        "parameters": [
-          {
-            "name": "promptId",
-            "required": true,
-            "in": "path",
-            "description": "ID del prompt a desactivar",
-            "schema": {
-              "type": "string"
+            "description": "Versión activada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePromptDto"
+                }
+              }
             }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Prompt desactivado (sin versión activa)."
           },
           "404": {
-            "description": "Prompt no encontrado."
+            "description": "Prompt o Versión no encontrada."
           }
         },
-        "summary": "Desactivar la versión activa de un prompt",
+        "summary": "Activa una versión específica para un prompt",
         "tags": [
-          "conversation-prompts"
+          "Prompts"
         ]
       }
     },
-    "/conversation-prompts/{promptId}/versions": {
+    "/prompts/{promptId}/versions": {
       "post": {
-        "operationId": "ConversationPromptController_createVersion",
+        "operationId": "PromptController_createVersion",
         "parameters": [
           {
             "name": "promptId",
@@ -933,13 +949,13 @@
         },
         "summary": "Crear una nueva versión para un prompt existente.",
         "tags": [
-          "conversation-prompts"
+          "Prompts"
         ]
       }
     },
-    "/conversation-prompts/{promptId}/versions/{versionId}/translations": {
+    "/prompts/{promptId}/versions/{versionId}/translations": {
       "put": {
-        "operationId": "ConversationPromptController_addOrUpdateTranslation",
+        "operationId": "PromptController_addOrUpdateTranslation",
         "parameters": [
           {
             "name": "promptId",
@@ -983,63 +999,80 @@
         },
         "summary": "Añadir o actualizar una traducción para una versión específica de prompt.",
         "tags": [
-          "conversation-prompts"
+          "Prompts"
         ]
       }
     },
-    "/conversation-prompt-assets": {
+    "/prompt-assets": {
       "post": {
-        "operationId": "ConversationPromptAssetController_create",
+        "operationId": "PromptAssetController_create",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateConversationPromptAssetDto"
+                "$ref": "#/components/schemas/CreatePromptAssetDto"
               }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Asset creado."
+            "description": "Asset creado con su versión inicial.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePromptAssetDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Datos inválidos."
           },
           "409": {
-            "description": "Conflicto, asset con esa Key ya existe."
+            "description": "Conflicto, la clave del asset ya existe."
           }
         },
-        "summary": "Crear un nuevo asset y su primera versión (v1.0.0, marcada como activa)",
+        "summary": "Crea un nuevo asset y su primera versión (v1.0.0)",
         "tags": [
-          "conversation-prompt-assets"
+          "Prompt Assets"
         ]
       },
       "get": {
-        "operationId": "ConversationPromptAssetController_findAll",
+        "operationId": "PromptAssetController_findAll",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Lista de assets."
+            "description": "Lista de assets.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CreatePromptAssetDto"
+                  }
+                }
+              }
+            }
           }
         },
-        "summary": "Obtener todos los assets (con su versión activa)",
+        "summary": "Obtiene todos los assets (sin historial completo de versiones)",
         "tags": [
-          "conversation-prompt-assets"
+          "Prompt Assets"
         ]
       }
     },
-    "/conversation-prompt-assets/{id}": {
+    "/prompt-assets/{key}": {
       "get": {
-        "operationId": "ConversationPromptAssetController_findOne",
+        "operationId": "PromptAssetController_findOne",
         "parameters": [
           {
-            "name": "id",
+            "name": "key",
             "required": true,
             "in": "path",
-            "description": "ID del asset",
+            "description": "Clave única del asset",
             "schema": {
               "type": "string"
             }
@@ -1047,25 +1080,32 @@
         ],
         "responses": {
           "200": {
-            "description": "Asset encontrado."
+            "description": "Asset encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePromptAssetDto"
+                }
+              }
+            }
           },
           "404": {
             "description": "Asset no encontrado."
           }
         },
-        "summary": "Obtener un asset por ID (con versión activa y opcionalmente historial)",
+        "summary": "Obtiene un asset por su clave única, incluyendo todas sus versiones y traducciones",
         "tags": [
-          "conversation-prompt-assets"
+          "Prompt Assets"
         ]
       },
       "patch": {
-        "operationId": "ConversationPromptAssetController_update",
+        "operationId": "PromptAssetController_update",
         "parameters": [
           {
-            "name": "id",
+            "name": "key",
             "required": true,
             "in": "path",
-            "description": "ID del asset a actualizar",
+            "description": "Clave única del asset a actualizar",
             "schema": {
               "type": "string"
             }
@@ -1076,14 +1116,21 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateConversationPromptAssetDto"
+                "$ref": "#/components/schemas/UpdatePromptAssetDto"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Asset actualizado."
+            "description": "Asset actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePromptAssetDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "Datos inválidos."
@@ -1092,19 +1139,19 @@
             "description": "Asset no encontrado."
           }
         },
-        "summary": "Actualizar metadatos de un asset (nombre, descripción, tipo, categoría). No crea nueva versión.",
+        "summary": "Actualiza los metadatos de un asset (nombre, descripción, etc.). No actualiza el valor.",
         "tags": [
-          "conversation-prompt-assets"
+          "Prompt Assets"
         ]
       },
       "delete": {
-        "operationId": "ConversationPromptAssetController_remove",
+        "operationId": "PromptAssetController_remove",
         "parameters": [
           {
-            "name": "id",
+            "name": "key",
             "required": true,
             "in": "path",
-            "description": "ID del asset a eliminar",
+            "description": "Clave única del asset a eliminar",
             "schema": {
               "type": "string"
             }
@@ -1112,27 +1159,34 @@
         ],
         "responses": {
           "200": {
-            "description": "Asset eliminado."
+            "description": "Asset eliminado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePromptAssetDto"
+                }
+              }
+            }
           },
           "404": {
             "description": "Asset no encontrado."
           }
         },
-        "summary": "Eliminar un asset y todas sus versiones/traducciones/links.",
+        "summary": "Elimina un asset y todas sus versiones, traducciones y links asociados",
         "tags": [
-          "conversation-prompt-assets"
+          "Prompt Assets"
         ]
       }
     },
-    "/conversation-prompt-assets/{assetId}/versions": {
+    "/prompt-assets/{assetKey}/versions": {
       "post": {
-        "operationId": "ConversationPromptAssetController_createVersion",
+        "operationId": "PromptAssetController_createVersion",
         "parameters": [
           {
-            "name": "assetId",
+            "name": "assetKey",
             "required": true,
             "in": "path",
-            "description": "ID del asset padre",
+            "description": "Clave del asset padre",
             "schema": {
               "type": "string"
             }
@@ -1150,42 +1204,37 @@
         },
         "responses": {
           "201": {
-            "description": "Nueva versión de asset creada."
-          },
-          "400": {
-            "description": "Datos inválidos."
+            "description": "Versión creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateAssetVersionDto"
+                }
+              }
+            }
           },
           "404": {
-            "description": "Asset padre no encontrado."
+            "description": "Asset no encontrado."
           },
           "409": {
-            "description": "Conflicto (e.g., versionTag ya existe para este asset)."
+            "description": "La etiqueta de versión ya existe para este asset."
           }
         },
-        "summary": "Crear una nueva versión para un asset existente.",
+        "summary": "Crea una nueva versión para un asset existente",
         "tags": [
-          "conversation-prompt-assets"
+          "Prompt Assets"
         ]
       }
     },
-    "/conversation-prompt-assets/{assetId}/versions/{versionId}/translations": {
-      "put": {
-        "operationId": "ConversationPromptAssetController_addOrUpdateAssetTranslation",
+    "/prompt-assets/versions/{versionId}/translations": {
+      "post": {
+        "operationId": "PromptAssetController_addOrUpdateTranslation",
         "parameters": [
-          {
-            "name": "assetId",
-            "required": true,
-            "in": "path",
-            "description": "ID del asset padre",
-            "schema": {
-              "type": "string"
-            }
-          },
           {
             "name": "versionId",
             "required": true,
             "in": "path",
-            "description": "ID de la versión a traducir",
+            "description": "ID de la versión del asset",
             "schema": {
               "type": "string"
             }
@@ -1202,32 +1251,36 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "Traducción creada o actualizada."
-          },
-          "400": {
-            "description": "Datos inválidos."
+          "201": {
+            "description": "Traducción creada/actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateOrUpdateAssetTranslationDto"
+                }
+              }
+            }
           },
           "404": {
-            "description": "Versión no encontrada."
+            "description": "Versión del asset no encontrada."
           }
         },
-        "summary": "Añadir o actualizar una traducción para una versión específica de asset.",
+        "summary": "Añade o actualiza una traducción para una versión de asset específica",
         "tags": [
-          "conversation-prompt-assets"
+          "Prompt Assets"
         ]
       }
     },
-    "/conversation-prompt-asset-links": {
+    "/prompt-asset-links": {
       "post": {
-        "operationId": "ConversationPromptAssetLinkController_create",
+        "operationId": "PromptAssetLinkController_create",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateConversationPromptAssetLinkDto"
+                "$ref": "#/components/schemas/CreatePromptAssetLinkDto"
               }
             }
           }
@@ -1238,7 +1291,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConversationPromptAssetLinkResponse"
+                  "$ref": "#/components/schemas/PromptAssetLinkResponse"
                 }
               }
             }
@@ -1252,11 +1305,11 @@
         },
         "summary": "Crear un nuevo vínculo entre prompt y asset",
         "tags": [
-          "conversation-prompt-asset-links"
+          "Prompt Asset Links"
         ]
       },
       "get": {
-        "operationId": "ConversationPromptAssetLinkController_findAll",
+        "operationId": "PromptAssetLinkController_findAll",
         "parameters": [],
         "responses": {
           "200": {
@@ -1266,7 +1319,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ConversationPromptAssetLinkResponse"
+                    "$ref": "#/components/schemas/PromptAssetLinkResponse"
                   }
                 }
               }
@@ -1275,13 +1328,13 @@
         },
         "summary": "Obtener todos los vínculos prompt-asset",
         "tags": [
-          "conversation-prompt-asset-links"
+          "Prompt Asset Links"
         ]
       }
     },
-    "/conversation-prompt-asset-links/{id}": {
+    "/prompt-asset-links/{id}": {
       "get": {
-        "operationId": "ConversationPromptAssetLinkController_findOne",
+        "operationId": "PromptAssetLinkController_findOne",
         "parameters": [
           {
             "name": "id",
@@ -1299,7 +1352,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConversationPromptAssetLinkResponse"
+                  "$ref": "#/components/schemas/PromptAssetLinkResponse"
                 }
               }
             }
@@ -1310,11 +1363,11 @@
         },
         "summary": "Obtener un vínculo por ID",
         "tags": [
-          "conversation-prompt-asset-links"
+          "Prompt Asset Links"
         ]
       },
       "patch": {
-        "operationId": "ConversationPromptAssetLinkController_update",
+        "operationId": "PromptAssetLinkController_update",
         "parameters": [
           {
             "name": "id",
@@ -1331,7 +1384,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateConversationPromptAssetLinkDto"
+                "$ref": "#/components/schemas/UpdatePromptAssetLinkDto"
               }
             }
           }
@@ -1342,7 +1395,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConversationPromptAssetLinkResponse"
+                  "$ref": "#/components/schemas/PromptAssetLinkResponse"
                 }
               }
             }
@@ -1356,11 +1409,11 @@
         },
         "summary": "Actualizar un vínculo por ID (campos como isActive, position)",
         "tags": [
-          "conversation-prompt-asset-links"
+          "Prompt Asset Links"
         ]
       },
       "delete": {
-        "operationId": "ConversationPromptAssetLinkController_remove",
+        "operationId": "PromptAssetLinkController_remove",
         "parameters": [
           {
             "name": "id",
@@ -1382,7 +1435,7 @@
         },
         "summary": "Eliminar un vínculo por ID",
         "tags": [
-          "conversation-prompt-asset-links"
+          "Prompt Asset Links"
         ]
       }
     },
@@ -1420,7 +1473,7 @@
         },
         "summary": "Crear metadatos para un documento RAG",
         "tags": [
-          "rag-document-metadata"
+          "RAG Document Metadata"
         ]
       },
       "get": {
@@ -1443,7 +1496,7 @@
         },
         "summary": "Obtener todos los metadatos de documentos RAG",
         "tags": [
-          "rag-document-metadata"
+          "RAG Document Metadata"
         ]
       }
     },
@@ -1478,7 +1531,7 @@
         },
         "summary": "Obtener metadatos por ID",
         "tags": [
-          "rag-document-metadata"
+          "RAG Document Metadata"
         ]
       },
       "patch": {
@@ -1524,7 +1577,7 @@
         },
         "summary": "Actualizar metadatos por ID",
         "tags": [
-          "rag-document-metadata"
+          "RAG Document Metadata"
         ]
       },
       "delete": {
@@ -1550,7 +1603,7 @@
         },
         "summary": "Eliminar metadatos por ID",
         "tags": [
-          "rag-document-metadata"
+          "RAG Document Metadata"
         ]
       }
     },
@@ -1609,11 +1662,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Prompt ensamblado listo para usar.",
+            "description": "Prompt procesado y metadatos.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string"
+                  "example": {
+                    "processedPrompt": "string",
+                    "metadata": {}
+                  }
                 }
               }
             }
@@ -1622,12 +1678,12 @@
             "description": "Parámetros de consulta inválidos."
           },
           "404": {
-            "description": "Prompt no encontrado."
+            "description": "Prompt o versión no encontrada."
           }
         },
         "summary": "Obtiene y ensambla un prompt basado en criterios",
         "tags": [
-          "serve-prompt"
+          "Serve Prompt"
         ]
       }
     },
@@ -2015,7 +2071,7 @@
         },
         "summary": "Crear un nuevo tag",
         "tags": [
-          "tag"
+          "Tag"
         ]
       },
       "get": {
@@ -2038,7 +2094,7 @@
         },
         "summary": "Obtener todos los tags",
         "tags": [
-          "tag"
+          "Tag"
         ]
       }
     },
@@ -2073,7 +2129,7 @@
         },
         "summary": "Obtener un tag por su ID (CUID)",
         "tags": [
-          "tag"
+          "Tag"
         ]
       },
       "patch": {
@@ -2122,7 +2178,7 @@
         },
         "summary": "Actualizar un tag por su ID",
         "tags": [
-          "tag"
+          "Tag"
         ]
       },
       "delete": {
@@ -2148,20 +2204,20 @@
         },
         "summary": "Eliminar un tag por su ID",
         "tags": [
-          "tag"
+          "Tag"
         ]
       }
     },
-    "/conversation-prompt-version": {
+    "/prompt-versions": {
       "post": {
-        "operationId": "ConversationPromptVersionController_create",
+        "operationId": "PromptVersionController_create",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateConversationPromptVersionDto"
+                "$ref": "#/components/schemas/CreatePromptVersionDto"
               }
             }
           }
@@ -2172,7 +2228,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateConversationPromptVersionDto"
+                  "$ref": "#/components/schemas/CreatePromptVersionDto"
                 }
               }
             }
@@ -2181,25 +2237,25 @@
             "description": "Datos inválidos."
           },
           "404": {
-            "description": "Prompt lógico no encontrado."
+            "description": "Prompt no encontrado."
           },
           "409": {
-            "description": "Conflicto, ya existe una versión con ese tag para ese prompt."
+            "description": "La versión ya existe para este prompt."
           }
         },
-        "summary": "Crear una nueva versión de un prompt",
+        "summary": "Crea una nueva versión de un prompt existente",
         "tags": [
-          "conversation-prompt-version"
+          "Prompt Versions"
         ]
       },
       "get": {
-        "operationId": "ConversationPromptVersionController_findAll",
+        "operationId": "PromptVersionController_findAll",
         "parameters": [
           {
             "name": "promptId",
             "required": false,
             "in": "query",
-            "description": "Filtrar versiones por el ID (slug) del prompt lógico",
+            "description": "ID (nombre) del prompt para filtrar versiones",
             "schema": {
               "type": "string"
             }
@@ -2213,28 +2269,28 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/CreateConversationPromptVersionDto"
+                    "$ref": "#/components/schemas/CreatePromptVersionDto"
                   }
                 }
               }
             }
           }
         },
-        "summary": "Obtener todas las versiones de prompts, opcionalmente filtradas por promptId",
+        "summary": "Obtiene todas las versiones de prompts o filtra por prompt ID",
         "tags": [
-          "conversation-prompt-version"
+          "Prompt Versions"
         ]
       }
     },
-    "/conversation-prompt-version/{id}": {
+    "/prompt-versions/{id}": {
       "get": {
-        "operationId": "ConversationPromptVersionController_findOne",
+        "operationId": "PromptVersionController_findOne",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "ID de la versión",
+            "description": "ID único de la versión del prompt",
             "schema": {
               "type": "string"
             }
@@ -2246,7 +2302,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateConversationPromptVersionDto"
+                  "$ref": "#/components/schemas/CreatePromptVersionDto"
                 }
               }
             }
@@ -2255,19 +2311,19 @@
             "description": "Versión no encontrada."
           }
         },
-        "summary": "Obtener una versión de prompt por su ID (CUID)",
+        "summary": "Obtiene una versión de prompt por su ID",
         "tags": [
-          "conversation-prompt-version"
+          "Prompt Versions"
         ]
       },
       "patch": {
-        "operationId": "ConversationPromptVersionController_update",
+        "operationId": "PromptVersionController_update",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "ID de la versión a actualizar",
+            "description": "ID único de la versión a actualizar",
             "schema": {
               "type": "string"
             }
@@ -2278,7 +2334,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateConversationPromptVersionDto"
+                "$ref": "#/components/schemas/UpdatePromptVersionDto"
               }
             }
           }
@@ -2289,7 +2345,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateConversationPromptVersionDto"
+                  "$ref": "#/components/schemas/CreatePromptVersionDto"
                 }
               }
             }
@@ -2301,19 +2357,19 @@
             "description": "Versión no encontrada."
           }
         },
-        "summary": "Actualizar una versión de prompt por su ID",
+        "summary": "Actualiza una versión de prompt existente",
         "tags": [
-          "conversation-prompt-version"
+          "Prompt Versions"
         ]
       },
       "delete": {
-        "operationId": "ConversationPromptVersionController_remove",
+        "operationId": "PromptVersionController_remove",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "ID de la versión a eliminar",
+            "description": "ID único de la versión a eliminar",
             "schema": {
               "type": "string"
             }
@@ -2321,15 +2377,22 @@
         ],
         "responses": {
           "200": {
-            "description": "Versión eliminada."
+            "description": "Versión eliminada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePromptVersionDto"
+                }
+              }
+            }
           },
           "404": {
             "description": "Versión no encontrada."
           }
         },
-        "summary": "Eliminar una versión de prompt por su ID",
+        "summary": "Elimina una versión de prompt",
         "tags": [
-          "conversation-prompt-version"
+          "Prompt Versions"
         ]
       }
     },
@@ -2370,7 +2433,7 @@
         },
         "summary": "Crear una nueva traducción para una versión de prompt",
         "tags": [
-          "prompt-translation"
+          "Prompt Translation"
         ]
       },
       "get": {
@@ -2403,7 +2466,7 @@
         },
         "summary": "Obtener todas las traducciones, opcionalmente filtradas por versionId",
         "tags": [
-          "prompt-translation"
+          "Prompt Translation"
         ]
       }
     },
@@ -2438,7 +2501,7 @@
         },
         "summary": "Obtener una traducción por su ID (CUID)",
         "tags": [
-          "prompt-translation"
+          "Prompt Translation"
         ]
       },
       "patch": {
@@ -2484,7 +2547,7 @@
         },
         "summary": "Actualizar una traducción por su ID",
         "tags": [
-          "prompt-translation"
+          "Prompt Translation"
         ]
       },
       "delete": {
@@ -2510,7 +2573,7 @@
         },
         "summary": "Eliminar una traducción por su ID",
         "tags": [
-          "prompt-translation"
+          "Prompt Translation"
         ]
       }
     },
@@ -2554,20 +2617,20 @@
         },
         "summary": "Obtener una traducción específica por versión y código de idioma",
         "tags": [
-          "prompt-translation"
+          "Prompt Translation"
         ]
       }
     },
-    "/conversation-prompt-asset-version": {
+    "/prompt-asset-versions": {
       "post": {
-        "operationId": "ConversationPromptAssetVersionController_create",
+        "operationId": "PromptAssetVersionController_create",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateConversationPromptAssetVersionDto"
+                "$ref": "#/components/schemas/CreatePromptAssetVersionDto"
               }
             }
           }
@@ -2578,69 +2641,56 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateConversationPromptAssetVersionDto"
+                  "$ref": "#/components/schemas/CreatePromptAssetVersionDto"
                 }
               }
             }
           },
-          "400": {
-            "description": "Datos inválidos."
-          },
           "404": {
-            "description": "Asset lógico no encontrado."
+            "description": "Asset no encontrado."
           },
           "409": {
-            "description": "Conflicto, ya existe una versión con ese tag para ese asset."
+            "description": "La etiqueta de versión ya existe para este asset."
           }
         },
-        "summary": "Crear una nueva versión de un asset",
+        "summary": "Crea una nueva versión para un asset (Requiere assetId en el body)",
         "tags": [
-          "conversation-prompt-asset-version"
+          "Prompt Asset Versions"
         ]
       },
       "get": {
-        "operationId": "ConversationPromptAssetVersionController_findAll",
-        "parameters": [
-          {
-            "name": "assetId",
-            "required": false,
-            "in": "query",
-            "description": "Filtrar versiones por el Key (slug) del asset lógico",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "operationId": "PromptAssetVersionController_findAll",
+        "parameters": [],
         "responses": {
           "200": {
-            "description": "Lista de versiones.",
+            "description": "Lista de versiones de assets.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/CreateConversationPromptAssetVersionDto"
+                    "$ref": "#/components/schemas/CreatePromptAssetVersionDto"
                   }
                 }
               }
             }
           }
         },
-        "summary": "Obtener todas las versiones de assets, opcionalmente filtradas por assetId",
+        "summary": "Obtiene todas las versiones de assets",
         "tags": [
-          "conversation-prompt-asset-version"
+          "Prompt Asset Versions"
         ]
       }
     },
-    "/conversation-prompt-asset-version/{id}": {
+    "/prompt-asset-versions/{id}": {
       "get": {
-        "operationId": "ConversationPromptAssetVersionController_findOne",
+        "operationId": "PromptAssetVersionController_findOne",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "ID de la versión",
+            "description": "ID único de la versión del asset",
             "schema": {
               "type": "string"
             }
@@ -2652,7 +2702,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateConversationPromptAssetVersionDto"
+                  "$ref": "#/components/schemas/CreatePromptAssetVersionDto"
                 }
               }
             }
@@ -2661,19 +2711,19 @@
             "description": "Versión no encontrada."
           }
         },
-        "summary": "Obtener una versión de asset por su ID (CUID)",
+        "summary": "Obtiene una versión de asset por su ID",
         "tags": [
-          "conversation-prompt-asset-version"
+          "Prompt Asset Versions"
         ]
       },
       "patch": {
-        "operationId": "ConversationPromptAssetVersionController_update",
+        "operationId": "PromptAssetVersionController_update",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "ID de la versión a actualizar",
+            "description": "ID único de la versión a actualizar",
             "schema": {
               "type": "string"
             }
@@ -2684,7 +2734,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateConversationPromptAssetVersionDto"
+                "$ref": "#/components/schemas/UpdatePromptAssetVersionDto"
               }
             }
           }
@@ -2695,7 +2745,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateConversationPromptAssetVersionDto"
+                  "$ref": "#/components/schemas/CreatePromptAssetVersionDto"
                 }
               }
             }
@@ -2707,19 +2757,19 @@
             "description": "Versión no encontrada."
           }
         },
-        "summary": "Actualizar una versión de asset por su ID",
+        "summary": "Actualiza una versión de asset (solo value y changeMessage)",
         "tags": [
-          "conversation-prompt-asset-version"
+          "Prompt Asset Versions"
         ]
       },
       "delete": {
-        "operationId": "ConversationPromptAssetVersionController_remove",
+        "operationId": "PromptAssetVersionController_remove",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "ID de la versión a eliminar",
+            "description": "ID único de la versión a eliminar",
             "schema": {
               "type": "string"
             }
@@ -2727,15 +2777,22 @@
         ],
         "responses": {
           "200": {
-            "description": "Versión eliminada."
+            "description": "Versión eliminada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePromptAssetVersionDto"
+                }
+              }
+            }
           },
           "404": {
             "description": "Versión no encontrada."
           }
         },
-        "summary": "Eliminar una versión de asset por su ID",
+        "summary": "Elimina una versión de asset",
         "tags": [
-          "conversation-prompt-asset-version"
+          "Prompt Asset Versions"
         ]
       }
     },
@@ -2776,7 +2833,7 @@
         },
         "summary": "Crear una nueva traducción para una versión de asset",
         "tags": [
-          "asset-translation"
+          "Asset Translation"
         ]
       },
       "get": {
@@ -2809,7 +2866,7 @@
         },
         "summary": "Obtener todas las traducciones de assets, opcionalmente filtradas por versionId",
         "tags": [
-          "asset-translation"
+          "Asset Translation"
         ]
       }
     },
@@ -2844,7 +2901,7 @@
         },
         "summary": "Obtener una traducción de asset por su ID (CUID)",
         "tags": [
-          "asset-translation"
+          "Asset Translation"
         ]
       },
       "patch": {
@@ -2890,7 +2947,7 @@
         },
         "summary": "Actualizar una traducción de asset por su ID",
         "tags": [
-          "asset-translation"
+          "Asset Translation"
         ]
       },
       "delete": {
@@ -2916,7 +2973,7 @@
         },
         "summary": "Eliminar una traducción de asset por su ID",
         "tags": [
-          "asset-translation"
+          "Asset Translation"
         ]
       }
     },
@@ -2960,7 +3017,7 @@
         },
         "summary": "Obtener una traducción de asset específica por versión y código de idioma",
         "tags": [
-          "asset-translation"
+          "Asset Translation"
         ]
       }
     }
@@ -3179,36 +3236,7 @@
           }
         }
       },
-      "CreateConversationTacticDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "pattern": "/^[a-z0-9]+(?:-[a-z0-9]+)*$/",
-            "description": "Nombre único de la táctica (formato slug: minúsculas, guiones)",
-            "example": "formal-greeting-de"
-          },
-          "regionId": {
-            "type": "string",
-            "pattern": "/^[a-z]{2}-[A-Z]{2}$/",
-            "description": "Código de idioma de la región asociada (e.g., es-ES, opcional)"
-          },
-          "culturalDataId": {
-            "type": "string",
-            "description": "ID (slug) de los datos culturales asociados (opcional)",
-            "example": "direct-and-formal"
-          },
-          "tacticsConfig": {
-            "type": "object",
-            "format": "json",
-            "description": "Configuración específica de la táctica en formato JSON (opcional)"
-          }
-        },
-        "required": [
-          "name"
-        ]
-      },
-      "ConversationTacticResponse": {
+      "CreateTacticDto": {
         "type": "object",
         "properties": {
           "name": {
@@ -3232,20 +3260,42 @@
             "format": "json",
             "description": "Configuración específica de la táctica en formato JSON (opcional)"
           },
-          "region": {
-            "$ref": "#/components/schemas/CreateRegionDto"
-          },
-          "culturalData": {
-            "$ref": "#/components/schemas/CreateCulturalDataDto"
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID del proyecto al que pertenece la táctica."
           }
         },
         "required": [
           "name"
         ]
       },
-      "UpdateConversationTacticDto": {
+      "UpdateTacticDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "tacticsConfig": {
+            "type": "string",
+            "description": "Nueva configuración específica de la táctica (e.g., JSON string)"
+          },
+          "regionId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nuevo código de idioma de la región asociada, o null para desasociar.",
+            "example": "en-US"
+          },
+          "culturalDataId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nuevo ID de los datos culturales asociados, o null para desasociar.",
+            "example": "informal-and-direct"
+          },
+          "projectId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid",
+            "description": "Nuevo ID del proyecto asociado, o null para desasociar."
+          }
+        }
       },
       "InitialTranslationDto": {
         "type": "object",
@@ -3254,8 +3304,7 @@
             "type": "string",
             "minLength": 2,
             "maxLength": 10,
-            "description": "Código de idioma (e.g., es-ES)",
-            "example": "es-ES"
+            "description": "Código de idioma ISO (e.g., es, en)"
           },
           "promptText": {
             "type": "string",
@@ -3267,42 +3316,41 @@
           "promptText"
         ]
       },
-      "CreateConversationPromptDto": {
+      "CreatePromptDto": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
-            "pattern": "/^[a-z0-9]+(?:-[a-z0-9]+)*$/",
-            "description": "Nombre único del prompt (formato slug: minúsculas, guiones)",
-            "example": "bienvenida-formal-es"
+            "pattern": "/^[a-z0-9_]+$/",
+            "description": "Nombre único del prompt (usado como ID)",
+            "example": "saludo_bienvenida_cliente"
           },
           "description": {
             "type": "string",
-            "description": "Descripción del propósito del prompt"
-          },
-          "promptText": {
-            "type": "string",
-            "description": "Texto BASE del prompt para la primera versión (v1.0.0)"
+            "description": "Descripción del propósito del prompt.",
+            "example": "Prompt inicial para saludar a un cliente."
           },
           "tacticId": {
             "type": "string",
-            "pattern": "/^[a-z0-9]+(?:-[a-z0-9]+)*$/",
-            "description": "Nombre de la táctica asociada (formato slug, opcional)",
-            "example": "formal-greeting-es"
+            "description": "ID (nombre) de la táctica conversacional asociada.",
+            "example": "small_talk_inicio"
           },
           "tags": {
-            "minItems": 1,
             "uniqueItems": true,
-            "description": "Lista de nombres de tags para asociar al prompt (formato slug)",
+            "description": "Lista de nombres de etiquetas a asociar.",
             "example": [
-              "saludo",
-              "formal"
+              "bienvenida",
+              "general"
             ],
             "type": "array",
             "items": {
-              "type": "string",
-              "pattern": "/^[a-z0-9]+(?:-[a-z0-9]+)*$/"
+              "type": "string"
             }
+          },
+          "promptText": {
+            "type": "string",
+            "description": "Texto base del prompt para la primera versión (v1.0.0)",
+            "example": "Hola {{nombre_cliente}}, bienvenido."
           },
           "initialTranslations": {
             "description": "Traducciones iniciales opcionales para la primera versión",
@@ -3317,31 +3365,28 @@
           "promptText"
         ]
       },
-      "UpdateConversationPromptDto": {
+      "UpdatePromptDto": {
         "type": "object",
         "properties": {
           "description": {
             "type": "string",
-            "description": "Descripción del propósito del prompt"
+            "description": "Nueva descripción del propósito del prompt.",
+            "example": "Prompt actualizado para saludar."
           },
           "tacticId": {
             "type": "string",
-            "pattern": "/^[a-z0-9]+(?:-[a-z0-9]+)*$/",
-            "description": "Nombre de la táctica asociada (formato slug, opcional)",
-            "example": "formal-greeting-es"
+            "nullable": true,
+            "description": "ID de la táctica a asociar, o null para desasociar.",
+            "example": "small_talk_continuacion"
           },
           "tags": {
-            "minItems": 1,
-            "uniqueItems": true,
-            "description": "Lista de nombres de tags para asociar al prompt (formato slug)",
+            "description": "Lista completa de nombres de etiquetas a asociar (reemplaza las existentes). Array vacío para quitar todas.",
             "example": [
-              "saludo",
-              "formal"
+              "despedida"
             ],
             "type": "array",
             "items": {
-              "type": "string",
-              "pattern": "/^[a-z0-9]+(?:-[a-z0-9]+)*$/"
+              "type": "string"
             }
           }
         }
@@ -3351,7 +3396,7 @@
         "properties": {
           "assetVersionId": {
             "type": "string",
-            "description": "ID de la ConversationPromptAssetVersion a vincular."
+            "description": "ID de la PromptAssetVersion a vincular."
           },
           "usageContext": {
             "type": "string",
@@ -3371,36 +3416,30 @@
         "properties": {
           "promptText": {
             "type": "string",
-            "description": "Texto BASE del prompt para esta nueva versión."
+            "description": "Texto completo del prompt para esta versión.",
+            "example": "Translate the following text to Spanish: {{text_to_translate}}"
+          },
+          "promptId": {
+            "type": "string",
+            "description": "Identificador único del prompt lógico al que pertenece esta versión.",
+            "example": "translate_english_to_spanish"
           },
           "versionTag": {
             "type": "string",
-            "description": "Etiqueta única para esta versión dentro del prompt (e.g., v1.1.0, beta-feature-x).",
-            "example": "v1.1.0"
+            "default": "v1.0.0",
+            "pattern": "/^v\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)*)?(\\+[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)*)?$/",
+            "description": "Etiqueta de versión semántica (e.g., v1.0.0, v1.1.0-beta). Por defecto v1.0.0",
+            "example": "v1.0.0"
           },
           "changeMessage": {
             "type": "string",
-            "description": "Mensaje describiendo los cambios en esta versión."
-          },
-          "assetLinks": {
-            "description": "Lista de versiones de assets a vincular a esta versión del prompt.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AssetVersionLinkDto"
-            }
-          },
-          "initialTranslations": {
-            "description": "Traducciones iniciales opcionales para esta nueva versión.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/InitialTranslationDto"
-            }
+            "description": "Mensaje describiendo los cambios en esta versión.",
+            "example": "Initial version."
           }
         },
         "required": [
           "promptText",
-          "versionTag",
-          "assetLinks"
+          "promptId"
         ]
       },
       "CreateOrUpdatePromptTranslationDto": {
@@ -3423,98 +3462,107 @@
           "promptText"
         ]
       },
-      "CreateConversationPromptAssetDto": {
+      "CreatePromptAssetDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Clave única identificadora del asset (e.g., saludo_formal_es)",
+            "example": "saludo_formal_es"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre descriptivo del asset",
+            "example": "Saludo Formal (España)"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo de asset (e.g., texto, json, lista)",
+            "example": "texto"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción más detallada del propósito del asset"
+          },
+          "category": {
+            "type": "string",
+            "description": "Categoría para organizar assets (e.g., Saludos, Despedidas)",
+            "example": "Saludos"
+          },
+          "initialValue": {
+            "type": "string",
+            "description": "Valor inicial del asset para la primera versión (v1.0.0)"
+          },
+          "initialChangeMessage": {
+            "type": "string",
+            "description": "Mensaje de cambio para la primera versión"
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 25,
+            "maxLength": 25,
+            "description": "ID opcional del proyecto al que pertenece el asset"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "initialValue"
+        ]
+      },
+      "UpdatePromptAssetDto": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
-            "description": "Nombre del asset",
-            "example": "Saludo Formal ES"
+            "description": "Nombre descriptivo del asset",
+            "example": "Saludo Formal (España)"
           },
           "type": {
             "type": "string",
-            "description": "Tipo de asset",
-            "example": "Greeting"
-          },
-          "key": {
-            "type": "string",
-            "pattern": "/^[a-z0-9]+(?:-[a-z0-9]+)*$/",
-            "description": "Clave única del asset (formato slug: minúsculas, guiones), usada para {{key}} en prompts",
-            "example": "saludo-formal-es"
-          },
-          "value": {
-            "type": "string",
-            "description": "Valor/contenido BASE del asset para la primera versión (v1.0.0)"
+            "description": "Tipo de asset (e.g., texto, json, lista)",
+            "example": "texto"
           },
           "description": {
             "type": "string",
-            "description": "Descripción del propósito del asset"
+            "description": "Descripción más detallada del propósito del asset"
           },
           "category": {
             "type": "string",
-            "description": "Categoría para organizar assets",
+            "description": "Categoría para organizar assets (e.g., Saludos, Despedidas)",
             "example": "Saludos"
           },
-          "initialTranslations": {
-            "description": "Traducciones iniciales opcionales para la primera versión",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/InitialTranslationDto"
-            }
-          }
-        },
-        "required": [
-          "name",
-          "key",
-          "value"
-        ]
-      },
-      "UpdateConversationPromptAssetDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "InitialAssetTranslationDto": {
-        "type": "object",
-        "properties": {
-          "languageCode": {
-            "type": "string",
-            "minLength": 2,
-            "maxLength": 10,
-            "description": "Código de idioma (e.g., es-ES).",
-            "example": "es-ES"
+          "enabled": {
+            "type": "boolean",
+            "description": "Activa o desactiva el asset"
           },
-          "value": {
+          "projectId": {
             "type": "string",
-            "description": "Valor traducido del asset para esta versión."
+            "nullable": true,
+            "minLength": 25,
+            "maxLength": 25,
+            "description": "ID opcional del proyecto al que pertenece el asset (null para desvincular)"
           }
-        },
-        "required": [
-          "languageCode",
-          "value"
-        ]
+        }
       },
       "CreateAssetVersionDto": {
         "type": "object",
         "properties": {
           "value": {
             "type": "string",
-            "description": "Valor/Contenido BASE del asset para esta nueva versión."
+            "description": "Valor/contenido del asset para esta versión específica.",
+            "example": "¡Hola Mundo!"
           },
           "versionTag": {
             "type": "string",
-            "description": "Etiqueta única para esta versión dentro del asset (e.g., v1.1.0, fix-typo).",
-            "example": "v1.0.1"
+            "pattern": "/^v\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)*)?(\\+[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)*)?$/",
+            "description": "Etiqueta de versión semántica (e.g., v1.1.0, v2.0.0-alpha). Debe ser única para el asset.",
+            "example": "v1.1.0"
           },
           "changeMessage": {
             "type": "string",
-            "description": "Mensaje describiendo los cambios en esta versión."
-          },
-          "initialTranslations": {
-            "description": "Traducciones iniciales opcionales para esta nueva versión.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/InitialAssetTranslationDto"
-            }
+            "description": "Mensaje describiendo los cambios introducidos en esta versión.",
+            "example": "Corregido error tipográfico."
           }
         },
         "required": [
@@ -3527,14 +3575,13 @@
         "properties": {
           "languageCode": {
             "type": "string",
-            "minLength": 2,
-            "maxLength": 10,
-            "description": "Código de idioma de la traducción (e.g., es-ES, fr-FR).",
-            "example": "fr-FR"
+            "description": "Código de idioma ISO para la traducción (e.g., es, fr, de).",
+            "example": "es"
           },
           "value": {
             "type": "string",
-            "description": "Valor traducido del asset para esta versión y idioma."
+            "description": "El valor traducido del asset para este idioma.",
+            "example": "Hola Mundo Traducido"
           }
         },
         "required": [
@@ -3542,26 +3589,38 @@
           "value"
         ]
       },
-      "CreateConversationPromptAssetLinkDto": {
+      "CreatePromptAssetLinkDto": {
         "type": "object",
         "properties": {
           "promptVersionId": {
             "type": "string",
-            "description": "ID de la VERSIÓN del prompt a vincular",
-            "example": "clx..."
+            "format": "uuid",
+            "description": "ID de la PromptVersion a la que se vincula el asset."
           },
           "assetVersionId": {
             "type": "string",
-            "description": "ID de la VERSIÓN del asset a vincular",
-            "example": "cly..."
+            "format": "uuid",
+            "description": "ID de la PromptAssetVersion que se vincula."
           },
           "usageContext": {
             "type": "string",
-            "description": "Contexto de uso del asset en el prompt (opcional)"
+            "description": "Contexto de uso o propósito de este asset en el prompt.",
+            "example": "Nombre del producto"
           },
           "position": {
             "type": "number",
-            "description": "Posición/orden del asset en el prompt (opcional)"
+            "minimum": 0,
+            "description": "Orden posicional del asset dentro del prompt (si aplica).",
+            "example": 1
+          },
+          "insertionLogic": {
+            "type": "string",
+            "description": "Lógica de inserción condicional (formato a definir).",
+            "example": "variable_exists:user_name"
+          },
+          "isRequired": {
+            "type": "boolean",
+            "description": "Indica si el asset es requerido para el prompt (default: true)."
           }
         },
         "required": [
@@ -3569,32 +3628,44 @@
           "assetVersionId"
         ]
       },
-      "ConversationPromptAssetLinkResponse": {
+      "PromptAssetLinkResponse": {
         "type": "object",
         "properties": {
           "promptVersionId": {
             "type": "string",
-            "description": "ID de la VERSIÓN del prompt a vincular",
-            "example": "clx..."
+            "format": "uuid",
+            "description": "ID de la PromptVersion a la que se vincula el asset."
           },
           "assetVersionId": {
             "type": "string",
-            "description": "ID de la VERSIÓN del asset a vincular",
-            "example": "cly..."
+            "format": "uuid",
+            "description": "ID de la PromptAssetVersion que se vincula."
           },
           "usageContext": {
             "type": "string",
-            "description": "Contexto de uso del asset en el prompt (opcional)"
+            "description": "Contexto de uso o propósito de este asset en el prompt.",
+            "example": "Nombre del producto"
           },
           "position": {
             "type": "number",
-            "description": "Posición/orden del asset en el prompt (opcional)"
+            "minimum": 0,
+            "description": "Orden posicional del asset dentro del prompt (si aplica).",
+            "example": 1
+          },
+          "insertionLogic": {
+            "type": "string",
+            "description": "Lógica de inserción condicional (formato a definir).",
+            "example": "variable_exists:user_name"
+          },
+          "isRequired": {
+            "type": "boolean",
+            "description": "Indica si el asset es requerido para el prompt (default: true)."
           },
           "prompt": {
-            "$ref": "#/components/schemas/CreateConversationPromptDto"
+            "$ref": "#/components/schemas/CreatePromptDto"
           },
           "asset": {
-            "$ref": "#/components/schemas/CreateConversationPromptAssetDto"
+            "$ref": "#/components/schemas/CreatePromptAssetDto"
           },
           "id": {
             "type": "string"
@@ -3608,16 +3679,28 @@
           "id"
         ]
       },
-      "UpdateConversationPromptAssetLinkDto": {
+      "UpdatePromptAssetLinkDto": {
         "type": "object",
         "properties": {
           "usageContext": {
             "type": "string",
-            "description": "Contexto de uso del asset en el prompt (opcional)"
+            "description": "Contexto de uso o propósito de este asset en el prompt.",
+            "example": "Nombre del producto"
           },
           "position": {
             "type": "number",
-            "description": "Posición/orden del asset en el prompt (opcional)"
+            "minimum": 0,
+            "description": "Orden posicional del asset dentro del prompt (si aplica).",
+            "example": 1
+          },
+          "insertionLogic": {
+            "type": "string",
+            "description": "Lógica de inserción condicional (formato a definir).",
+            "example": "variable_exists:user_name"
+          },
+          "isRequired": {
+            "type": "boolean",
+            "description": "Indica si el asset es requerido para el prompt (default: true)."
           }
         }
       },
@@ -3835,44 +3918,18 @@
           }
         }
       },
-      "CreateConversationPromptVersionDto": {
-        "type": "object",
-        "properties": {
-          "promptId": {
-            "type": "string",
-            "description": "ID (slug) del prompt lógico al que pertenece esta versión",
-            "example": "bienvenida-simple"
-          },
-          "promptText": {
-            "type": "string",
-            "description": "El texto completo del prompt para esta versión"
-          },
-          "versionTag": {
-            "type": "string",
-            "default": "v1.0.0",
-            "description": "Etiqueta de versión (e.g., v1.0.0, v2.1-beta). Debe ser única por prompt.",
-            "example": "v1.0.0"
-          },
-          "changeMessage": {
-            "type": "string",
-            "description": "Mensaje describiendo los cambios en esta versión."
-          }
-        },
-        "required": [
-          "promptId",
-          "promptText"
-        ]
-      },
-      "UpdateConversationPromptVersionDto": {
+      "UpdatePromptVersionDto": {
         "type": "object",
         "properties": {
           "promptText": {
             "type": "string",
-            "description": "El texto completo del prompt para esta versión"
+            "description": "Texto completo del prompt para esta versión.",
+            "example": "Translate the following text to Spanish: {{text_to_translate}}"
           },
           "changeMessage": {
             "type": "string",
-            "description": "Mensaje describiendo los cambios en esta versión."
+            "description": "Mensaje describiendo los cambios en esta versión.",
+            "example": "Initial version."
           }
         }
       },
@@ -3911,7 +3968,7 @@
           }
         }
       },
-      "CreateConversationPromptAssetVersionDto": {
+      "CreatePromptAssetVersionDto": {
         "type": "object",
         "properties": {
           "assetId": {
@@ -3939,16 +3996,18 @@
           "value"
         ]
       },
-      "UpdateConversationPromptAssetVersionDto": {
+      "UpdatePromptAssetVersionDto": {
         "type": "object",
         "properties": {
           "value": {
             "type": "string",
-            "description": "El valor del asset para esta versión"
+            "description": "Nuevo valor/contenido del asset para esta versión.",
+            "example": "¡Hola Mundo Corregido!"
           },
           "changeMessage": {
             "type": "string",
-            "description": "Mensaje describiendo los cambios en esta versión."
+            "description": "Nuevo mensaje describiendo los cambios.",
+            "example": "Corrección de error tipográfico."
           }
         }
       },

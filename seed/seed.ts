@@ -18,14 +18,14 @@ async function main() {
 
     // --- Limpieza Opcional ---
     console.log('Deleting existing data...');
-    await prisma.conversationPromptAssetLink.deleteMany({});
+    await prisma.promptAssetLink.deleteMany({});
     await prisma.promptTranslation.deleteMany({});
     await prisma.assetTranslation.deleteMany({});
-    await prisma.conversationPromptVersion.deleteMany({});
-    await prisma.conversationPromptAssetVersion.deleteMany({});
-    await prisma.conversationPrompt.deleteMany({});
-    await prisma.conversationPromptAsset.deleteMany({});
-    await prisma.conversationTactic.deleteMany({});
+    await prisma.promptVersion.deleteMany({});
+    await prisma.promptAssetVersion.deleteMany({});
+    await prisma.prompt.deleteMany({});
+    await prisma.promptAsset.deleteMany({});
+    await prisma.tactic.deleteMany({});
     await prisma.culturalData.deleteMany({});
     await prisma.region.deleteMany({});
     await prisma.tag.deleteMany({}); // Añadir limpieza de Tags
@@ -82,7 +82,7 @@ async function main() {
     const tacticName = 'Formal Greeting ES';
     const tacticSlug = toSlug(tacticName);
     console.log(`Creating Tactic '${tacticSlug}' ...`);
-    const tacticFormalES = await prisma.conversationTactic.create({
+    const tacticFormalES = await prisma.tactic.create({
         data: {
             name: tacticSlug,
             regionId: regionES.languageCode,
@@ -95,7 +95,7 @@ async function main() {
     const assetName = 'Saludo inicial';
     const assetKey = toSlug(assetName);
     console.log(`Creating Asset '${assetKey}' ...`);
-    const assetSaludo = await prisma.conversationPromptAsset.create({
+    const assetSaludo = await prisma.promptAsset.create({
         data: {
             key: assetKey,
             name: assetName,
@@ -107,7 +107,7 @@ async function main() {
 
     // 6. Crear Versión 1.0.0 del Asset Saludo
     console.log(`Creating Asset Version ${assetKey} v1.0.0...`);
-    const assetSaludoV1 = await prisma.conversationPromptAssetVersion.create({
+    const assetSaludoV1 = await prisma.promptAssetVersion.create({
         data: {
             value: 'Hello',
             versionTag: 'v1.0.0',
@@ -128,20 +128,12 @@ async function main() {
     });
     console.log(`Created Asset Translation ES for ${assetSaludo.key} ${assetSaludoV1.versionTag}`);
 
-    // 8. Marcar v1.0.0 como activa para el Asset Saludo
-    console.log('Setting Active Version for Asset Saludo...');
-    await prisma.conversationPromptAsset.update({
-        where: { key: assetSaludo.key },
-        data: { activeVersion: { connect: { id: assetSaludoV1.id } } },
-    });
-    console.log(`Set active version for Asset: ${assetSaludo.key}`);
-
     // 9. Crear Prompt Lógico: Bienvenida Simple (con name slug y tags slugs)
     const promptName = 'Bienvenida Simple';
     const promptSlug = toSlug(promptName);
     const tagNames = ['bienvenida', 'general']; // Tags ya en formato slug
     console.log(`Creating Prompt '${promptSlug}' ...`);
-    const promptBienvenida = await prisma.conversationPrompt.create({
+    const promptBienvenida = await prisma.prompt.create({
         data: {
             name: promptSlug,
             description: 'Un prompt simple de bienvenida usando un asset.',
@@ -159,7 +151,7 @@ async function main() {
 
     // 10. Crear Versión 1.0.0 del Prompt Bienvenida
     console.log(`Creating Prompt Version ${promptSlug} v1.0.0...`);
-    const promptBienvenidaV1 = await prisma.conversationPromptVersion.create({
+    const promptBienvenidaV1 = await prisma.promptVersion.create({
         data: {
             promptText: `{{${assetSaludo.key}}}, how can I help you today?`,
             versionTag: 'v1.0.0',
@@ -182,7 +174,7 @@ async function main() {
 
     // 12. Vincular Asset Saludo v1.0.0 al Prompt Bienvenida v1.0.0
     console.log('Linking Asset Version to Prompt Version...');
-    await prisma.conversationPromptAssetLink.create({
+    await prisma.promptAssetLink.create({
         data: {
             position: 1,
             usageContext: 'Inicio del prompt',
@@ -191,14 +183,6 @@ async function main() {
         }
     });
     console.log(`Linked Asset ${assetSaludo.key} v${assetSaludoV1.versionTag} to Prompt ${promptBienvenida.name} v${promptBienvenidaV1.versionTag}`);
-
-    // 13. Marcar v1.0.0 como activa para el Prompt Bienvenida
-    console.log('Setting Active Version for Prompt Bienvenida...');
-    await prisma.conversationPrompt.update({
-        where: { name: promptBienvenida.name },
-        data: { activeVersion: { connect: { id: promptBienvenidaV1.id } } },
-    });
-    console.log(`Set active version for Prompt: ${promptBienvenida.name}`);
 
     console.log(`Seeding finished.`);
 }

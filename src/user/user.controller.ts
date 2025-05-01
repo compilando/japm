@@ -5,7 +5,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { User } from '@prisma/client'; // Importar el tipo User de Prisma
 
-@ApiTags('users') // Tag para agrupar en Swagger
+@ApiTags('Users') // Tag para agrupar en Swagger
 @Controller('users') // Ruta base para este controlador
 export class UserController {
     constructor(private readonly userService: UserService) { }

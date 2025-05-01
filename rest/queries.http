@@ -22,12 +22,12 @@
 
 ### 1. Listar todos los Assets
 # @name listAssetsSeed
-GET {{baseUrl}}/conversation-prompt-assets
+GET {{baseUrl}}/prompt-assets
 
 ### 2. Obtener detalles del Asset "Saludo Inicial" (usando su key slug del seed)
 #    (Muestra v1.0.0 activa, traducción ES, sin historial)
 # @name getAssetSaludoDetailsSeed
-GET {{baseUrl}}/conversation-prompt-assets/{{assetKeySaludoSeed}}
+GET {{baseUrl}}/prompt-assets/{{assetKeySaludoSeed}}
 
 ###
 # -------------------------
@@ -36,12 +36,12 @@ GET {{baseUrl}}/conversation-prompt-assets/{{assetKeySaludoSeed}}
 
 ### 3. Listar todos los Prompts
 # @name listPromptsSeed
-GET {{baseUrl}}/conversation-prompts
+GET {{baseUrl}}/prompts
 
 ### 4. Obtener Detalles del Prompt "Bienvenida Simple" (usando su name slug del seed)
 #    (Muestra v1.0.0 activa, traducción ES, tags, asset Saludo v1.0.0 vinculado)
 # @name getPromptBienvenidaDetailsSeed
-GET {{baseUrl}}/conversation-prompts/{{promptNameBienvenidaSeed}}
+GET {{baseUrl}}/prompts/{{promptNameBienvenidaSeed}}
 
 ###
 # -------------------------

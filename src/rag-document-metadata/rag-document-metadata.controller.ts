@@ -15,7 +15,7 @@ class RagDocumentMetadataResponse extends CreateRagDocumentMetadataDto {
     id: string;
 }
 
-@ApiTags('rag-document-metadata')
+@ApiTags('RAG Document Metadata')
 @Controller('rag-document-metadata')
 export class RagDocumentMetadataController {
     constructor(private readonly service: RagDocumentMetadataService) { }

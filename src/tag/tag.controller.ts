@@ -5,7 +5,7 @@ import { UpdateTagDto } from './dto/update-tag.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { Tag } from '@prisma/client'; // Usar el tipo Prisma directamente para la respuesta
 
-@ApiTags('tag')
+@ApiTags('Tag')
 @Controller('tag')
 export class TagController {
   constructor(private readonly tagService: TagService) { }

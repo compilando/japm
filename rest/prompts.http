@@ -18,7 +18,7 @@
 
 ### 1. Crear Asset "Saludo" (key en formato slug)
 # @name createAssetSaludo
-POST {{baseUrl}}/conversation-prompt-assets
+POST {{baseUrl}}/prompt-assets
 Content-Type: application/json
 
 {
@@ -40,7 +40,7 @@ Content-Type: application/json
 
 ### 2. Crear Nueva Versión (v1.1.0) para Asset "Saludo"
 # @name createAssetSaludoV1_1
-POST {{baseUrl}}/conversation-prompt-assets/{{assetKeySaludo}}/versions # Usar key slug en URL
+POST {{baseUrl}}/prompt-assets/{{assetKeySaludo}}/versions # Usar key slug en URL
 Content-Type: application/json
 
 {
@@ -53,7 +53,7 @@ Content-Type: application/json
 
 ### 3. Añadir/Actualizar Traducción ES para Asset "Saludo" v1.1.0
 # @name updateAssetSaludoV1_1TransES
-PUT {{baseUrl}}/conversation-prompt-assets/{{assetKeySaludo}}/versions/{{assetSaludoV1_1Id}}/translations # Usar key slug en URL
+PUT {{baseUrl}}/prompt-assets/{{assetKeySaludo}}/versions/{{assetSaludoV1_1Id}}/translations # Usar key slug en URL
 Content-Type: application/json
 
 {
@@ -63,7 +63,7 @@ Content-Type: application/json
 
 ### 4. Añadir Traducción FR para Asset "Saludo" v1.1.0
 # @name addAssetSaludoV1_1TransFR
-PUT {{baseUrl}}/conversation-prompt-assets/{{assetKeySaludo}}/versions/{{assetSaludoV1_1Id}}/translations # Usar key slug en URL
+PUT {{baseUrl}}/prompt-assets/{{assetKeySaludo}}/versions/{{assetSaludoV1_1Id}}/translations # Usar key slug en URL
 Content-Type: application/json
 
 {
@@ -73,15 +73,15 @@ Content-Type: application/json
 
 ### 5. Listar todos los Assets
 # @name listAssets1
-GET {{baseUrl}}/conversation-prompt-assets
+GET {{baseUrl}}/prompt-assets
 
 ### 6. Obtener detalles del Asset "Saludo"
 # @name getAssetSaludoDetails
-GET {{baseUrl}}/conversation-prompt-assets/{{assetKeySaludo}} # Usar key slug en URL
+GET {{baseUrl}}/prompt-assets/{{assetKeySaludo}} # Usar key slug en URL
 
 ### 7. Crear Asset "Despedida" (key en formato slug)
 # @name createAssetDespedida
-POST {{baseUrl}}/conversation-prompt-assets
+POST {{baseUrl}}/prompt-assets
 Content-Type: application/json
 
 {
@@ -108,7 +108,7 @@ Content-Type: application/json
 
 ### 8. Crear Prompt "Bienvenida" (name en formato slug y tags en slug)
 # @name createPromptBienvenida
-POST {{baseUrl}}/conversation-prompts
+POST {{baseUrl}}/prompts
 Content-Type: application/json
 
 {
@@ -130,7 +130,7 @@ Content-Type: application/json
 
 ### 9. Crear Nueva Versión (v1.1.0) para Prompt "Bienvenida"
 # @name createPromptBienvenidaV1_1
-POST {{baseUrl}}/conversation-prompts/{{promptNameBienvenida}}/versions # Usar name slug en URL
+POST {{baseUrl}}/prompts/{{promptNameBienvenida}}/versions # Usar name slug en URL
 Content-Type: application/json
 
 {
@@ -159,7 +159,7 @@ Content-Type: application/json
 
 ### 10. Añadir Traducción FR para Prompt "Bienvenida" v1.1.0
 # @name addPromptBienvenidaV1_1TransFR
-PUT {{baseUrl}}/conversation-prompts/{{promptNameBienvenida}}/versions/{{promptBienvenidaV1_1Id}}/translations # Usar name slug en URL
+PUT {{baseUrl}}/prompts/{{promptNameBienvenida}}/versions/{{promptBienvenidaV1_1Id}}/translations # Usar name slug en URL
 Content-Type: application/json
 
 {
@@ -169,15 +169,15 @@ Content-Type: application/json
 
 ### 11. Listar Prompts
 # @name listPrompts1
-GET {{baseUrl}}/conversation-prompts
+GET {{baseUrl}}/prompts
 
 ### 12. Obtener Detalles Prompt Bienvenida
 # @name getPromptBienvenidaDetails1
-GET {{baseUrl}}/conversation-prompts/{{promptNameBienvenida}} # Usar name slug en URL
+GET {{baseUrl}}/prompts/{{promptNameBienvenida}} # Usar name slug en URL
 
 ### 12b. Actualizar Prompt Bienvenida (tags en formato slug)
 # @name updatePromptBienvenidaTags
-PUT {{baseUrl}}/conversation-prompts/{{promptNameBienvenida}} # Usar name slug en URL
+PUT {{baseUrl}}/prompts/{{promptNameBienvenida}} # Usar name slug en URL
 Content-Type: application/json
 
 {
@@ -187,11 +187,11 @@ Content-Type: application/json
 
 ### 12c. Obtener Detalles Prompt Bienvenida (Verificar tags actualizados)
 # @name getPromptBienvenidaDetailsUpdatedTags
-GET {{baseUrl}}/conversation-prompts/{{promptNameBienvenida}} # Usar name slug en URL
+GET {{baseUrl}}/prompts/{{promptNameBienvenida}} # Usar name slug en URL
 
 ### 12d. Actualizar Prompt Bienvenida (Eliminar todos los tags)
 # @name updatePromptBienvenidaRemoveTags
-PUT {{baseUrl}}/conversation-prompts/{{promptNameBienvenida}} # Usar name slug en URL
+PUT {{baseUrl}}/prompts/{{promptNameBienvenida}} # Usar name slug en URL
 Content-Type: application/json
 
 {
@@ -200,23 +200,23 @@ Content-Type: application/json
 
 ### 12e. Obtener Detalles Prompt Bienvenida (Verificar tags eliminados)
 # @name getPromptBienvenidaDetailsNoTags
-GET {{baseUrl}}/conversation-prompts/{{promptNameBienvenida}} # Usar name slug en URL
+GET {{baseUrl}}/prompts/{{promptNameBienvenida}} # Usar name slug en URL
 
 ### 13. Activar Versión v1.1.0 del Prompt Bienvenida
 # @name activatePromptBienvenidaV1_1
-PATCH {{baseUrl}}/conversation-prompts/{{promptNameBienvenida}}/versions/{{promptBienvenidaV1_1Id}}/activate # Usar name slug en URL
+PATCH {{baseUrl}}/prompts/{{promptNameBienvenida}}/versions/{{promptBienvenidaV1_1Id}}/activate # Usar name slug en URL
 
 ### 14. Obtener Detalles Prompt Bienvenida (v1.1.0 activa)
 # @name getPromptBienvenidaDetails2
-GET {{baseUrl}}/conversation-prompts/{{promptNameBienvenida}} # Usar name slug en URL
+GET {{baseUrl}}/prompts/{{promptNameBienvenida}} # Usar name slug en URL
 
 ### 15. Desactivar Versión Activa del Prompt Bienvenida
 # @name deactivatePromptBienvenida
-PATCH {{baseUrl}}/conversation-prompts/{{promptNameBienvenida}}/deactivate # Usar name slug en URL
+PATCH {{baseUrl}}/prompts/{{promptNameBienvenida}}/deactivate # Usar name slug en URL
 
 ### 16. Obtener Detalles Prompt Bienvenida (Sin versión activa)
 # @name getPromptBienvenidaDetails3
-GET {{baseUrl}}/conversation-prompts/{{promptNameBienvenida}} # Usar name slug en URL
+GET {{baseUrl}}/prompts/{{promptNameBienvenida}} # Usar name slug en URL
 
 ###
 # -------------------------
@@ -224,7 +224,7 @@ GET {{baseUrl}}/conversation-prompts/{{promptNameBienvenida}} # Usar name slug e
 # -------------------------
 
 ### 17. Servir Prompt Bienvenida v1.0.0
-# PATCH {{baseUrl}}/conversation-prompts/{{promptNameBienvenida}}/versions/{{promptBienvenidaV1Id}}/activate
+# PATCH {{baseUrl}}/prompts/{{promptNameBienvenida}}/versions/{{promptBienvenidaV1Id}}/activate
 
 # 17a. Servir v1.0.0 en ES
 # @name servePromptV1_ES
@@ -236,7 +236,7 @@ GET {{baseUrl}}/serve-prompt?promptId={{promptNameBienvenida}} # Usar name slug
 
 ### 18. Servir Prompt Bienvenida v1.1.0 (Actívala primero)
 # @name activatePromptBienvenidaV1_1_again
-PATCH {{baseUrl}}/conversation-prompts/{{promptNameBienvenida}}/versions/{{promptBienvenidaV1_1Id}}/activate # Usar name slug
+PATCH {{baseUrl}}/prompts/{{promptNameBienvenida}}/versions/{{promptBienvenidaV1_1Id}}/activate # Usar name slug
 
 # 18a. Servir v1.1.0 en ES
 # @name servePromptV1_1_ES
@@ -261,14 +261,14 @@ GET {{baseUrl}}/serve-prompt?promptId={{promptNameBienvenida}}&versionTag=v1.0.0
 
 ### 19. Eliminar Prompt Bienvenida
 # @name deletePromptBienvenida
-DELETE {{baseUrl}}/conversation-prompts/{{promptNameBienvenida}} # Usar name slug
+DELETE {{baseUrl}}/prompts/{{promptNameBienvenida}} # Usar name slug
 
 ### 20. Eliminar Asset Saludo
 # @name deleteAssetSaludo
-DELETE {{baseUrl}}/conversation-prompt-assets/{{assetKeySaludo}} # Usar key slug
+DELETE {{baseUrl}}/prompt-assets/{{assetKeySaludo}} # Usar key slug
 
 ### 21. Eliminar Asset Despedida
 # @name deleteAssetDespedida
-DELETE {{baseUrl}}/conversation-prompt-assets/{{assetKeyDespedida}} # Usar key slug
+DELETE {{baseUrl}}/prompt-assets/{{assetKeyDespedida}} # Usar key slug
 
 # ... (Podrías añadir DELETE para la Táctica y los Tags si tienes endpoints para ellos) 

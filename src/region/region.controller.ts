@@ -5,7 +5,7 @@ import { UpdateRegionDto } from './dto/update-region.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { Region } from '@prisma/client';
 
-@ApiTags('regions')
+@ApiTags('Regions')
 @Controller('regions') // Ruta base /regions
 export class RegionController {
     constructor(private readonly regionService: RegionService) { }

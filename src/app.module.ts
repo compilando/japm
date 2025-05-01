@@ -4,10 +4,10 @@ import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
 import { RegionModule } from './region/region.module';
 import { CulturalDataModule } from './cultural-data/cultural-data.module';
-import { ConversationTacticModule } from './conversation-tactic/conversation-tactic.module';
-import { ConversationPromptModule } from './conversation-prompt/conversation-prompt.module';
-import { ConversationPromptAssetModule } from './conversation-prompt-asset/conversation-prompt-asset.module';
-import { ConversationPromptAssetLinkModule } from './conversation-prompt-asset-link/conversation-prompt-asset-link.module';
+import { TacticModule } from './tactic/tactic.module';
+import { PromptModule } from './prompt/prompt.module';
+import { PromptAssetModule } from './prompt-asset/prompt-asset.module';
+import { PromptAssetLinkModule } from './prompt-asset-link/prompt-asset-link.module';
 import { RagDocumentMetadataModule } from './rag-document-metadata/rag-document-metadata.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
@@ -16,20 +16,21 @@ import { ProjectModule } from './project/project.module';
 import { AiModelModule } from './ai-model/ai-model.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { TagModule } from './tag/tag.module';
-import { ConversationPromptVersionModule } from './conversation-prompt-version/conversation-prompt-version.module';
+import { PromptVersionModule } from './prompt-version/prompt-version.module';
 import { PromptTranslationModule } from './prompt-translation/prompt-translation.module';
-import { ConversationPromptAssetVersionModule } from './conversation-prompt-asset-version/conversation-prompt-asset-version.module';
+import { PromptAssetVersionModule } from './prompt-asset-version/prompt-asset-version.module';
 import { AssetTranslationModule } from './asset-translation/asset-translation.module';
+import { ExecutionLogModule } from './execution-log/execution-log.module';
 
 @Module({
   imports: [
     UserModule,
     RegionModule,
     CulturalDataModule,
-    ConversationTacticModule,
-    ConversationPromptModule,
-    ConversationPromptAssetModule,
-    ConversationPromptAssetLinkModule,
+    TacticModule,
+    PromptModule,
+    PromptAssetModule,
+    PromptAssetLinkModule,
     RagDocumentMetadataModule,
     PrismaModule,
     HealthModule,
@@ -37,10 +38,11 @@ import { AssetTranslationModule } from './asset-translation/asset-translation.mo
     ProjectModule,
     AiModelModule,
     TagModule,
-    ConversationPromptVersionModule,
+    PromptVersionModule,
     PromptTranslationModule,
-    ConversationPromptAssetVersionModule,
+    PromptAssetVersionModule,
     AssetTranslationModule,
+    ExecutionLogModule,
   ],
   controllers: [AppController],
   providers: [AppService],

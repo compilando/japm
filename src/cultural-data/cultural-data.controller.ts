@@ -12,7 +12,7 @@ class CulturalDataResponse extends CreateCulturalDataDto {
     region: Region; // Usar el tipo Prisma Region
 }
 
-@ApiTags('cultural-data')
+@ApiTags('Cultural Data')
 @Controller('cultural-data') // Ruta base /cultural-data
 export class CulturalDataController {
     constructor(private readonly culturalDataService: CulturalDataService) { }

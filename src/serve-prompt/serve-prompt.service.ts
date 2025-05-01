@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ServePromptQueryDto } from './dto/serve-prompt-query.dto';
-import { Prisma, ConversationPrompt, ConversationPromptVersion, ConversationPromptAssetVersion, PromptTranslation, AssetTranslation } from '@prisma/client';
+import { Prisma, Prompt, PromptVersion, PromptAssetVersion, PromptTranslation, AssetTranslation } from '@prisma/client';
+// import { TemplateService } from '../template/template.service'; // Comentado temporalmente
 
-// Tipo extendido para incluir datos de versión, traducción y assets
-// Ya no es estrictamente necesario para el valor de retorno de serve(), pero se mantiene por si se usa internamente
-type PromptVersionWithDetails = Prisma.ConversationPromptVersionGetPayload<{
+// Tipo helper para obtener el payload con relaciones profundas
+type PromptVersionWithDetails = Prisma.PromptVersionGetPayload<{
     include: {
         prompt: true;
         translations: true;
@@ -24,147 +24,133 @@ type PromptVersionWithDetails = Prisma.ConversationPromptVersionGetPayload<{
 
 @Injectable()
 export class ServePromptService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        // private templateService: TemplateService // Comentado temporalmente
+    ) { }
 
-    // Modificar el tipo de retorno a Promise<string>
-    async serve(query: ServePromptQueryDto): Promise<string> {
-        let targetPrompt: ConversationPrompt | null = null;
+    async servePrompt(
+        promptName: string,
+        languageCode: string,
+        versionTag?: string,
+        context?: Record<string, any>
+    ): Promise<{ processedPrompt: string; metadata: any }> {
+        let targetPrompt: Prompt | null = null;
 
-        // 1. Encontrar el ConversationPrompt lógico
-        if (query.promptId) {
-            targetPrompt = await this.prisma.conversationPrompt.findUnique({
-                where: { name: query.promptId },
-            });
-            if (!targetPrompt) {
-                throw new NotFoundException(`Prompt with NAME ${query.promptId} not found.`);
-            }
-        } else if (query.tacticId) {
-            // Buscar el primer prompt que use esta táctica (podría haber varios, ¿necesitamos más filtros?)
-            // Podríamos añadir más lógica aquí si múltiples prompts pueden compartir táctica
-            targetPrompt = await this.prisma.conversationPrompt.findFirst({
-                where: { tacticId: query.tacticId },
-                // Podríamos ordenar por nombre o fecha de creación si hay varios
-            });
-            if (!targetPrompt) {
-                throw new NotFoundException(`No prompt found for tactic NAME ${query.tacticId}.`);
-            }
-        } else {
-            throw new BadRequestException('Must provide either promptId or tacticId.');
+        // 1. Encontrar el Prompt lógico
+        targetPrompt = await this.prisma.prompt.findUnique({
+            where: { name: promptName },
+        });
+
+        if (!targetPrompt) {
+            throw new NotFoundException(`Prompt with name "${promptName}" not found.`);
         }
 
-        // 2. Determinar la ConversationPromptVersion a usar
-        let targetVersionId: string | undefined = undefined;
+        // 2. Determinar la PromptVersion a usar
+        let versionToUse: PromptVersionWithDetails | null = null;
 
-        if (query.useLatestActive !== false) {
-            // Buscar la versión activa
-            const promptWithActiveVersion = await this.prisma.conversationPrompt.findUnique({
-                where: { name: targetPrompt.name },
-                select: { activeVersionId: true }
-            });
-            if (!promptWithActiveVersion?.activeVersionId) {
-                throw new NotFoundException(`Prompt ${targetPrompt.name} does not have an active version set.`);
-            }
-            targetVersionId = promptWithActiveVersion.activeVersionId;
-
-            // Si se especificó un versionTag *y* useLatestActive es true (comportamiento por defecto),
-            // podríamos considerar si lanzar un warning o priorizar la activa.
-            // Por ahora, priorizamos la activa.
-            if (query.versionTag) {
-                console.warn(`(Serve) Ignoring versionTag '${query.versionTag}' because useLatestActive is true/default. Using active version.`);
-            }
-
-        } else {
-            // useLatestActive es explícitamente false, buscar por versionTag
-            if (!query.versionTag) {
-                throw new BadRequestException('Must provide versionTag when useLatestActive is false.');
-            }
-            const specificVersion = await this.prisma.conversationPromptVersion.findUnique({
-                where: {
-                    promptId_versionTag: { // Usar índice único
-                        promptId: targetPrompt.name,
-                        versionTag: query.versionTag,
-                    }
-                },
-                select: { id: true }
-            });
-            if (!specificVersion) {
-                throw new NotFoundException(`Version with tag '${query.versionTag}' not found for prompt ${targetPrompt.name}.`);
-            }
-            targetVersionId = specificVersion.id;
-        }
-
-        // 3. Obtener los detalles completos de la versión seleccionada (incluyendo assets y traducciones)
-        const promptVersionData = await this.prisma.conversationPromptVersion.findUnique({
-            where: { id: targetVersionId },
-            include: {
-                prompt: true, // Incluir el prompt padre
-                translations: true, // Incluir traducciones disponibles de esta versión
-                assets: { // Incluir links ordenados por posición (si existe)
-                    orderBy: { position: 'asc' },
-                    include: {
-                        assetVersion: { // Incluir la versión del asset
-                            include: {
-                                asset: true, // Incluir el asset padre (para la 'key')
-                                translations: true, // Incluir traducciones disponibles de esta versión del asset
-                            }
+        if (versionTag) {
+            // Si se especifica una versión, buscarla directamente
+            versionToUse = await this.prisma.promptVersion.findUnique({
+                where: { promptId_versionTag: { promptId: promptName, versionTag } },
+                include: {
+                    prompt: true,
+                    translations: true,
+                    assets: {
+                        include: {
+                            assetVersion: { include: { asset: true, translations: true } }
                         }
                     }
                 }
+            });
+            if (!versionToUse) {
+                throw new NotFoundException(`Version "${versionTag}" for prompt "${promptName}" not found.`);
             }
-        });
-
-        if (!promptVersionData) {
-            // Esto no debería ocurrir si los pasos anteriores funcionaron, pero por seguridad:
-            throw new NotFoundException(`Prompt version details could not be loaded for version ID ${targetVersionId}.`);
-        }
-
-        // 4. Determinar el texto base del prompt (traducido o por defecto)
-        let promptTextToUse: string = promptVersionData.promptText; // Texto base por defecto
-        if (query.languageCode) {
-            const translation = promptVersionData.translations.find(t => t.languageCode === query.languageCode);
-            if (translation) {
-                promptTextToUse = translation.promptText;
-            } else {
-                // Opcional: podríamos buscar en una región "padre" o usar un idioma por defecto si la traducción exacta no existe.
-                console.warn(`(Serve) Prompt translation for language '${query.languageCode}' not found for version ${promptVersionData.versionTag}. Falling back to base text.`);
-                // Se usará promptVersionData.promptText
-            }
-        }
-
-        // 5. Preparar mapa de assets (clave -> valor a usar)
-        const assetsValueMap = new Map<string, string>();
-        promptVersionData.assets.forEach(link => {
-            const assetVersion = link.assetVersion;
-            if (assetVersion?.asset?.key) { // Verificar que tenemos la versión del asset y su clave
-                let assetValueToUse = assetVersion.value; // Valor base por defecto
-                if (query.languageCode) {
-                    const assetTranslation = assetVersion.translations.find(t => t.languageCode === query.languageCode);
-                    if (assetTranslation) {
-                        assetValueToUse = assetTranslation.value;
-                    } else {
-                        console.warn(`(Serve) Asset '${assetVersion.asset.key}' translation for language '${query.languageCode}' not found for version ${assetVersion.versionTag}. Falling back to base value.`);
-                        // Se usará assetVersion.value
+        } else if (targetPrompt.activeVersionId) {
+            // Si no se especifica versión, usar la activa
+            versionToUse = await this.prisma.promptVersion.findUnique({
+                where: { id: targetPrompt.activeVersionId },
+                include: {
+                    prompt: true,
+                    translations: true,
+                    assets: {
+                        include: {
+                            assetVersion: { include: { asset: true, translations: true } }
+                        }
                     }
                 }
-                assetsValueMap.set(assetVersion.asset.key, assetValueToUse);
-            } else {
-                console.warn(`(Serve) Asset link for prompt version ${promptVersionData.id} links to an incomplete asset version or asset.`);
+            });
+            if (!versionToUse) {
+                // Esto sería un estado inconsistente (activeVersionId apunta a algo inexistente)
+                throw new Error(`Active version ID "${targetPrompt.activeVersionId}" for prompt "${promptName}" is invalid.`);
             }
-        });
+        } else {
+            // Si no hay versión activa, no podemos servir el prompt
+            throw new NotFoundException(`Prompt "${promptName}" does not have an active version and no specific version was requested.`);
+        }
 
-        // 6. Ensamblar el prompt final reemplazando placeholders {{key}}
-        let assembledText = promptTextToUse.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
-            const trimmedKey = key.trim();
-            const assetValue = assetsValueMap.get(trimmedKey);
-            if (assetValue !== undefined) { // Usar !== undefined por si el valor es una cadena vacía
-                return assetValue;
+        // 3. Obtener el texto base del prompt (traducido si es posible)
+        let basePromptText = versionToUse.promptText;
+
+        const promptTranslation = versionToUse.translations.find(t => t.languageCode === languageCode);
+        if (promptTranslation) {
+            basePromptText = promptTranslation.promptText;
+        }
+        // TODO: Añadir lógica de fallback de idioma si no se encuentra el específico?
+
+        // 4. Preparar el contexto de los assets para el motor de plantillas
+        const assetContext: Record<string, string> = {};
+        for (const link of versionToUse.assets) {
+            const assetVersion = link.assetVersion;
+            const assetKey = assetVersion.asset.key;
+
+            let assetValue = assetVersion.value;
+            const assetTranslation = assetVersion.translations.find(t => t.languageCode === languageCode);
+            if (assetTranslation) {
+                assetValue = assetTranslation.value;
             }
-            console.warn(`(Serve) Placeholder {{${trimmedKey}}} not found in linked assets for prompt version ${promptVersionData.versionTag}. Leaving placeholder.`);
-            return match; // Dejar placeholder si no se encuentra el asset
-        });
+            // TODO: Añadir lógica de fallback de idioma para assets?
 
-        // 7. Devolver resultado: solo la cadena ensamblada
-        return assembledText;
+            assetContext[assetKey] = assetValue;
+        }
+
+        // 5. Combinar contexto de assets y contexto de usuario
+        const finalContext = { ...assetContext, ...context };
+
+        // 6. Procesar el texto del prompt con el contexto
+        let processedPrompt: string;
+        try {
+            // Reemplazo simple por ahora, hasta confirmar TemplateService
+            processedPrompt = basePromptText.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+                const trimmedKey = key.trim();
+                // Usar finalContext en lugar de llamar a templateService.render
+                return finalContext.hasOwnProperty(trimmedKey) ? finalContext[trimmedKey] : match;
+            });
+            // processedPrompt = this.templateService.render(basePromptText, finalContext); // Comentado temporalmente
+        } catch (error) {
+            console.error("Error rendering prompt template:", error);
+            throw new BadRequestException(`Failed to render prompt template: ${error.message}`);
+        }
+
+        // 7. Preparar metadatos para la respuesta (opcional)
+        const metadata = {
+            promptName: targetPrompt.name,
+            promptVersionId: versionToUse.id,
+            promptVersionTag: versionToUse.versionTag,
+            languageUsed: promptTranslation ? languageCode : 'default', // Indicar si se usó traducción
+            assetsUsed: versionToUse.assets.map(link => {
+                // Definir assetTranslation aquí para que esté en el scope correcto
+                const assetTranslation = link.assetVersion.translations.find(t => t.languageCode === languageCode);
+                return {
+                    key: link.assetVersion.asset.key,
+                    versionId: link.assetVersion.id,
+                    versionTag: link.assetVersion.versionTag,
+                    languageUsed: assetTranslation ? languageCode : 'default' // Indicar si se usó traducción del asset
+                };
+            })
+        };
+
+        return { processedPrompt, metadata };
     }
 }
 
