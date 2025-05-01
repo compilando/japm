@@ -1993,7 +1993,7 @@
         ]
       }
     },
-    "/tag": {
+    "/tags": {
       "post": {
         "operationId": "TagController_create",
         "parameters": [],
@@ -2009,7 +2009,7 @@
         },
         "responses": {
           "201": {
-            "description": "Tag creado.",
+            "description": "Etiqueta creada.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2022,12 +2022,12 @@
             "description": "Datos inválidos."
           },
           "409": {
-            "description": "Conflicto, el tag ya existe (por nombre)."
+            "description": "Conflicto, ya existe una etiqueta con ese nombre."
           }
         },
-        "summary": "Crear un nuevo tag",
+        "summary": "Crea una nueva etiqueta",
         "tags": [
-          "Tag"
+          "Tags"
         ]
       },
       "get": {
@@ -2035,7 +2035,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Lista de tags.",
+            "description": "Lista de etiquetas.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2048,13 +2048,13 @@
             }
           }
         },
-        "summary": "Obtener todos los tags",
+        "summary": "Obtiene todas las etiquetas",
         "tags": [
-          "Tag"
+          "Tags"
         ]
       }
     },
-    "/tag/{id}": {
+    "/tags/{id}": {
       "get": {
         "operationId": "TagController_findOne",
         "parameters": [
@@ -2062,7 +2062,7 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "ID del tag",
+            "description": "ID único de la etiqueta (CUID)",
             "schema": {
               "type": "string"
             }
@@ -2070,7 +2070,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Tag encontrado.",
+            "description": "Etiqueta encontrada.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2080,12 +2080,12 @@
             }
           },
           "404": {
-            "description": "Tag no encontrado."
+            "description": "Etiqueta no encontrada."
           }
         },
-        "summary": "Obtener un tag por su ID (CUID)",
+        "summary": "Obtiene una etiqueta por su ID",
         "tags": [
-          "Tag"
+          "Tags"
         ]
       },
       "patch": {
@@ -2095,7 +2095,7 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "ID del tag a actualizar",
+            "description": "ID único de la etiqueta a actualizar (CUID)",
             "schema": {
               "type": "string"
             }
@@ -2113,7 +2113,7 @@
         },
         "responses": {
           "200": {
-            "description": "Tag actualizado.",
+            "description": "Etiqueta actualizada.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2126,15 +2126,15 @@
             "description": "Datos inválidos."
           },
           "404": {
-            "description": "Tag no encontrado."
+            "description": "Etiqueta no encontrada."
           },
           "409": {
-            "description": "Conflicto, el nombre del tag ya existe."
+            "description": "Conflicto, ya existe una etiqueta con el nuevo nombre."
           }
         },
-        "summary": "Actualizar un tag por su ID",
+        "summary": "Actualiza una etiqueta existente",
         "tags": [
-          "Tag"
+          "Tags"
         ]
       },
       "delete": {
@@ -2144,7 +2144,7 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "ID del tag a eliminar",
+            "description": "ID único de la etiqueta a eliminar (CUID)",
             "schema": {
               "type": "string"
             }
@@ -2152,15 +2152,60 @@
         ],
         "responses": {
           "200": {
-            "description": "Tag eliminado."
+            "description": "Etiqueta eliminada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateTagDto"
+                }
+              }
+            }
           },
           "404": {
-            "description": "Tag no encontrado."
+            "description": "Etiqueta no encontrada."
+          },
+          "409": {
+            "description": "Conflicto, la etiqueta está en uso por prompts."
           }
         },
-        "summary": "Eliminar un tag por su ID",
+        "summary": "Elimina una etiqueta",
         "tags": [
-          "Tag"
+          "Tags"
+        ]
+      }
+    },
+    "/tags/by-name/{name}": {
+      "get": {
+        "operationId": "TagController_findByName",
+        "parameters": [
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "description": "Nombre único de la etiqueta",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Etiqueta encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateTagDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Etiqueta no encontrada."
+          }
+        },
+        "summary": "Obtiene una etiqueta por su nombre",
+        "tags": [
+          "Tags"
         ]
       }
     },
@@ -2974,6 +3019,219 @@
         "summary": "Obtener una traducción de asset específica por versión y código de idioma",
         "tags": [
           "Asset Translation"
+        ]
+      }
+    },
+    "/environments": {
+      "post": {
+        "operationId": "EnvironmentController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEnvironmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Entorno creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateEnvironmentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos."
+          },
+          "409": {
+            "description": "Conflicto, ya existe un entorno con ese nombre."
+          }
+        },
+        "summary": "Crea un nuevo entorno",
+        "tags": [
+          "Environments"
+        ]
+      },
+      "get": {
+        "operationId": "EnvironmentController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Lista de entornos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CreateEnvironmentDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Obtiene todos los entornos",
+        "tags": [
+          "Environments"
+        ]
+      }
+    },
+    "/environments/{id}": {
+      "get": {
+        "operationId": "EnvironmentController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "ID único del entorno (CUID)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Entorno encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateEnvironmentDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entorno no encontrado."
+          }
+        },
+        "summary": "Obtiene un entorno por su ID",
+        "tags": [
+          "Environments"
+        ]
+      },
+      "patch": {
+        "operationId": "EnvironmentController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "ID único del entorno a actualizar (CUID)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEnvironmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Entorno actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateEnvironmentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos."
+          },
+          "404": {
+            "description": "Entorno no encontrado."
+          },
+          "409": {
+            "description": "Conflicto, ya existe un entorno con el nuevo nombre."
+          }
+        },
+        "summary": "Actualiza un entorno existente",
+        "tags": [
+          "Environments"
+        ]
+      },
+      "delete": {
+        "operationId": "EnvironmentController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "ID único del entorno a eliminar (CUID)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Entorno eliminado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateEnvironmentDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entorno no encontrado."
+          }
+        },
+        "summary": "Elimina un entorno",
+        "tags": [
+          "Environments"
+        ]
+      }
+    },
+    "/environments/by-name/{name}": {
+      "get": {
+        "operationId": "EnvironmentController_findByName",
+        "parameters": [
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "description": "Nombre único del entorno",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Entorno encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateEnvironmentDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entorno no encontrado."
+          }
+        },
+        "summary": "Obtiene un entorno por su nombre",
+        "tags": [
+          "Environments"
         ]
       }
     }
@@ -3846,13 +4104,14 @@
         "properties": {
           "name": {
             "type": "string",
-            "pattern": "/^[a-z0-9]+(?:-[a-z0-9]+)*$/",
-            "description": "Nombre único del tag (formato slug)",
-            "example": "bienvenida"
+            "maxLength": 255,
+            "description": "Nombre único de la etiqueta",
+            "example": "customer-feedback"
           },
           "description": {
             "type": "string",
-            "description": "Descripción opcional del tag"
+            "description": "Descripción opcional de la etiqueta",
+            "example": "Etiquetas relacionadas con comentarios de clientes."
           }
         },
         "required": [
@@ -3864,13 +4123,14 @@
         "properties": {
           "name": {
             "type": "string",
-            "pattern": "/^[a-z0-9]+(?:-[a-z0-9]+)*$/",
-            "description": "Nombre único del tag (formato slug)",
-            "example": "bienvenida"
+            "maxLength": 255,
+            "description": "Nuevo nombre único de la etiqueta (opcional)",
+            "example": "user-feedback"
           },
           "description": {
             "type": "string",
-            "description": "Descripción opcional del tag"
+            "description": "Nueva descripción opcional de la etiqueta",
+            "example": "Comentarios generales de los usuarios."
           }
         }
       },
@@ -3999,6 +4259,41 @@
           "value": {
             "type": "string",
             "description": "Valor del asset traducido a este idioma"
+          }
+        }
+      },
+      "CreateEnvironmentDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Nombre único del entorno",
+            "example": "produccion"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción opcional del entorno",
+            "example": "Entorno de producción principal"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateEnvironmentDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Nuevo nombre único del entorno (opcional)",
+            "example": "staging"
+          },
+          "description": {
+            "type": "string",
+            "description": "Nueva descripción opcional del entorno",
+            "example": "Entorno de pruebas pre-producción"
           }
         }
       }

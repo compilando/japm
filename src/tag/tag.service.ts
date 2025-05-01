@@ -8,49 +8,60 @@ import { Prisma, Tag } from '@prisma/client';
 export class TagService {
   constructor(private prisma: PrismaService) { }
 
-  async create(createTagDto: CreateTagDto): Promise<Tag> {
+  async create(createDto: CreateTagDto): Promise<Tag> {
     try {
       return await this.prisma.tag.create({
-        data: createTagDto,
+        data: createDto,
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        // P2002 puede ser por 'id' (si no usara default) o por 'name' (@unique)
-        throw new ConflictException(`Tag with name "${createTagDto.name}" already exists.`);
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        // P2002: Unique constraint failed (name)
+        if (error.code === 'P2002') {
+          throw new ConflictException(`Ya existe una etiqueta con el nombre '${createDto.name}'`);
+        }
       }
       throw error;
     }
   }
 
-  findAll(): Promise<Tag[]> {
-    // Excluir prompts por defecto para no cargar demasiados datos
-    return this.prisma.tag.findMany({ include: { prompts: false } });
+  async findAll(): Promise<Tag[]> {
+    return this.prisma.tag.findMany();
   }
 
   async findOne(id: string): Promise<Tag> {
     const tag = await this.prisma.tag.findUnique({
       where: { id },
-      include: { prompts: true }, // Incluir prompts al buscar uno específico
     });
     if (!tag) {
-      throw new NotFoundException(`Tag with ID "${id}" not found`);
+      throw new NotFoundException(`Etiqueta con ID '${id}' no encontrada.`);
     }
     return tag;
   }
 
-  async update(id: string, updateTagDto: UpdateTagDto): Promise<Tag> {
+  async findByName(name: string): Promise<Tag> {
+    const tag = await this.prisma.tag.findUnique({
+      where: { name },
+    });
+    if (!tag) {
+      throw new NotFoundException(`Etiqueta con nombre '${name}' no encontrada.`);
+    }
+    return tag;
+  }
+
+  async update(id: string, updateDto: UpdateTagDto): Promise<Tag> {
+    // Primero, verifica que la etiqueta exista
+    await this.findOne(id);
+
     try {
       return await this.prisma.tag.update({
         where: { id },
-        data: updateTagDto,
+        data: updateDto,
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') { // Unicidad de 'name'
-          throw new ConflictException(`Tag with name "${updateTagDto.name}" already exists.`);
-        }
-        if (error.code === 'P2025') { // Registro no encontrado para actualizar
-          throw new NotFoundException(`Tag with ID "${id}" not found for update.`);
+        // P2002: Unique constraint failed (si se cambia el nombre a uno existente)
+        if (error.code === 'P2002') {
+          throw new ConflictException(`Ya existe una etiqueta con el nombre '${updateDto.name}'`);
         }
       }
       throw error;
@@ -58,17 +69,22 @@ export class TagService {
   }
 
   async remove(id: string): Promise<Tag> {
+    // Primero, verifica que la etiqueta exista
+    const tag = await this.findOne(id); // Reutilizamos para devolver el tag eliminado
+
+    // Considerar la relación con Prompts: ¿Qué pasa si un tag está en uso?
+    // Por defecto, Prisma no permitirá borrar si hay Prompts asociados.
+    // Podrías añadir lógica aquí para desasociar los prompts o lanzar un error más específico.
     try {
-      // Nota: La relación con Prompts es muchos-a-muchos.
-      // Eliminar un Tag no requiere desconectar manualmente los Prompts.
-      // Prisma maneja la tabla de unión implícita.
       return await this.prisma.tag.delete({
         where: { id },
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new NotFoundException(`Tag with ID "${id}" not found`);
+      // Podríamos manejar el error de restricción de clave foránea (P2003) aquí
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new ConflictException(`No se puede eliminar la etiqueta '${tag.name}' porque está asociada a uno o más prompts.`);
       }
+      // P2025: Record to delete not found (ya cubierto por findOne)
       throw error;
     }
   }

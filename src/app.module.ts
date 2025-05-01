@@ -21,6 +21,7 @@ import { PromptTranslationModule } from './prompt-translation/prompt-translation
 import { PromptAssetVersionModule } from './prompt-asset-version/prompt-asset-version.module';
 import { AssetTranslationModule } from './asset-translation/asset-translation.module';
 import { ExecutionLogModule } from './execution-log/execution-log.module';
+import { EnvironmentModule } from './environment/environment.module';
 
 @Module({
   imports: [
@@ -43,6 +44,8 @@ import { ExecutionLogModule } from './execution-log/execution-log.module';
     PromptAssetVersionModule,
     AssetTranslationModule,
     ExecutionLogModule,
+    EnvironmentModule,
+    TagModule,
   ],
   controllers: [AppController],
   providers: [AppService],

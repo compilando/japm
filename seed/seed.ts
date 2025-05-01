@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
+const SALT_ROUNDS = 10;
 
 // Helper para convertir a slug (simplificado, puedes usar una librería si necesitas más robustez)
 const toSlug = (str: string) => {
@@ -28,8 +30,101 @@ async function main() {
     await prisma.tactic.deleteMany({});
     await prisma.culturalData.deleteMany({});
     await prisma.region.deleteMany({});
-    await prisma.tag.deleteMany({}); // Añadir limpieza de Tags
+    await prisma.tag.deleteMany({});
+    await prisma.project.deleteMany({});
+    await prisma.environment.deleteMany({});
+    await prisma.aIModel.deleteMany({});
+    await prisma.user.deleteMany({});
     console.log('Existing data deleted.');
+
+    // --- NUEVOS DATOS ---
+
+    // 1. Crear Usuario de prueba
+    console.log('Creating test user...');
+    const hashedPassword = await bcrypt.hash('password123', SALT_ROUNDS);
+    const testUser = await prisma.user.upsert({
+        where: { email: 'test@example.com' },
+        update: {},
+        create: {
+            email: 'test@example.com',
+            name: 'Test User',
+            password: hashedPassword,
+        },
+    });
+    console.log(`Created/Found user: ${testUser.email}`);
+
+    // 2. Crear AI Models
+    console.log('Creating AI Models...');
+    const aiModelsData = [
+        { name: 'gpt-4-turbo-2024-04-09', provider: 'OpenAI', apiIdentifier: 'gpt-4-turbo-2024-04-09', description: 'Latest GPT-4 Turbo model', contextWindow: 128000, supportsJson: true, maxTokens: 4096 },
+        { name: 'gpt-4o-2024-05-13', provider: 'OpenAI', apiIdentifier: 'gpt-4o-2024-05-13', description: 'Latest omni model from OpenAI', contextWindow: 128000, supportsJson: true, maxTokens: 4096 },
+        { name: 'claude-3-opus-20240229', provider: 'Anthropic', apiIdentifier: 'claude-3-opus-20240229', description: 'Most powerful Claude 3 model', contextWindow: 200000, supportsJson: true, maxTokens: 4096 },
+        { name: 'claude-3-sonnet-20240229', provider: 'Anthropic', apiIdentifier: 'claude-3-sonnet-20240229', description: 'Balanced Claude 3 model', contextWindow: 200000, supportsJson: true, maxTokens: 4096 },
+        { name: 'claude-3-haiku-20240307', provider: 'Anthropic', apiIdentifier: 'claude-3-haiku-20240307', description: 'Fastest Claude 3 model', contextWindow: 200000, supportsJson: true, maxTokens: 4096 },
+        { name: 'gemini-1.5-pro-latest', provider: 'Google', apiIdentifier: 'gemini-1.5-pro-latest', description: 'Latest Gemini Pro model', contextWindow: 1000000, supportsJson: true, maxTokens: 8192 },
+        { name: 'gemini-1.0-pro', provider: 'Google', apiIdentifier: 'gemini-1.0-pro', description: 'Standard Gemini Pro model', contextWindow: 32000, supportsJson: true, maxTokens: 2048 },
+    ];
+    for (const modelData of aiModelsData) {
+        const model = await prisma.aIModel.upsert({
+            where: { name: modelData.name },
+            update: { ...modelData },
+            create: modelData,
+        });
+        console.log(`Created/Updated AI Model: ${model.name}`);
+    }
+
+    // 3. Crear Environments
+    console.log('Creating Environments...');
+    const environmentsData = [
+        { name: 'development', description: 'Development environment for testing and debugging.' },
+        { name: 'staging', description: 'Staging environment for pre-production testing.' },
+        { name: 'production', description: 'Live production environment.' },
+        { name: 'testing', description: 'Automated testing environment.' },
+    ];
+    for (const envData of environmentsData) {
+        const env = await prisma.environment.upsert({
+            where: { name: envData.name },
+            update: { description: envData.description },
+            create: envData,
+        });
+        console.log(`Created/Updated Environment: ${env.name}`);
+    }
+
+    // 4. Crear Proyecto "Sample"
+    console.log('Creating Sample Project...');
+    const sampleProject = await prisma.project.upsert({
+        where: { id: 'sample-project-id' },
+        update: { description: 'A sample project for demonstration purposes.', ownerUserId: testUser.id },
+        create: {
+            id: 'sample-project-id',
+            name: 'Sample',
+            description: 'A sample project for demonstration purposes.',
+            owner: { connect: { id: testUser.id } },
+        },
+    });
+    console.log(`Created/Updated Project: ${sampleProject.name} (ID: ${sampleProject.id})`);
+
+    // 5. Crear Tags útiles
+    console.log('Creating Tags...');
+    const tagsData = [
+        { name: 'chatbot', description: 'Related to chatbot interactions.' },
+        { name: 'summarization', description: 'Tasks involving text summarization.' },
+        { name: 'translation', description: 'Tasks involving language translation.' },
+        { name: 'rag', description: 'Related to Retrieval-Augmented Generation.' },
+        { name: 'customer-service', description: 'Prompts for customer service scenarios.' },
+        { name: 'internal-tool', description: 'Prompts for internal company tools.' },
+        { name: 'marketing', description: 'Marketing related prompts.' },
+    ];
+    for (const tagData of tagsData) {
+        const tag = await prisma.tag.upsert({
+            where: { name: tagData.name },
+            update: { description: tagData.description },
+            create: tagData,
+        });
+        console.log(`Created/Updated Tag: ${tag.name}`);
+    }
+
+    // --- DATOS EXISTENTES (Región, CulturalData, etc.) ---
 
     // 1. Crear Región ES
     console.log('Creating Region ES...');
