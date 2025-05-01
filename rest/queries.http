@@ -1,0 +1,86 @@
+# VS Code REST Client Test Suite - QUERY OPERATIONS ONLY (using Seed Data)
+
+# Variables (ajusta la base URL si es necesario)
+@baseUrl = http://localhost:3000
+
+# --- Identificadores Únicos Conocidos del Seed (en formato slug) --- 
+@assetKeySaludoSeed = saludo-inicial
+@promptNameBienvenidaSeed = bienvenida-simple
+@tacticNameSeed = formal-greeting-es
+@versionTagV1 = v1.0.0
+
+# --- IDs Generados por el Seed (OBTENER MANUALMENTE de la BD o Prisma Studio) ---
+# Eliminadas variables de IDs antiguos que ya no son identificadores únicos
+# @assetSaludoIdSeed = PON_ID_AQUI_ASSET_SALUDO_DEL_SEED
+# @promptBienvenidaIdSeed = PON_ID_AQUI_PROMPT_BIENVENIDA_DEL_SEED
+# @tacticIdSeed = PON_ID_AQUI_TACTICA_DEL_SEED # (ID de 'Formal Greeting ES')
+
+###
+# -------------------------
+# ASSET QUERIES (usando key slug)
+# -------------------------
+
+### 1. Listar todos los Assets
+# @name listAssetsSeed
+GET {{baseUrl}}/conversation-prompt-assets
+
+### 2. Obtener detalles del Asset "Saludo Inicial" (usando su key slug del seed)
+#    (Muestra v1.0.0 activa, traducción ES, sin historial)
+# @name getAssetSaludoDetailsSeed
+GET {{baseUrl}}/conversation-prompt-assets/{{assetKeySaludoSeed}}
+
+###
+# -------------------------
+# PROMPT QUERIES (usando name slug)
+# -------------------------
+
+### 3. Listar todos los Prompts
+# @name listPromptsSeed
+GET {{baseUrl}}/conversation-prompts
+
+### 4. Obtener Detalles del Prompt "Bienvenida Simple" (usando su name slug del seed)
+#    (Muestra v1.0.0 activa, traducción ES, tags, asset Saludo v1.0.0 vinculado)
+# @name getPromptBienvenidaDetailsSeed
+GET {{baseUrl}}/conversation-prompts/{{promptNameBienvenidaSeed}}
+
+###
+# -------------------------
+# SERVE PROMPT QUERIES (usando name slug del Prompt)
+# -------------------------
+
+### 5. Servir Prompt Bienvenida (activo, v1.0.0) por name slug
+
+# 5a. Servir versión activa (v1.0.0) en ES
+# @name servePromptActiveByName_ES
+GET {{baseUrl}}/serve-prompt?promptId={{promptNameBienvenidaSeed}}&languageCode=es-ES
+# Esperado: "Hola, ¿en qué puedo ayudarte hoy?"
+
+# 5b. Servir versión activa (v1.0.0) en EN (Base)
+# @name servePromptActiveByName_EN
+GET {{baseUrl}}/serve-prompt?promptId={{promptNameBienvenidaSeed}}
+# Esperado: "{{saludo-inicial}}, how can I help you today?"
+
+# 5c. Servir versión específica v1.0.0 en ES
+# @name servePromptSpecificV1ByName_ES
+GET {{baseUrl}}/serve-prompt?promptId={{promptNameBienvenidaSeed}}&versionTag={{versionTagV1}}&useLatestActive=false&languageCode=es-ES
+
+# 5d. Servir versión específica v1.0.0 en EN
+# @name servePromptSpecificV1ByName_EN
+GET {{baseUrl}}/serve-prompt?promptId={{promptNameBienvenidaSeed}}&versionTag={{versionTagV1}}&useLatestActive=false
+
+###
+# -------------------------
+# SERVE PROMPT QUERIES (usando name slug de Táctica)
+# -------------------------
+
+### 6. Servir usando Táctica
+
+# 6a. Servir por Táctica en ES
+# @name servePromptByTacticSeed_ES
+GET {{baseUrl}}/serve-prompt?tacticId={{tacticNameSeed}}&languageCode=es-ES
+# Esperado: "Hola, ¿en qué puedo ayudarte hoy?"
+
+# 6b. Servir por Táctica en EN (Base)
+# @name servePromptByTacticSeed_EN
+GET {{baseUrl}}/serve-prompt?tacticId={{tacticNameSeed}}
+# Esperado: "{{saludo-inicial}}, how can I help you today?" 
