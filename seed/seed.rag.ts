@@ -4,7 +4,6 @@ import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
-const toSlug = (str: string) => str.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/--+/g, '-').replace(/^-+|-+$/g, '');
 
 async function main() {
     console.log(`-----------------------------------`);
@@ -26,7 +25,7 @@ async function main() {
     // --- RAG Project ---
     const ragProject = await prisma.project.upsert({
         where: { id: 'internal-hr-assistant' },
-        update: { name: 'Internal HR Policy Assistant', description: 'AI assistant to answer employee questions based on HR documents.', owner: { connect: { id: testUser.id } } },
+        update: { name: 'Internal HR Policy Assistant', description: 'AI assistant to answer employee questions based on HR documents.', ownerUserId: testUser.id },
         create: {
             id: 'internal-hr-assistant',
             name: 'Internal HR Policy Assistant',
@@ -34,92 +33,143 @@ async function main() {
             owner: { connect: { id: testUser.id } },
         },
     });
-    console.log(`Created Project: ${ragProject.name}`);
+    console.log(`Upserted Project: ${ragProject.name}`);
 
-    // --- RAG Tags with prefix ---
+    // --- Upsert RAG Tags with prefix ---
     const ragProjectId = ragProject.id;
     const ragPrefix = 'rag_';
     const ragBaseTags = ['rag', 'internal-kb', 'hr-policy', 'employee-faq', 'compliance'];
-    const ragTagsToConnect: { name: string }[] = [];
+    const ragTagMap: Map<string, string> = new Map(); // Map tagName to tagId
 
     for (const baseTagName of ragBaseTags) {
         const tagName = `${ragPrefix}${baseTagName}`;
-        const existingTag = await prisma.tag.findUnique({ where: { name: tagName } });
-
-        if (existingTag) {
-            if (existingTag.projectId !== ragProjectId) {
-                await prisma.tag.update({ where: { id: existingTag.id }, data: { projectId: ragProjectId } });
-                console.log(`Updated Tag: ${tagName} project link to ${ragProjectId}`);
-            }
-        } else {
-            await prisma.tag.create({ data: { name: tagName, projectId: ragProjectId } });
-            console.log(`Created Tag: ${tagName} for project ${ragProjectId}`);
-        }
-        ragTagsToConnect.push({ name: tagName });
+        const tag = await prisma.tag.upsert({
+            where: { projectId_name: { projectId: ragProjectId, name: tagName } },
+            update: {},
+            create: { name: tagName, projectId: ragProjectId },
+            select: { id: true }
+        });
+        ragTagMap.set(tagName, tag.id); // Store ID in map
+        console.log(`Upserted Tag: ${tagName} for project ${ragProjectId}`);
     }
+    // Helper function to get tag IDs
+    const getRagTagIds = (baseNames: string[]): { id: string }[] => {
+        return baseNames
+            .map(baseName => ragTagMap.get(`${ragPrefix}${baseName}`))
+            .filter((id): id is string => id !== undefined)
+            .map(id => ({ id }));
+    };
 
-    // --- RAG Document Metadata ---
-    // NOTE: These link conceptually to the documents used for retrieval.
-    // The schema doesn't store the doc content or vectors, just metadata.
-    await prisma.ragDocumentMetadata.createMany({
-        data: [
-            { documentName: 'Employee Handbook v4.2', category: 'HR Policy', complianceReviewed: true, piiRiskLevel: 'Medium', lastReviewedBy: 'HR Compliance Team', id: 'doc-handbook-v4-2', projectId: ragProject.id },
-            { documentName: 'Remote Work Policy 2024', category: 'HR Policy', complianceReviewed: true, piiRiskLevel: 'Low', lastReviewedBy: 'HR Compliance Team', id: 'doc-remote-policy-2024', projectId: ragProject.id },
-            { documentName: 'Benefits Guide 2025', category: 'Benefits', complianceReviewed: true, piiRiskLevel: 'High', lastReviewedBy: 'Benefits Team', id: 'doc-benefits-2025', projectId: ragProject.id },
-            { documentName: 'IT Security Guidelines', category: 'IT Policy', complianceReviewed: false, piiRiskLevel: 'Low', lastReviewedBy: 'IT Security', id: 'doc-it-sec-guide', projectId: ragProject.id }, // Example not reviewed
-        ],
+    // --- Upsert RAG Document Metadata ---
+    // Using individual upserts for idempotency
+    const metadataToUpsert = [
+        { id: 'doc-handbook-v4-2', documentName: 'Employee Handbook v4.2', category: 'HR Policy', complianceReviewed: true, piiRiskLevel: 'Medium', lastReviewedBy: 'HR Compliance Team', projectId: ragProjectId },
+        { id: 'doc-remote-policy-2024', documentName: 'Remote Work Policy 2024', category: 'HR Policy', complianceReviewed: true, piiRiskLevel: 'Low', lastReviewedBy: 'HR Compliance Team', projectId: ragProjectId },
+        { id: 'doc-benefits-2025', documentName: 'Benefits Guide 2025', category: 'Benefits', complianceReviewed: true, piiRiskLevel: 'High', lastReviewedBy: 'Benefits Team', projectId: ragProjectId },
+        { id: 'doc-it-sec-guide', documentName: 'IT Security Guidelines', category: 'IT Policy', complianceReviewed: false, piiRiskLevel: 'Low', lastReviewedBy: 'IT Security', projectId: ragProjectId },
+    ];
+
+    for (const meta of metadataToUpsert) {
+        await prisma.ragDocumentMetadata.upsert({
+            where: { id: meta.id }, // Use provided ID for where clause
+            update: { ...meta, projectId: undefined }, // Update all fields except projectId and id
+            create: meta, // Create with all fields
+        });
+    }
+    console.log('Upserted RAG Document Metadata entries.');
+
+    // --- Upsert RAG Assets ---
+    const assetSystemInstruction = await prisma.promptAsset.upsert({
+        where: { key: 'rag-system-instruction' },
+        update: { name: 'RAG System Instruction', type: 'Instruction', projectId: ragProjectId },
+        create: { key: 'rag-system-instruction', name: 'RAG System Instruction', type: 'Instruction', projectId: ragProjectId }
     });
-    console.log('Created RAG Document Metadata entries.');
+    const assetSystemInstructionV1 = await prisma.promptAssetVersion.upsert({
+        where: { assetId_versionTag: { assetId: assetSystemInstruction.key, versionTag: 'v1.0.0' } },
+        update: { value: 'You are an AI assistant helping employees answer questions based ONLY on the provided internal documents. Answer concisely and accurately using the information given in the context. Cite the source document name(s) for your answer. If the answer cannot be found in the provided context, state that clearly. Do not make assumptions or use external knowledge.', status: 'active' },
+        create: { assetId: assetSystemInstruction.key, value: 'You are an AI assistant helping employees answer questions based ONLY on the provided internal documents. Answer concisely and accurately using the information given in the context. Cite the source document name(s) for your answer. If the answer cannot be found in the provided context, state that clearly. Do not make assumptions or use external knowledge.', versionTag: 'v1.0.0', status: 'active' },
+        select: { id: true }
+    });
 
-    // --- RAG Assets ---
-    const assetSystemInstruction = await prisma.promptAsset.create({ data: { key: 'rag-system-instruction', name: 'RAG System Instruction', type: 'Instruction', projectId: ragProject.id } });
-    const assetSystemInstructionV1 = await prisma.promptAssetVersion.create({ data: { assetId: assetSystemInstruction.key, value: 'You are an AI assistant helping employees answer questions based ONLY on the provided internal documents. Answer concisely and accurately using the information given in the context. Cite the source document name(s) for your answer. If the answer cannot be found in the provided context, state that clearly. Do not make assumptions or use external knowledge.', versionTag: 'v1.0.0', status: 'active' } });
+    const assetCitationFormat = await prisma.promptAsset.upsert({
+        where: { key: 'rag-citation-format' },
+        update: { name: 'RAG Citation Format', type: 'Instruction', projectId: ragProjectId },
+        create: { key: 'rag-citation-format', name: 'RAG Citation Format', type: 'Instruction', projectId: ragProjectId }
+    });
+    const assetCitationFormatV1 = await prisma.promptAssetVersion.upsert({
+        where: { assetId_versionTag: { assetId: assetCitationFormat.key, versionTag: 'v1.0.0' } },
+        update: { value: 'Cite sources like this: (Source: [Document Name])', status: 'active' },
+        create: { assetId: assetCitationFormat.key, value: 'Cite sources like this: (Source: [Document Name])', versionTag: 'v1.0.0', status: 'active' },
+        select: { id: true }
+    });
 
-    const assetCitationFormat = await prisma.promptAsset.create({ data: { key: 'rag-citation-format', name: 'RAG Citation Format', type: 'Instruction', projectId: ragProject.id } });
-    const assetCitationFormatV1 = await prisma.promptAssetVersion.create({ data: { assetId: assetCitationFormat.key, value: 'Cite sources like this: (Source: [Document Name])', versionTag: 'v1.0.0', status: 'active' } });
+    const assetNotFoundResponse = await prisma.promptAsset.upsert({
+        where: { key: 'rag-not-found-response' },
+        update: { name: 'RAG Not Found Response', type: 'Instruction', projectId: ragProjectId },
+        create: { key: 'rag-not-found-response', name: 'RAG Not Found Response', type: 'Instruction', projectId: ragProjectId }
+    });
+    const assetNotFoundResponseV1 = await prisma.promptAssetVersion.upsert({
+        where: { assetId_versionTag: { assetId: assetNotFoundResponse.key, versionTag: 'v1.0.0' } },
+        update: { value: 'I could not find information about that in the provided documents.', status: 'active' },
+        create: { assetId: assetNotFoundResponse.key, value: 'I could not find information about that in the provided documents.', versionTag: 'v1.0.0', status: 'active' },
+        select: { id: true }
+    });
+    console.log('Upserted RAG Assets and V1 Versions');
 
-    const assetNotFoundResponse = await prisma.promptAsset.create({ data: { key: 'rag-not-found-response', name: 'RAG Not Found Response', type: 'Instruction', projectId: ragProject.id } });
-    const assetNotFoundResponseV1 = await prisma.promptAssetVersion.create({ data: { assetId: assetNotFoundResponse.key, value: 'I could not find information about that in the provided documents.', versionTag: 'v1.0.0', status: 'active' } });
-    console.log('Created RAG Assets and V1 Versions');
 
-
-    // --- RAG Prompt: Answer Question ---
-    const promptRagQuery = await prisma.prompt.create({
-        data: {
-            name: 'answer-hr-question-rag',
+    // --- Upsert RAG Prompt: Answer Question ---
+    const promptRagQueryName = 'answer-hr-question-rag';
+    const promptRagQuery = await prisma.prompt.upsert({
+        where: { projectId_name: { projectId: ragProjectId, name: promptRagQueryName } },
+        update: {
             description: 'Core RAG prompt to answer user questions based on retrieved context.',
-            projectId: ragProject.id,
-            tags: { connect: ragTagsToConnect.filter(t => ['rag_rag', 'rag_hr-policy', 'rag_employee-faq'].includes(t.name)) } // Connect prefixed tags
-        }
+            tags: { set: getRagTagIds(['rag', 'hr-policy', 'employee-faq']) }
+        },
+        create: {
+            name: promptRagQueryName,
+            description: 'Core RAG prompt to answer user questions based on retrieved context.',
+            projectId: ragProjectId,
+            tags: { connect: getRagTagIds(['rag', 'hr-policy', 'employee-faq']) }
+        },
+        select: { id: true, name: true }
     });
 
     // This prompt takes the user's question and the retrieved context as input at runtime.
-    const promptRagQueryV1 = await prisma.promptVersion.create({
-        data: {
-            promptId: promptRagQuery.name,
-            promptText: `{{rag-system-instruction}}\n\n            Context Documents:\n            --- START CONTEXT ---
-            {{Retrieved Context Chunks}}\n            --- END CONTEXT ---
-
-            User Question: {{User Question}}\n
-            Answer based ONLY on the context above. Use this citation format: {{rag-citation-format}}. If the answer isn't in the context, respond with: {{rag-not-found-response}}.\n
-            Answer:`,
+    const promptRagQueryV1 = await prisma.promptVersion.upsert({
+        where: { promptId_versionTag: { promptId: promptRagQuery.id, versionTag: 'v1.0.0' } },
+        update: {
+            promptText: `{{rag-system-instruction}}\n\n            Context Documents:\n            --- START CONTEXT ---\n            {{Retrieved Context Chunks}}\n            --- END CONTEXT ---\n\n            User Question: {{User Question}}\n\n            Answer based ONLY on the context above. Use this citation format: {{rag-citation-format}}. If the answer isn't in the context, respond with: {{rag-not-found-response}}.\n\n            Answer:`,
+            status: 'active',
+            activeInEnvironments: { set: [{ id: productionEnvironment.id }, { id: stagingEnvironment.id }] }
+        },
+        create: {
+            promptId: promptRagQuery.id, // Use ID
+            promptText: `{{rag-system-instruction}}\n\n            Context Documents:\n            --- START CONTEXT ---\n            {{Retrieved Context Chunks}}\n            --- END CONTEXT ---\n\n            User Question: {{User Question}}\n\n            Answer based ONLY on the context above. Use this citation format: {{rag-citation-format}}. If the answer isn't in the context, respond with: {{rag-not-found-response}}.\n\n            Answer:`,
             versionTag: 'v1.0.0',
             status: 'active',
             changeMessage: 'Initial RAG prompt using system instructions and context.',
-            activeInEnvironments: { connect: [{ id: productionEnvironment.id }, { id: stagingEnvironment.id }] } // Use env IDs
-        }
+            activeInEnvironments: { connect: [{ id: productionEnvironment.id }, { id: stagingEnvironment.id }] }
+        },
+        select: { id: true }
     });
-    console.log(`Created Prompt ${promptRagQuery.name} V1`);
+    console.log(`Upserted Prompt ${promptRagQuery.name} V1`);
 
-    await prisma.promptAssetLink.createMany({
-        data: [
-            { promptVersionId: promptRagQueryV1.id, assetVersionId: assetSystemInstructionV1.id, usageContext: 'Overall system behavior instruction', position: 1 },
-            { promptVersionId: promptRagQueryV1.id, assetVersionId: assetCitationFormatV1.id, usageContext: 'Instruction on how to cite sources', position: 2 },
-            { promptVersionId: promptRagQueryV1.id, assetVersionId: assetNotFoundResponseV1.id, usageContext: 'Standard response when info is missing', position: 3 },
-            // Note: Retrieved Context Chunks and User Question are dynamic inputs, not static assets.
-        ]
-    });
-    console.log(`Linked assets to ${promptRagQuery.name} V1`);
+    // Upsert Links individually
+    const ragLinksToUpsert = [
+        { assetVersionId: assetSystemInstructionV1.id, usageContext: 'Overall system behavior instruction', position: 1 },
+        { assetVersionId: assetCitationFormatV1.id, usageContext: 'Instruction on how to cite sources', position: 2 },
+        { assetVersionId: assetNotFoundResponseV1.id, usageContext: 'Standard response when info is missing', position: 3 },
+        // Note: Retrieved Context Chunks and User Question are dynamic inputs, not static assets.
+    ];
+
+    for (const link of ragLinksToUpsert) {
+        await prisma.promptAssetLink.upsert({
+            where: { promptVersionId_assetVersionId: { promptVersionId: promptRagQueryV1.id, assetVersionId: link.assetVersionId } },
+            update: { usageContext: link.usageContext, position: link.position },
+            create: { promptVersionId: promptRagQueryV1.id, assetVersionId: link.assetVersionId, usageContext: link.usageContext, position: link.position },
+        });
+    }
+    console.log(`Upserted links for ${promptRagQuery.name} V1`);
 
     console.log(`Internal Knowledge Base (RAG) seeding finished.`);
 }

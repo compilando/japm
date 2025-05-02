@@ -26,152 +26,174 @@ const invoiceFieldsToExtract = [
 
 async function main() {
     console.log(`-----------------------------------`);
-    console.log(`Start seeding for Invoice Data Extraction...`);
-    console.log(`-----------------------------------`);
-    console.log('Assuming prior cleanup...'); // Add specific deletes if needed
+    console.log(`Start seeding for Invoice Extraction...`);
+    console.log(`Assuming base seed (user, envs, models, regions) already ran...`);
 
-    // --- Ensure Base Data Exists (User, Models, Environments) ---
-    const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS) } });
-    // Find necessary base data
-    const defaultProjectId = 'default-project'; // Assuming the default project ID
-    const stagingEnvironment = await prisma.environment.findUniqueOrThrow({
-        where: { projectId_name: { name: 'staging', projectId: defaultProjectId } }, // Find env in default project
-        select: { id: true } // Select ID for connecting later
-    });
-    const productionEnvironment = await prisma.environment.findUniqueOrThrow({
-        where: { projectId_name: { name: 'production', projectId: defaultProjectId } }, // Find env in default project
-        select: { id: true } // Select ID for connecting later
+    // --- Find necessary base data ---
+    const testUser = await prisma.user.findUniqueOrThrow({
+        where: { email: 'test@example.com' },
+        select: { id: true }
     });
 
-    // Let's ensure a relevant AI Model exists (assuming it can be shared or linked)
-    const jsonModel = await prisma.aIModel.upsert({
-        where: { name: 'gpt-4o-2024-05-13' }, // Assuming this exists from original seed
-        update: { supportsJson: true },
+    const defaultProjectId = 'default-project'; // ID del proyecto donde buscar los entornos base
+    const prodEnvironment = await prisma.environment.findUniqueOrThrow({
+        where: { projectId_name: { projectId: defaultProjectId, name: 'production' } },
+        select: { id: true }
+    });
+    // Find base AI Model (assuming it exists and is global)
+    const gpt4Model = await prisma.aIModel.findUniqueOrThrow({
+        where: { name: 'gpt-4o-2024-05-13' }, // Use an existing model name from base seed
+        select: { id: true }
+    });
+
+    // --- Create Project Specific Data ---
+    // 1. Upsert Invoice Extraction Project
+    const invoiceProject = await prisma.project.upsert({
+        where: { id: 'invoice-data-extraction' },
+        update: { name: 'Invoice Data Extraction AI', description: 'Prompts to extract structured data from invoice documents.', ownerUserId: testUser.id },
         create: {
-            name: 'gpt-4o-2024-05-13', provider: 'OpenAI', apiIdentifier: 'gpt-4o-2024-05-13', description: 'Latest omni model from OpenAI', contextWindow: 128000, supportsJson: true, maxTokens: 4096
-        }
-    });
-    console.log(`Ensured AI Model ${jsonModel.name} supports JSON.`);
-
-
-    // --- Extraction Project ---
-    const extractionProject = await prisma.project.upsert({
-        where: { id: 'invoice-processing-system' },
-        update: { name: 'Invoice Processing System', description: 'Extracting key data from scanned invoices.', owner: { connect: { id: testUser.id } } }, // use owner connect
-        create: {
-            id: 'invoice-processing-system',
-            name: 'Invoice Processing System',
-            description: 'Extracting key data from scanned invoices.',
-            owner: { connect: { id: testUser.id } }, // use owner connect
+            id: 'invoice-data-extraction',
+            name: 'Invoice Data Extraction AI',
+            description: 'Prompts to extract structured data from invoice documents.',
+            owner: { connect: { id: testUser.id } },
         },
     });
-    console.log(`Created Project: ${extractionProject.name}`);
+    console.log(`Upserted Project: ${invoiceProject.name}`);
+    const invProjectId = invoiceProject.id;
 
-    // --- Extraction Tags with prefix ---
-    const invProjectId = extractionProject.id;
+    // 2. Upsert Invoice Extraction Tags with prefix
     const invPrefix = 'inv_';
-    const invBaseTags = ['extraction', 'invoice', 'finance', 'ocr', 'json', 'automation'];
-    const invTagsToConnect: { name: string }[] = [];
+    const invBaseTags = ['invoice', 'data-extraction', 'ocr', 'structured-data', 'json-output', 'pdf-processing'];
+    const invTagMap: Map<string, string> = new Map(); // Map tagName to tagId
 
     for (const baseTagName of invBaseTags) {
         const tagName = `${invPrefix}${baseTagName}`;
-        const existingTag = await prisma.tag.findUnique({ where: { name: tagName } });
-
-        if (existingTag) {
-            if (existingTag.projectId !== invProjectId) {
-                await prisma.tag.update({ where: { id: existingTag.id }, data: { projectId: invProjectId } });
-                console.log(`Updated Tag: ${tagName} project link to ${invProjectId}`);
-            }
-        } else {
-            await prisma.tag.create({ data: { name: tagName, projectId: invProjectId } });
-            console.log(`Created Tag: ${tagName} for project ${invProjectId}`);
-        }
-        invTagsToConnect.push({ name: tagName });
-    }
-
-    // --- Create Assets for each Field to Extract ---
-    const createdAssetVersions: { key: string, versionId: string }[] = [];
-    for (const field of invoiceFieldsToExtract) {
-        const asset = await prisma.promptAsset.create({
-            data: {
-                key: field.key,
-                name: field.name,
-                description: field.description, // Description holds the extraction instruction for this field
-                type: 'Extraction Field', // Custom type
-                category: 'Invoice Data', // Custom category
-                projectId: extractionProject.id // Use direct projectId
-            }
+        const tag = await prisma.tag.upsert({
+            where: { projectId_name: { projectId: invProjectId, name: tagName } },
+            update: {},
+            create: { name: tagName, projectId: invProjectId },
+            select: { id: true }
         });
-
-        const assetVersion = await prisma.promptAssetVersion.create({
-            data: {
-                assetId: asset.key, // Use direct assetId
-                // Value could hold example format, validation regex, etc. but description is key here.
-                value: `Example format or type hint: ${field.key.includes('date') ? 'YYYY-MM-DD' : (field.key.includes('amount') ? 'Number' : 'String')}`,
-                versionTag: 'v1.0.0',
-                status: 'active',
-                // Activate in relevant environments
-                activeInEnvironments: { connect: [{ id: stagingEnvironment.id }, { id: productionEnvironment.id }] } // Use connect with env IDs
-            }
-        });
-        createdAssetVersions.push({ key: field.key, versionId: assetVersion.id });
-        console.log(`Created Asset & V1 Version for Field: ${field.name}`);
+        invTagMap.set(tagName, tag.id); // Store ID in map
+        console.log(`Upserted Tag: ${tagName} for project ${invProjectId}`);
     }
+    // Helper function to get tag IDs from map
+    const getInvTagIds = (baseNames: string[]): { id: string }[] => {
+        return baseNames
+            .map(baseName => invTagMap.get(`${invPrefix}${baseName}`))
+            .filter((id): id is string => id !== undefined)
+            .map(id => ({ id }));
+    };
 
-
-    // --- Create the Main Extraction Prompt ---
-    const promptExtract = await prisma.prompt.create({
-        data: {
-            name: 'extract-invoice-data-json',
-            description: 'Extracts key fields from invoice text into JSON format, using linked assets for field definitions.',
-            projectId: extractionProject.id, // Use direct projectId
-            tags: { connect: invTagsToConnect.filter(t => ['inv_extraction', 'inv_invoice', 'inv_json'].includes(t.name)) } // Connect prefixed tags
-        }
+    // 3. Upsert Invoice Extraction Assets and Versions
+    const assetInvoiceFields = await prisma.promptAsset.upsert({
+        where: { key: 'invoice-standard-fields' },
+        update: { name: 'Invoice Standard Fields List', type: 'List', projectId: invProjectId },
+        create: { key: 'invoice-standard-fields', name: 'Invoice Standard Fields List', type: 'List', projectId: invProjectId }
+    });
+    const assetInvoiceFieldsV1 = await prisma.promptAssetVersion.upsert({
+        where: { assetId_versionTag: { assetId: assetInvoiceFields.key, versionTag: 'v1.0.0' } },
+        update: { value: 'Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price\nLine Item Total', status: 'active' },
+        create: { assetId: assetInvoiceFields.key, value: 'Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price\nLine Item Total', versionTag: 'v1.0.0', status: 'active' },
+        select: { id: true }
     });
 
-    // --- Create Version 1 of the Extraction Prompt ---
-    // This prompt expects the OCR'd text of the invoice to be injected at runtime.
-    const promptExtractV1 = await prisma.promptVersion.create({
-        data: {
-            promptId: promptExtract.name, // Use direct promptId
-            promptText: `You are an expert invoice data extraction AI.
-Analyze the following invoice text provided between '''triple quotes'''.
-Extract the data points specified by the linked field assets. Use the description of each linked asset to understand exactly what information to find for that field.
-Format your output strictly as a JSON object, where the keys are the 'key' names of the linked assets (e.g., "invoice-number", "total-amount") and the values are the extracted data.
-If a field cannot be found or is not applicable, use a null value for that key in the JSON.
-Do not include any explanation or introductory text outside the JSON object.
-
-'''
-{{Invoice OCR Text}}
-'''
-
-JSON Output:`,
+    const assetJsonSchema = await prisma.promptAsset.upsert({
+        where: { key: 'invoice-json-schema' },
+        update: { name: 'Target JSON Schema for Invoice', type: 'JSON Schema', projectId: invProjectId },
+        create: { key: 'invoice-json-schema', name: 'Target JSON Schema for Invoice', type: 'JSON Schema', projectId: invProjectId }
+    });
+    const assetJsonSchemaV1 = await prisma.promptAssetVersion.upsert({
+        where: { assetId_versionTag: { assetId: assetJsonSchema.key, versionTag: 'v1.0.0' } },
+        update: {
+            value: JSON.stringify({
+                type: "object",
+                properties: {
+                    invoiceNumber: { type: "string" },
+                    invoiceDate: { type: "string", format: "date" },
+                    dueDate: { type: "string", format: "date" },
+                    vendorName: { type: "string" },
+                    totalAmount: { type: "number" },
+                    taxAmount: { type: ["number", "null"] }
+                    /* Add other fields as needed */
+                },
+                required: ["invoiceNumber", "invoiceDate", "vendorName", "totalAmount"]
+            }, null, 2),
+            status: 'active'
+        },
+        create: {
+            assetId: assetJsonSchema.key,
+            value: JSON.stringify({
+                type: "object",
+                properties: {
+                    invoiceNumber: { type: "string" },
+                    invoiceDate: { type: "string", format: "date" },
+                    dueDate: { type: "string", format: "date" },
+                    vendorName: { type: "string" },
+                    totalAmount: { type: "number" },
+                    taxAmount: { type: ["number", "null"] }
+                    /* Add other fields as needed */
+                },
+                required: ["invoiceNumber", "invoiceDate", "vendorName", "totalAmount"]
+            }, null, 2),
             versionTag: 'v1.0.0',
+            status: 'active'
+        },
+        select: { id: true }
+    });
+    console.log('Upserted Invoice Extraction Assets and V1 Versions');
+
+    // 4. Upsert Invoice Extraction Prompt and Version
+    const promptExtractName = 'extract-invoice-data';
+    const promptExtract = await prisma.prompt.upsert({
+        where: { projectId_name: { projectId: invProjectId, name: promptExtractName } },
+        update: {
+            description: 'Extract key fields from invoice text (OCR result). Output as JSON.',
+            tags: { set: getInvTagIds(['invoice', 'data-extraction', 'structured-data', 'json-output']) }
+        },
+        create: {
+            name: promptExtractName,
+            description: 'Extract key fields from invoice text (OCR result). Output as JSON.',
+            projectId: invProjectId,
+            tags: { connect: getInvTagIds(['invoice', 'data-extraction', 'structured-data', 'json-output']) }
+        },
+        select: { id: true, name: true }
+    });
+
+    const promptExtractV1 = await prisma.promptVersion.upsert({
+        where: { promptId_versionTag: { promptId: promptExtract.id, versionTag: 'v1.0.0' } },
+        update: {
+            promptText: `Given the following text extracted from an invoice via OCR:\n\`\`\`\n{{Invoice OCR Text}}\n\`\`\`\n\nExtract the following fields: {{invoice-standard-fields}}.\n\nFormat the output as a JSON object conforming to this schema:\n{{invoice-json-schema}}\n\nIf a field is not found, use null as the value. Pay close attention to dates and amounts.`,
             status: 'active',
-            changeMessage: 'Initial version for extracting invoice fields defined by linked assets into JSON.',
-            // Activate in relevant environments
-            activeInEnvironments: { connect: [{ id: stagingEnvironment.id }, { id: productionEnvironment.id }] } // Use connect with env IDs
-        }
+            aiModelId: gpt4Model.id, // Connect global AI model
+            activeInEnvironments: { set: [{ id: prodEnvironment.id }] }
+        },
+        create: {
+            promptId: promptExtract.id,
+            promptText: `Given the following text extracted from an invoice via OCR:\n\`\`\`\n{{Invoice OCR Text}}\n\`\`\`\n\nExtract the following fields: {{invoice-standard-fields}}.\n\nFormat the output as a JSON object conforming to this schema:\n{{invoice-json-schema}}\n\nIf a field is not found, use null as the value. Pay close attention to dates and amounts.`,
+            versionTag: 'v1.0.0', status: 'active',
+            changeMessage: 'Initial version for extracting invoice data to JSON using GPT-4.',
+            aiModelId: gpt4Model.id, // Connect global AI model
+            activeInEnvironments: { connect: [{ id: prodEnvironment.id }] }
+        },
+        select: { id: true }
     });
-    console.log(`Created Prompt ${promptExtract.name} V1`);
+    console.log(`Upserted Prompt ${promptExtract.name} V1`);
 
-    // --- Link the Field Assets to the Main Prompt Version ---
-    const assetLinks = createdAssetVersions.map((assetVer, index) => ({
-        promptVersionId: promptExtractV1.id,
-        assetVersionId: assetVer.versionId,
-        // Usage context clearly indicates the purpose of the link/asset for the AI
-        usageContext: `Field to extract: ${assetVer.key}`,
-        position: index + 1, // Define order in prompt or potentially desired JSON output order
-        isRequired: !['tax-amount'].includes(assetVer.key), // Example: Make tax optional
-    }));
-
-    await prisma.promptAssetLink.createMany({
-        data: assetLinks
+    // Upsert Links
+    await prisma.promptAssetLink.upsert({
+        where: { promptVersionId_assetVersionId: { promptVersionId: promptExtractV1.id, assetVersionId: assetInvoiceFieldsV1.id } },
+        update: { usageContext: 'List of fields to extract' },
+        create: { promptVersionId: promptExtractV1.id, assetVersionId: assetInvoiceFieldsV1.id, usageContext: 'List of fields to extract' }
     });
-    console.log(`Linked ${createdAssetVersions.length} field assets to ${promptExtract.name} V1`);
+    await prisma.promptAssetLink.upsert({
+        where: { promptVersionId_assetVersionId: { promptVersionId: promptExtractV1.id, assetVersionId: assetJsonSchemaV1.id } },
+        update: { usageContext: 'Target JSON output structure' },
+        create: { promptVersionId: promptExtractV1.id, assetVersionId: assetJsonSchemaV1.id, usageContext: 'Target JSON output structure' }
+    });
+    console.log(`Upserted links for ${promptExtract.name} V1`);
 
-
-    console.log(`Invoice Data Extraction seeding finished.`);
+    console.log(`Invoice Extraction seeding finished.`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(async () => { await prisma.$disconnect(); });
