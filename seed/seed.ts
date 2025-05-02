@@ -21,20 +21,24 @@ async function main() {
     // --- Optional Cleanup ---
     console.log('Deleting existing data...');
     // Delete in reverse order of dependency or use transaction if needed
+    // Adjusted order based on corrected schema dependencies
+    await prisma.promptExecutionLog.deleteMany({});
     await prisma.promptAssetLink.deleteMany({});
-    await prisma.promptTranslation.deleteMany({});
     await prisma.assetTranslation.deleteMany({});
-    await prisma.promptVersion.deleteMany({}); // Depends on Prompt, Env
-    await prisma.promptAssetVersion.deleteMany({}); // Depends on Asset, Env
-    await prisma.prompt.deleteMany({}); // Depends on Project, Tactic, Tags
-    await prisma.tactic.deleteMany({}); // Depends on Project, Region, CulturalData
-    await prisma.promptAsset.deleteMany({}); // Depends on Project
-    await prisma.tag.deleteMany({}); // Depends on Prompt
-    await prisma.project.deleteMany({}); // Depends on User, AIModel
-    await prisma.environment.deleteMany({}); // Referenced by Versions
-    await prisma.aIModel.deleteMany({}); // Depends on Project
-    await prisma.culturalData.deleteMany({}); // Depends on Region
+    await prisma.promptTranslation.deleteMany({});
+    await prisma.promptVersion.deleteMany({});
+    await prisma.promptAssetVersion.deleteMany({});
+    await prisma.tag.deleteMany({});
+    await prisma.prompt.deleteMany({});
+    await prisma.tactic.deleteMany({});
+    await prisma.culturalData.deleteMany({});
+    await prisma.ragDocumentMetadata.deleteMany({});
     await prisma.region.deleteMany({});
+    await prisma.environment.deleteMany({});
+    await prisma.promptAsset.deleteMany({});
+    // AIModel is ManyToMany, relation handled by Prisma implicitly? Or delete manually if needed.
+    await prisma.aIModel.deleteMany({}); // Keep for now
+    await prisma.project.deleteMany({});
     await prisma.user.deleteMany({});
     console.log('Existing data deleted.');
 
@@ -45,106 +49,120 @@ async function main() {
     const hashedPassword = await bcrypt.hash('password123', SALT_ROUNDS);
     const testUser = await prisma.user.upsert({
         where: { email: 'test@example.com' },
-        update: { name: 'Test User', password: hashedPassword }, // Ensure data is updated if user exists
+        update: { name: 'Test User', password: hashedPassword },
         create: {
             email: 'test@example.com',
             name: 'Test User',
             password: hashedPassword,
         },
     });
-    console.log(`Upserted user: ${testUser.email}`);
+    console.log(`Upserted user: ${testUser.name}`);
 
-    // 2. Create AI Models
+    // 2. Create Default Project
+    const defaultProject = await prisma.project.upsert({
+        where: { id: 'default-project' },
+        update: { name: 'Default Project', description: 'Project for base/shared entities.', owner: { connect: { id: testUser.id } } },
+        create: { id: 'default-project', name: 'Default Project', description: 'Project for base/shared entities.', owner: { connect: { id: testUser.id } } },
+    });
+    console.log(`Upserted default project: ${defaultProject.name}`);
+
+    // 3. Create AI Models (Still global ManyToMany based on schema)
     console.log('Upserting AI Models...');
     const aiModelsData = [
-        { name: 'gpt-4-turbo-2024-04-09', provider: 'OpenAI', apiIdentifier: 'gpt-4-turbo-2024-04-09', description: 'Latest GPT-4 Turbo model', contextWindow: 128000, supportsJson: true, maxTokens: 4096 },
-        { name: 'gpt-4o-2024-05-13', provider: 'OpenAI', apiIdentifier: 'gpt-4o-2024-05-13', description: 'Latest omni model from OpenAI', contextWindow: 128000, supportsJson: true, maxTokens: 4096 },
-        { name: 'claude-3-opus-20240229', provider: 'Anthropic', apiIdentifier: 'claude-3-opus-20240229', description: 'Most powerful Claude 3 model', contextWindow: 200000, supportsJson: true, maxTokens: 4096 },
-        { name: 'claude-3-sonnet-20240229', provider: 'Anthropic', apiIdentifier: 'claude-3-sonnet-20240229', description: 'Balanced Claude 3 model', contextWindow: 200000, supportsJson: true, maxTokens: 4096 },
-        { name: 'claude-3-haiku-20240307', provider: 'Anthropic', apiIdentifier: 'claude-3-haiku-20240307', description: 'Fastest Claude 3 model', contextWindow: 200000, supportsJson: true, maxTokens: 4096 },
-        { name: 'gemini-1.5-pro-latest', provider: 'Google', apiIdentifier: 'gemini-1.5-pro-latest', description: 'Latest Gemini Pro model', contextWindow: 1000000, supportsJson: true, maxTokens: 8192 },
-        { name: 'gemini-1.0-pro', provider: 'Google', apiIdentifier: 'gemini-1.0-pro', description: 'Standard Gemini Pro model', contextWindow: 32000, supportsJson: true, maxTokens: 2048 },
+        { id: 'gpt-4-turbo', name: 'gpt-4-turbo-2024-04-09', provider: 'OpenAI', apiIdentifier: 'gpt-4-turbo-2024-04-09', description: 'Latest GPT-4 Turbo model', contextWindow: 128000, supportsJson: true, maxTokens: 4096 },
+        { id: 'gpt-4o', name: 'gpt-4o-2024-05-13', provider: 'OpenAI', apiIdentifier: 'gpt-4o-2024-05-13', description: 'Latest omni model from OpenAI', contextWindow: 128000, supportsJson: true, maxTokens: 4096 },
+        { id: 'claude-3-opus', name: 'claude-3-opus-20240229', provider: 'Anthropic', apiIdentifier: 'claude-3-opus-20240229', description: 'Most powerful Claude 3 model', contextWindow: 200000, supportsJson: true, maxTokens: 4096 },
+        { id: 'claude-3-sonnet', name: 'claude-3-sonnet-20240229', provider: 'Anthropic', apiIdentifier: 'claude-3-sonnet-20240229', description: 'Balanced Claude 3 model', contextWindow: 200000, supportsJson: true, maxTokens: 4096 },
+        { id: 'claude-3-haiku', name: 'claude-3-haiku-20240307', provider: 'Anthropic', apiIdentifier: 'claude-3-haiku-20240307', description: 'Fastest Claude 3 model', contextWindow: 200000, supportsJson: true, maxTokens: 4096 },
+        { id: 'gemini-1.5-pro', name: 'gemini-1.5-pro-latest', provider: 'Google', apiIdentifier: 'gemini-1.5-pro-latest', description: 'Latest Gemini Pro model', contextWindow: 1000000, supportsJson: true, maxTokens: 8192 },
+        { id: 'gemini-1.0-pro', name: 'gemini-1.0-pro', provider: 'Google', apiIdentifier: 'gemini-1.0-pro', description: 'Standard Gemini Pro model', contextWindow: 32000, supportsJson: true, maxTokens: 2048 },
     ];
     for (const modelData of aiModelsData) {
-        const model = await prisma.aIModel.upsert({
-            where: { name: modelData.name },
-            update: { ...modelData }, // Update all fields
+        await prisma.aIModel.upsert({
+            where: { id: modelData.id }, // Use ID for upsert
+            update: { ...modelData },
             create: modelData,
         });
-        console.log(`Upserted AI Model: ${model.name}`);
+        console.log(`Upserted AI Model: ${modelData.name}`);
     }
 
-    // 3. Create Environments
+    // 4. Create Environments (Associated with Default Project)
     console.log('Upserting Environments...');
-    const environmentsData = [
-        { name: 'development', description: 'Development environment for testing and debugging.' },
+    const environments = [
+        { name: 'development', description: 'For active development and testing' },
         { name: 'staging', description: 'Staging environment for pre-production testing.' },
         { name: 'production', description: 'Live production environment.' },
         { name: 'testing', description: 'Automated testing environment.' },
     ];
-    for (const envData of environmentsData) {
-        const env = await prisma.environment.upsert({
-            where: { name: envData.name },
-            update: { description: envData.description }, // Only update description if needed
-            create: envData,
+    for (const envData of environments) {
+        // Use the composite key directly in where for upsert
+        await prisma.environment.upsert({
+            where: { projectId_name: { name: envData.name, projectId: defaultProject.id } },
+            update: { description: envData.description },
+            create: {
+                name: envData.name,
+                description: envData.description,
+                projectId: defaultProject.id // Connect using projectId directly in create
+            }
         });
-        console.log(`Upserted Environment: ${env.name}`);
+        console.log(`Upserted Environment: ${envData.name}`);
     }
 
-    // 4. Create ES Region and CulturalData
+    // 5. Create ES Region and CulturalData (Associated with Default Project)
     console.log('Upserting Region ES...');
     const regionES = await prisma.region.upsert({
         where: { languageCode: 'es-ES' },
-        update: { name: 'Spain', timeZone: 'Europe/Madrid' },
+        update: { name: 'Spain', timeZone: 'Europe/Madrid', projectId: defaultProject.id }, // Ensure projectId on update too
         create: {
             name: 'Spain',
             languageCode: 'es-ES',
             timeZone: 'Europe/Madrid',
-        },
+            projectId: defaultProject.id // Connect using projectId directly in create
+        }
     });
     console.log(`Upserted Region: ${regionES.name}`);
 
     console.log('Upserting CulturalData ES...');
     await prisma.culturalData.upsert({
-        where: { id: "direct-and-formal" }, // Assuming ID is the primary identifier
-        update: { formalityLevel: 5, style: 'Direct but formal', regionId: regionES.languageCode },
+        where: { id: "direct-and-formal" },
+        update: { formalityLevel: 8, style: 'Direct, formal language common in Spanish business.', regionId: regionES.languageCode, projectId: defaultProject.id },
         create: {
             id: "direct-and-formal",
-            formalityLevel: 5,
-            style: 'Direct but formal',
-            region: { connect: { languageCode: regionES.languageCode } },
-        },
+            formalityLevel: 8,
+            style: 'Direct, formal language common in Spanish business.',
+            regionId: regionES.languageCode, // Use direct regionId
+            projectId: defaultProject.id // Use direct projectId
+        }
     });
     console.log(`Upserted CulturalData for ES (ID: direct-and-formal)`);
 
-    // 5. Create US Region and CulturalData
+    // 6. Create US Region and CulturalData (Associated with Default Project)
     console.log('Upserting Region US...');
     const regionUS = await prisma.region.upsert({
         where: { languageCode: 'en-US' },
-        update: { name: 'United States', timeZone: 'America/New_York' },
-        create: { name: 'United States', languageCode: 'en-US', timeZone: 'America/New_York' },
+        update: { name: 'United States', timeZone: 'America/New_York', projectId: defaultProject.id }, // Ensure projectId on update too
+        create: {
+            name: 'United States',
+            languageCode: 'en-US',
+            timeZone: 'America/New_York',
+            projectId: defaultProject.id // Connect using projectId directly in create
+        }
     });
+    console.log(`Upserted Region: ${regionUS.name}`);
+
     console.log('Upserting CulturalData US...');
     await prisma.culturalData.upsert({
-        where: { id: regionUS.languageCode }, // Using language code as ID here
-        update: { formalityLevel: 3, style: 'Informal and direct', regionId: regionUS.languageCode },
+        where: { id: 'en-US' },
+        update: { formalityLevel: 5, style: 'Standard American English, generally informal.', regionId: regionUS.languageCode, projectId: defaultProject.id },
         create: {
-            id: regionUS.languageCode,
-            formalityLevel: 3,
-            style: 'Informal and direct',
-            region: { connect: { languageCode: regionUS.languageCode } },
-        },
+            id: 'en-US',
+            formalityLevel: 5,
+            style: 'Standard American English, generally informal.',
+            regionId: regionUS.languageCode, // Use direct regionId
+            projectId: defaultProject.id // Use direct projectId
+        }
     });
-    console.log(`Upserted CulturalData for US (ID: ${regionUS.languageCode})`);
-
-    // --- COMMON ASSETS --- 
-    // Removed common assets - they should be created in their specific seed files if not truly shared.
-    /*
-    console.log('Upserting common assets...');
-    const assetPythonImports = await prisma.promptAsset.upsert({ ... });
-    await prisma.promptAssetVersion.upsert({ ... });
-    console.log(`Upserted common asset: ${assetPythonImports.key} and version v1.0.0`);
-    */
+    console.log(`Upserted CulturalData for US (ID: en-US)`);
 
     console.log(`Base seeding finished.`);
 }
@@ -156,4 +174,4 @@ main()
     })
     .finally(async () => {
         await prisma.$disconnect();
-    }); 
+    });

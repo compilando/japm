@@ -1,92 +1,86 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, NotFoundException, HttpCode, HttpStatus, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { PromptAssetService } from './prompt-asset.service';
 import { CreatePromptAssetDto } from './dto/create-prompt-asset.dto';
 import { UpdatePromptAssetDto } from './dto/update-prompt-asset.dto';
-import { CreateAssetVersionDto } from '../prompt-asset-version/dto/create-asset-version.dto';
-import { PromptAsset, PromptAssetVersion, AssetTranslation } from '@prisma/client';
-import { AssetWithInitialVersion } from './prompt-asset.service';
-import { CreateOrUpdateAssetTranslationDto } from 'src/asset-translation/dto/create-or-update-asset-translation.dto';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { PromptAsset, PromptAssetVersion } from '@prisma/client';
+import { ProjectGuard } from '../common/guards/project.guard';
+import { Request as ExpressRequest } from 'express';
+
+interface RequestWithProject extends ExpressRequest {
+    projectId: string;
+}
 
 @ApiTags('Prompt Assets')
-@Controller('prompt-assets')
+@UseGuards(ProjectGuard)
+@Controller('/api/projects/:projectId/prompt-assets')
 export class PromptAssetController {
     constructor(private readonly service: PromptAssetService) { }
 
     @Post()
-    @ApiOperation({ summary: 'Crea un nuevo asset y su primera versión (v1.0.0)' })
+    @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+    @ApiOperation({ summary: 'Crea un nuevo prompt asset (y su primera versión) dentro de un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
     @ApiBody({ type: CreatePromptAssetDto })
-    @ApiResponse({ status: 201, description: 'Asset creado con su versión inicial.', type: CreatePromptAssetDto })
-    @ApiResponse({ status: 400, description: 'Datos inválidos.' })
-    @ApiResponse({ status: 409, description: 'Conflicto, la clave del asset ya existe.' })
+    @ApiResponse({ status: 201, description: 'Asset creado con su versión inicial.' })
+    @ApiResponse({ status: 400, description: 'Datos inválidos (e.g., falta initialValue).' })
+    @ApiResponse({ status: 404, description: 'Proyecto no encontrado.' })
+    @ApiResponse({ status: 409, description: 'Conflicto, ya existe un asset con esa key en el proyecto.' })
     @HttpCode(HttpStatus.CREATED)
-    create(@Body() createDto: CreatePromptAssetDto): Promise<AssetWithInitialVersion> {
-        return this.service.create(createDto);
+    create(@Req() req: RequestWithProject, @Body() createDto: CreatePromptAssetDto) {
+        const projectId = req.projectId;
+        return this.service.create(createDto, projectId);
     }
 
     @Get()
-    @ApiOperation({ summary: 'Obtiene todos los assets (sin historial completo de versiones)' })
-    @ApiResponse({ status: 200, description: 'Lista de assets.', type: [CreatePromptAssetDto] })
-    findAll(): Promise<PromptAsset[]> {
-        return this.service.findAll();
+    @ApiOperation({ summary: 'Obtiene todos los prompt assets de un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
+    @ApiResponse({ status: 200, description: 'Lista de assets.' })
+    @ApiResponse({ status: 404, description: 'Proyecto no encontrado.' })
+    findAll(@Req() req: RequestWithProject) {
+        const projectId = req.projectId;
+        return this.service.findAll(projectId);
     }
 
-    @Get(':key')
-    @ApiOperation({ summary: 'Obtiene un asset por su clave única, incluyendo todas sus versiones y traducciones' })
-    @ApiParam({ name: 'key', description: 'Clave única del asset' })
-    @ApiResponse({ status: 200, description: 'Asset encontrado.', type: CreatePromptAssetDto })
-    @ApiResponse({ status: 404, description: 'Asset no encontrado.' })
-    findOne(@Param('key') key: string): Promise<PromptAsset> {
-        return this.service.findOne(key);
+    @Get(':assetKey')
+    @ApiOperation({ summary: 'Obtiene un prompt asset por su key dentro de un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
+    @ApiParam({ name: 'assetKey', description: 'Key única del asset dentro del proyecto' })
+    @ApiResponse({ status: 200, description: 'Asset encontrado con detalles.' })
+    @ApiResponse({ status: 404, description: 'Proyecto o Asset no encontrado.' })
+    findOne(@Req() req: RequestWithProject, @Param('assetKey') key: string) {
+        const projectId = req.projectId;
+        return this.service.findOne(key, projectId);
     }
 
-    @Patch(':key')
-    @ApiOperation({ summary: 'Actualiza los metadatos de un asset (nombre, descripción, etc.). No actualiza el valor.' })
-    @ApiParam({ name: 'key', description: 'Clave única del asset a actualizar' })
+    @Patch(':assetKey')
+    @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, skipMissingProperties: true }))
+    @ApiOperation({ summary: 'Actualiza metadatos de un prompt asset (nombre, descripción, etc.) dentro de un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
+    @ApiParam({ name: 'assetKey', description: 'Key única del asset a actualizar' })
     @ApiBody({ type: UpdatePromptAssetDto })
-    @ApiResponse({ status: 200, description: 'Asset actualizado.', type: CreatePromptAssetDto })
-    @ApiResponse({ status: 404, description: 'Asset no encontrado.' })
+    @ApiResponse({ status: 200, description: 'Asset actualizado.' })
+    @ApiResponse({ status: 404, description: 'Proyecto o Asset no encontrado.' })
     @ApiResponse({ status: 400, description: 'Datos inválidos.' })
-    update(@Param('key') key: string, @Body() updateDto: UpdatePromptAssetDto): Promise<PromptAsset> {
-        return this.service.update(key, updateDto);
+    update(
+        @Req() req: RequestWithProject,
+        @Param('assetKey') key: string,
+        @Body() updateDto: UpdatePromptAssetDto
+    ) {
+        const projectId = req.projectId;
+        return this.service.update(key, updateDto, projectId);
     }
 
-    @Delete(':key')
-    @ApiOperation({ summary: 'Elimina un asset y todas sus versiones, traducciones y links asociados' })
-    @ApiParam({ name: 'key', description: 'Clave única del asset a eliminar' })
-    @ApiResponse({ status: 200, description: 'Asset eliminado.', type: CreatePromptAssetDto })
-    @ApiResponse({ status: 404, description: 'Asset no encontrado.' })
+    @Delete(':assetKey')
+    @ApiOperation({ summary: 'Elimina un prompt asset (y sus versiones/traducciones por Cascade) dentro de un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
+    @ApiParam({ name: 'assetKey', description: 'Key única del asset a eliminar' })
+    @ApiResponse({ status: 200, description: 'Asset eliminado.' })
+    @ApiResponse({ status: 404, description: 'Proyecto o Asset no encontrado.' })
+    @ApiResponse({ status: 409, description: 'Conflicto al eliminar (revisar relaciones sin Cascade).' })
     @HttpCode(HttpStatus.OK)
-    remove(@Param('key') key: string): Promise<PromptAsset> {
-        return this.service.remove(key);
-    }
-
-    @Post(':assetKey/versions')
-    @ApiOperation({ summary: 'Crea una nueva versión para un asset existente' })
-    @ApiParam({ name: 'assetKey', description: 'Clave del asset padre' })
-    @ApiBody({ type: CreateAssetVersionDto })
-    @ApiResponse({ status: 201, description: 'Versión creada.', type: CreateAssetVersionDto })
-    @ApiResponse({ status: 404, description: 'Asset no encontrado.' })
-    @ApiResponse({ status: 409, description: 'La etiqueta de versión ya existe para este asset.' })
-    @HttpCode(HttpStatus.CREATED)
-    createVersion(
-        @Param('assetKey') assetKey: string,
-        @Body() createVersionDto: CreateAssetVersionDto
-    ): Promise<PromptAssetVersion> {
-        return this.service.createVersion(assetKey, createVersionDto);
-    }
-
-    @Post('versions/:versionId/translations')
-    @ApiOperation({ summary: 'Añade o actualiza una traducción para una versión de asset específica' })
-    @ApiParam({ name: 'versionId', description: 'ID de la versión del asset' })
-    @ApiBody({ type: CreateOrUpdateAssetTranslationDto })
-    @ApiResponse({ status: 201, description: 'Traducción creada/actualizada.', type: CreateOrUpdateAssetTranslationDto })
-    @ApiResponse({ status: 404, description: 'Versión del asset no encontrada.' })
-    @HttpCode(HttpStatus.CREATED)
-    addOrUpdateTranslation(
-        @Param('versionId') versionId: string,
-        @Body() translationDto: CreateOrUpdateAssetTranslationDto
-    ): Promise<AssetTranslation> {
-        return this.service.addOrUpdateTranslation(versionId, translationDto);
+    remove(@Req() req: RequestWithProject, @Param('assetKey') key: string) {
+        const projectId = req.projectId;
+        return this.service.remove(key, projectId);
     }
 }

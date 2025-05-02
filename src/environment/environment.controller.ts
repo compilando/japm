@@ -1,78 +1,98 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, HttpCode, HttpStatus, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, HttpCode, HttpStatus, Req, UseGuards } from '@nestjs/common';
 import { EnvironmentService } from './environment.service';
 import { CreateEnvironmentDto } from './dto/create-environment.dto';
 import { UpdateEnvironmentDto } from './dto/update-environment.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { Environment } from '@prisma/client';
+import { ProjectGuard } from '../common/guards/project.guard';
+import { Request as ExpressRequest } from 'express';
 
-// Podríamos definir un DTO de respuesta si quisiéramos controlar qué se devuelve,
-// pero por ahora devolveremos la entidad Environment completa.
+// Definir interfaz para el request con projectId
+interface RequestWithProject extends ExpressRequest {
+    projectId: string;
+}
 
 @ApiTags('Environments')
-@Controller('environments')
+@UseGuards(ProjectGuard)
+@Controller('/api/projects/:projectId/environments')
 export class EnvironmentController {
     constructor(private readonly service: EnvironmentService) { }
 
     @Post()
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-    @ApiOperation({ summary: 'Crea un nuevo entorno' })
+    @ApiOperation({ summary: 'Crea un nuevo entorno para un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
     @ApiBody({ type: CreateEnvironmentDto })
-    @ApiResponse({ status: 201, description: 'Entorno creado.', type: CreateEnvironmentDto }) // Debería ser Environment realmente
+    @ApiResponse({ status: 201, description: 'Entorno creado.', type: CreateEnvironmentDto })
     @ApiResponse({ status: 400, description: 'Datos inválidos.' })
-    @ApiResponse({ status: 409, description: 'Conflicto, ya existe un entorno con ese nombre.' })
+    @ApiResponse({ status: 404, description: 'Proyecto no encontrado.' })
+    @ApiResponse({ status: 409, description: 'Conflicto, ya existe un entorno con ese nombre en el proyecto.' })
     @HttpCode(HttpStatus.CREATED)
-    create(@Body() createDto: CreateEnvironmentDto): Promise<Environment> {
-        return this.service.create(createDto);
+    create(@Req() req: RequestWithProject, @Body() createDto: CreateEnvironmentDto): Promise<Environment> {
+        const projectId = req.projectId;
+        return this.service.create(createDto, projectId);
     }
 
     @Get()
-    @ApiOperation({ summary: 'Obtiene todos los entornos' })
-    @ApiResponse({ status: 200, description: 'Lista de entornos.', type: [CreateEnvironmentDto] }) // Debería ser [Environment]
-    findAll(): Promise<Environment[]> {
-        return this.service.findAll();
+    @ApiOperation({ summary: 'Obtiene todos los entornos de un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
+    @ApiResponse({ status: 200, description: 'Lista de entornos.', type: [CreateEnvironmentDto] })
+    @ApiResponse({ status: 404, description: 'Proyecto no encontrado.' })
+    findAll(@Req() req: RequestWithProject): Promise<Environment[]> {
+        const projectId = req.projectId;
+        return this.service.findAll(projectId);
     }
 
-    @Get(':id')
-    @ApiOperation({ summary: 'Obtiene un entorno por su ID' })
-    @ApiParam({ name: 'id', description: 'ID único del entorno (CUID)', type: String })
-    @ApiResponse({ status: 200, description: 'Entorno encontrado.', type: CreateEnvironmentDto }) // Debería ser Environment
-    @ApiResponse({ status: 404, description: 'Entorno no encontrado.' })
-    // NOTA: No usamos ParseUUIDPipe porque Prisma usa CUIDs (strings), no UUIDs estándar.
-    // Se podría añadir validación custom si se quiere asegurar que es un CUID válido.
-    findOne(@Param('id') id: string): Promise<Environment> {
-        return this.service.findOne(id);
-    }
-
-    // Opcional: Endpoint para buscar por nombre si es común
-    @Get('/by-name/:name')
-    @ApiOperation({ summary: 'Obtiene un entorno por su nombre' })
-    @ApiParam({ name: 'name', description: 'Nombre único del entorno' })
+    @Get(':environmentId')
+    @ApiOperation({ summary: 'Obtiene un entorno por su ID dentro de un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
+    @ApiParam({ name: 'environmentId', description: 'ID único del entorno (CUID)', type: String })
     @ApiResponse({ status: 200, description: 'Entorno encontrado.', type: CreateEnvironmentDto })
-    @ApiResponse({ status: 404, description: 'Entorno no encontrado.' })
-    findByName(@Param('name') name: string): Promise<Environment> {
-        return this.service.findByName(name);
+    @ApiResponse({ status: 404, description: 'Proyecto o Entorno no encontrado.' })
+    findOne(@Req() req: RequestWithProject, @Param('environmentId') environmentId: string): Promise<Environment> {
+        const projectId = req.projectId;
+        return this.service.findOne(environmentId, projectId);
     }
 
-    @Patch(':id')
+    @Get('/by-name/:name')
+    @ApiOperation({ summary: 'Obtiene un entorno por su nombre dentro de un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
+    @ApiParam({ name: 'name', description: 'Nombre único del entorno en el proyecto' })
+    @ApiResponse({ status: 200, description: 'Entorno encontrado.', type: CreateEnvironmentDto })
+    @ApiResponse({ status: 404, description: 'Proyecto o Entorno no encontrado.' })
+    findByName(@Req() req: RequestWithProject, @Param('name') name: string): Promise<Environment> {
+        const projectId = req.projectId;
+        return this.service.findByName(name, projectId);
+    }
+
+    @Patch(':environmentId')
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, skipMissingProperties: true }))
-    @ApiOperation({ summary: 'Actualiza un entorno existente' })
-    @ApiParam({ name: 'id', description: 'ID único del entorno a actualizar (CUID)', type: String })
+    @ApiOperation({ summary: 'Actualiza un entorno existente en un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
+    @ApiParam({ name: 'environmentId', description: 'ID único del entorno a actualizar (CUID)', type: String })
     @ApiBody({ type: UpdateEnvironmentDto })
-    @ApiResponse({ status: 200, description: 'Entorno actualizado.', type: CreateEnvironmentDto }) // Debería ser Environment
-    @ApiResponse({ status: 404, description: 'Entorno no encontrado.' })
+    @ApiResponse({ status: 200, description: 'Entorno actualizado.', type: CreateEnvironmentDto })
+    @ApiResponse({ status: 404, description: 'Proyecto o Entorno no encontrado.' })
     @ApiResponse({ status: 400, description: 'Datos inválidos.' })
-    @ApiResponse({ status: 409, description: 'Conflicto, ya existe un entorno con el nuevo nombre.' })
-    update(@Param('id') id: string, @Body() updateDto: UpdateEnvironmentDto): Promise<Environment> {
-        return this.service.update(id, updateDto);
+    @ApiResponse({ status: 409, description: 'Conflicto, ya existe un entorno con el nuevo nombre en el proyecto.' })
+    update(
+        @Req() req: RequestWithProject,
+        @Param('environmentId') environmentId: string,
+        @Body() updateDto: UpdateEnvironmentDto
+    ): Promise<Environment> {
+        const projectId = req.projectId;
+        return this.service.update(environmentId, updateDto, projectId);
     }
 
-    @Delete(':id')
-    @ApiOperation({ summary: 'Elimina un entorno' })
-    @ApiParam({ name: 'id', description: 'ID único del entorno a eliminar (CUID)', type: String })
-    @ApiResponse({ status: 200, description: 'Entorno eliminado.', type: CreateEnvironmentDto }) // Debería ser Environment
-    @ApiResponse({ status: 404, description: 'Entorno no encontrado.' })
-    @HttpCode(HttpStatus.OK) // Usar OK (200) o No Content (204) es común para DELETE
-    remove(@Param('id') id: string): Promise<Environment> {
-        return this.service.remove(id);
+    @Delete(':environmentId')
+    @ApiOperation({ summary: 'Elimina un entorno de un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
+    @ApiParam({ name: 'environmentId', description: 'ID único del entorno a eliminar (CUID)', type: String })
+    @ApiResponse({ status: 200, description: 'Entorno eliminado.', type: CreateEnvironmentDto })
+    @ApiResponse({ status: 404, description: 'Proyecto o Entorno no encontrado.' })
+    @HttpCode(HttpStatus.OK)
+    remove(@Req() req: RequestWithProject, @Param('environmentId') environmentId: string): Promise<Environment> {
+        const projectId = req.projectId;
+        return this.service.remove(environmentId, projectId);
     }
 } 

@@ -1,6 +1,7 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 import { RegionModule } from './region/region.module';
 import { CulturalDataModule } from './cultural-data/cultural-data.module';
@@ -22,10 +23,14 @@ import { PromptAssetVersionModule } from './prompt-asset-version/prompt-asset-ve
 import { AssetTranslationModule } from './asset-translation/asset-translation.module';
 import { ExecutionLogModule } from './execution-log/execution-log.module';
 import { EnvironmentModule } from './environment/environment.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    PrismaModule,
     UserModule,
+    AuthModule,
     RegionModule,
     CulturalDataModule,
     TacticModule,

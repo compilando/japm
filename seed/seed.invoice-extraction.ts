@@ -32,8 +32,18 @@ async function main() {
 
     // --- Ensure Base Data Exists (User, Models, Environments) ---
     const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS) } });
-    // Assume AI Models (esp. one good at JSON) and Environments are created.
-    // Let's ensure a relevant AI Model exists
+    // Find necessary base data
+    const defaultProjectId = 'default-project'; // Assuming the default project ID
+    const stagingEnvironment = await prisma.environment.findUniqueOrThrow({
+        where: { projectId_name: { name: 'staging', projectId: defaultProjectId } }, // Find env in default project
+        select: { id: true } // Select ID for connecting later
+    });
+    const productionEnvironment = await prisma.environment.findUniqueOrThrow({
+        where: { projectId_name: { name: 'production', projectId: defaultProjectId } }, // Find env in default project
+        select: { id: true } // Select ID for connecting later
+    });
+
+    // Let's ensure a relevant AI Model exists (assuming it can be shared or linked)
     const jsonModel = await prisma.aIModel.upsert({
         where: { name: 'gpt-4o-2024-05-13' }, // Assuming this exists from original seed
         update: { supportsJson: true },
@@ -47,23 +57,36 @@ async function main() {
     // --- Extraction Project ---
     const extractionProject = await prisma.project.upsert({
         where: { id: 'invoice-processing-system' },
-        update: { name: 'Invoice Processing System', description: 'Extracting key data from scanned invoices.' },
+        update: { name: 'Invoice Processing System', description: 'Extracting key data from scanned invoices.', owner: { connect: { id: testUser.id } } }, // use owner connect
         create: {
             id: 'invoice-processing-system',
             name: 'Invoice Processing System',
             description: 'Extracting key data from scanned invoices.',
-            owner: { connect: { id: testUser.id } },
-            // Optionally link specific models good for extraction
-            aiModels: { connect: { id: jsonModel.id } }
+            owner: { connect: { id: testUser.id } }, // use owner connect
         },
     });
     console.log(`Created Project: ${extractionProject.name}`);
 
-    // --- Extraction Tags ---
-    const extractionTags = ['extraction', 'invoice', 'finance', 'ocr', 'json', 'automation'];
-    for (const tagName of extractionTags) {
-        await prisma.tag.upsert({ where: { name: tagName }, update: {}, create: { name: tagName } });
-        console.log(`Upserted Tag: ${tagName}`);
+    // --- Extraction Tags with prefix ---
+    const invProjectId = extractionProject.id;
+    const invPrefix = 'inv_';
+    const invBaseTags = ['extraction', 'invoice', 'finance', 'ocr', 'json', 'automation'];
+    const invTagsToConnect: { name: string }[] = [];
+
+    for (const baseTagName of invBaseTags) {
+        const tagName = `${invPrefix}${baseTagName}`;
+        const existingTag = await prisma.tag.findUnique({ where: { name: tagName } });
+
+        if (existingTag) {
+            if (existingTag.projectId !== invProjectId) {
+                await prisma.tag.update({ where: { id: existingTag.id }, data: { projectId: invProjectId } });
+                console.log(`Updated Tag: ${tagName} project link to ${invProjectId}`);
+            }
+        } else {
+            await prisma.tag.create({ data: { name: tagName, projectId: invProjectId } });
+            console.log(`Created Tag: ${tagName} for project ${invProjectId}`);
+        }
+        invTagsToConnect.push({ name: tagName });
     }
 
     // --- Create Assets for each Field to Extract ---
@@ -76,19 +99,19 @@ async function main() {
                 description: field.description, // Description holds the extraction instruction for this field
                 type: 'Extraction Field', // Custom type
                 category: 'Invoice Data', // Custom category
-                project: { connect: { id: extractionProject.id } }
+                projectId: extractionProject.id // Use direct projectId
             }
         });
 
         const assetVersion = await prisma.promptAssetVersion.create({
             data: {
-                asset: { connect: { key: asset.key } },
+                assetId: asset.key, // Use direct assetId
                 // Value could hold example format, validation regex, etc. but description is key here.
                 value: `Example format or type hint: ${field.key.includes('date') ? 'YYYY-MM-DD' : (field.key.includes('amount') ? 'Number' : 'String')}`,
                 versionTag: 'v1.0.0',
                 status: 'active',
                 // Activate in relevant environments
-                activeInEnvironments: { connect: [{ name: 'staging' }, { name: 'production' }] }
+                activeInEnvironments: { connect: [{ id: stagingEnvironment.id }, { id: productionEnvironment.id }] } // Use connect with env IDs
             }
         });
         createdAssetVersions.push({ key: field.key, versionId: assetVersion.id });
@@ -101,8 +124,8 @@ async function main() {
         data: {
             name: 'extract-invoice-data-json',
             description: 'Extracts key fields from invoice text into JSON format, using linked assets for field definitions.',
-            project: { connect: { id: extractionProject.id } },
-            tags: { connect: [{ name: 'extraction' }, { name: 'invoice' }, { name: 'json' }] }
+            projectId: extractionProject.id, // Use direct projectId
+            tags: { connect: invTagsToConnect.filter(t => ['inv_extraction', 'inv_invoice', 'inv_json'].includes(t.name)) } // Connect prefixed tags
         }
     });
 
@@ -110,7 +133,7 @@ async function main() {
     // This prompt expects the OCR'd text of the invoice to be injected at runtime.
     const promptExtractV1 = await prisma.promptVersion.create({
         data: {
-            prompt: { connect: { name: promptExtract.name } },
+            promptId: promptExtract.name, // Use direct promptId
             promptText: `You are an expert invoice data extraction AI.
 Analyze the following invoice text provided between '''triple quotes'''.
 Extract the data points specified by the linked field assets. Use the description of each linked asset to understand exactly what information to find for that field.
@@ -127,7 +150,7 @@ JSON Output:`,
             status: 'active',
             changeMessage: 'Initial version for extracting invoice fields defined by linked assets into JSON.',
             // Activate in relevant environments
-            activeInEnvironments: { connect: [{ name: 'staging' }, { name: 'production' }] }
+            activeInEnvironments: { connect: [{ id: stagingEnvironment.id }, { id: productionEnvironment.id }] } // Use connect with env IDs
         }
     });
     console.log(`Created Prompt ${promptExtract.name} V1`);

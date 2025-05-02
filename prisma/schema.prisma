@@ -35,7 +35,11 @@ model Region {
   from_Region_parentRegion Region[]              @relation("Region_parentRegion")
   from_RagDocumentMetadata RagDocumentMetadata[] @relation("RagDocumentMetadata_region")
 
+  project                  Project               @relation("ProjectRegions", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId                String                @map("project")
+
   @@index([parentRegionId])
+  @@index([projectId])
 }
 
 model CulturalData {
@@ -48,7 +52,11 @@ model CulturalData {
   notes               String               @default("")
   tactics             Tactic[]             @relation("Tactic_culturalData")
 
+  project             Project              @relation("ProjectCulturalData", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId           String               @map("project")
+
   @@index([regionId])
+  @@index([projectId])
 }
 
 model Prompt {
@@ -58,8 +66,8 @@ model Prompt {
   tacticId        String?           @map("tactic")
   versions        PromptVersion[]   @relation("PromptVersion_prompt")
   tags            Tag[]             @relation("PromptTags")
-  project         Project?          @relation("ProjectPrompts", fields: [projectId], references: [id])
-  projectId       String?           @map("project")
+  project         Project           @relation("ProjectPrompts", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId       String            @map("project")
 
   @@index([tacticId])
   @@index([projectId])
@@ -78,9 +86,13 @@ model PromptVersion {
   assets              PromptAssetLink[]  @relation("PromptAssetLink_promptVersion")
   activeInEnvironments Environment[]      @relation("ActivePromptsInEnvironment")
   executionLogs       PromptExecutionLog[] // Relación inversa añadida
+  aiModel             AIModel?           @relation(fields: [aiModelId], references: [id]) // Optional link to a global AI Model
+  aiModelId           String?            // FK for AIModel
 
+  // Implicitly linked to Project via Prompt
   @@unique([promptId, versionTag])
   @@index([promptId])
+  @@index([aiModelId]) // Index the new FK
 }
 
 model Tactic {
@@ -91,8 +103,8 @@ model Tactic {
   culturalDataId String?
   tacticsConfig  String?
   prompts        Prompt[]             @relation("Prompt_tactic")
-  project        Project?             @relation("ProjectTactics", fields: [projectId], references: [id])
-  projectId      String?
+  project        Project              @relation("ProjectTactics", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId      String               @map("project")
 
   @@index([regionId])
   @@index([culturalDataId])
@@ -119,8 +131,8 @@ model PromptAsset {
   category        String?
   enabled         Boolean               @default(true)
   versions        PromptAssetVersion[]  @relation("PromptAssetVersion_asset")
-  project         Project?              @relation("ProjectAssets", fields: [projectId], references: [id])
-  projectId       String?               @map("project")
+  project         Project               @relation("ProjectAssets", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId       String                @map("project")
 
   @@index([projectId])
 }
@@ -138,6 +150,7 @@ model PromptAssetVersion {
   links               PromptAssetLink[]  @relation("PromptAssetLink_assetVersion")
   activeInEnvironments Environment[]      @relation("ActiveAssetsInEnvironment")
 
+  // Implicitly linked to Project via PromptAsset
   @@unique([assetId, versionTag])
   @@index([assetId])
 }
@@ -180,7 +193,11 @@ model RagDocumentMetadata {
   piiRiskLevel       String?
   lastReviewedBy     String  @default("")
 
+  project            Project @relation("ProjectRagDocs", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId          String  @map("project")
+
   @@index([regionId])
+  @@index([projectId])
 }
 
 model Tag {
@@ -188,6 +205,12 @@ model Tag {
   name        String    @unique
   description String?
   prompts     Prompt[] @relation("PromptTags")
+
+  project     Project  @relation("ProjectTags", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String   @map("project")
+
+  @@unique([projectId, name])
+  @@index([projectId])
 }
 
 model Project {
@@ -202,7 +225,12 @@ model Project {
   tactics             Tactic[]             @relation("ProjectTactics")
   prompts             Prompt[]             @relation("ProjectPrompts")
   assets              PromptAsset[]        @relation("ProjectAssets")
-  aiModels            AIModel[]            @relation("ProjectModels")
+  regions             Region[]             @relation("ProjectRegions")
+  culturalData        CulturalData[]       @relation("ProjectCulturalData")
+  ragDocs             RagDocumentMetadata[] @relation("ProjectRagDocs")
+  tags                Tag[]                @relation("ProjectTags")
+  environments        Environment[]        @relation("ProjectEnvironments")
+  promptExecutionLogs PromptExecutionLog[] @relation("ProjectLogs")
 
   @@index([ownerUserId])
 }
@@ -218,9 +246,16 @@ model AIModel {
   supportsJson  Boolean @default(false)
   contextWindow Int?   // Tamaño máximo de contexto
 
-  projects Project[] @relation("ProjectModels")
-  // promptVersions PromptVersion[] // Relación potencial a añadir después
-  // assetVersions  PromptAssetVersion[] // Relación potencial a añadir después
+  // Add back-relation to PromptVersion
+  promptVersions PromptVersion[]
+
+  // Remove relation to Project
+  // project       Project   @relation("ProjectModels", fields: [projectId], references: [id], onDelete: Cascade)
+  // projectId     String    @map("project")
+
+  // Remove project-specific constraints
+  // @@unique([projectId, name])
+  // @@index([projectId])
 }
 
 model Environment {
@@ -230,6 +265,12 @@ model Environment {
   activePromptVersions PromptVersion[]    @relation("ActivePromptsInEnvironment")
   activeAssetVersions PromptAssetVersion[] @relation("ActiveAssetsInEnvironment")
   promptExecutionLogs PromptExecutionLog[] // Relación inversa añadida
+
+  project             Project            @relation("ProjectEnvironments", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId           String             @map("project")
+
+  @@unique([projectId, name])
+  @@index([projectId])
 }
 
 // --- LOGGING --- //
@@ -258,6 +299,9 @@ model PromptExecutionLog {
   durationMs    Int?          // Duración de la ejecución en milisegundos
   errorMessage  String?       // Mensaje de error si success = false
   // Podríamos añadir métricas como tokenCount, cost, etc.
+
+  project       Project        @relation("ProjectLogs", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId     String         @map("project")
 
   @@index([promptVersionId])
   @@index([environmentId])

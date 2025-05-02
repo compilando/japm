@@ -22,6 +22,19 @@ export class ProjectService {
         return this.prisma.project.findMany();
     }
 
+    async findAllForUser(userId: string): Promise<Pick<Project, 'id' | 'name'>[]> {
+        return this.prisma.project.findMany({
+            where: { ownerUserId: userId },
+            select: {
+                id: true,
+                name: true,
+            },
+            orderBy: {
+                name: 'asc',
+            },
+        });
+    }
+
     async findOne(id: string): Promise<Project> {
         const project = await this.prisma.project.findUnique({
             where: { id },

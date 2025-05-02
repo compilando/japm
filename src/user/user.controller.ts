@@ -35,7 +35,7 @@ export class UserController {
     @ApiResponse({ status: 200, description: 'El usuario encontrado.', type: CreateUserDto })
     @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
     findOne(@Param('id') id: string): Promise<User> {
-        return this.userService.findOne(id);
+        return this.userService.findOneById(id);
     }
 
     @Patch(':id')

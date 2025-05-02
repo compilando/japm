@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, HttpCode, HttpStatus, Req, UseGuards } from '@nestjs/common';
 import { TacticService } from './tactic.service';
 import { CreateTacticDto } from './dto/create-tactic.dto';
 import { UpdateTacticDto } from './dto/update-tactic.dto';
@@ -6,69 +6,100 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiProperty } fr
 import { Tactic, Region, CulturalData } from '@prisma/client';
 import { CreateRegionDto } from '../region/dto/create-region.dto'; // Para el DTO de respuesta
 import { CreateCulturalDataDto } from '../cultural-data/dto/create-cultural-data.dto'; // Para el DTO de respuesta
+import { ProjectGuard } from '../common/guards/project.guard'; // Import guard
+import { Request as ExpressRequest } from 'express';
 
-// DTO de respuesta
-class TacticResponse extends CreateTacticDto {
+// Define interface for request with projectId
+interface RequestWithProject extends ExpressRequest {
+    projectId: string;
+}
+
+// DTO de respuesta (Independiente para evitar conflictos de herencia)
+class TacticResponse {
+    @ApiProperty()
+    name: string;
+
+    @ApiProperty({ required: false })
+    tacticsConfig?: string;
+
     @ApiProperty({ type: () => CreateRegionDto, required: false })
     region?: Region;
+
     @ApiProperty({ type: () => CreateCulturalDataDto, required: false })
     culturalData?: CulturalData;
-    // prompts: Prompt[]; // Podríamos añadir los prompts también
+
+    @ApiProperty()
+    projectId: string;
+
+    // Se podrían añadir más campos si son relevantes en la respuesta
 }
 
 @ApiTags('Tactics')
-@Controller('tactics')
+@UseGuards(ProjectGuard)
+@Controller('/api/projects/:projectId/tactics') // Nueva ruta base
 export class TacticController {
     constructor(private readonly service: TacticService) { }
 
     @Post()
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-    @ApiOperation({ summary: 'Crea una nueva táctica conversacional' })
+    @ApiOperation({ summary: 'Crea una nueva táctica conversacional dentro de un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
     @ApiBody({ type: CreateTacticDto })
-    @ApiResponse({ status: 201, description: 'Táctica creada.', type: CreateTacticDto })
+    @ApiResponse({ status: 201, description: 'Táctica creada.', type: TacticResponse })
     @ApiResponse({ status: 400, description: 'Datos inválidos.' })
-    @ApiResponse({ status: 404, description: 'Región o CulturalData no encontrada.' })
-    @ApiResponse({ status: 409, description: 'Conflicto, ya existe una táctica con ese nombre.' })
+    @ApiResponse({ status: 404, description: 'Proyecto, Región o CulturalData no encontrada.' })
+    @ApiResponse({ status: 409, description: 'Conflicto, ya existe una táctica con ese nombre en el proyecto.' })
     @HttpCode(HttpStatus.CREATED)
-    create(@Body() createDto: CreateTacticDto): Promise<Tactic> {
-        return this.service.create(createDto);
+    create(@Req() req: RequestWithProject, @Body() createDto: CreateTacticDto): Promise<Tactic> {
+        const projectId = req.projectId;
+        return this.service.create(createDto, projectId);
     }
 
     @Get()
-    @ApiOperation({ summary: 'Obtiene todas las tácticas conversacionales' })
-    @ApiResponse({ status: 200, description: 'Lista de tácticas.', type: [CreateTacticDto] })
-    findAll(): Promise<Tactic[]> {
-        return this.service.findAll();
+    @ApiOperation({ summary: 'Obtiene todas las tácticas conversacionales de un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
+    @ApiResponse({ status: 200, description: 'Lista de tácticas.', type: [TacticResponse] })
+    @ApiResponse({ status: 404, description: 'Proyecto no encontrado.' })
+    findAll(@Req() req: RequestWithProject): Promise<Tactic[]> {
+        const projectId = req.projectId;
+        return this.service.findAll(projectId);
     }
 
-    @Get(':name')
-    @ApiOperation({ summary: 'Obtiene una táctica por su nombre (ID)' })
-    @ApiParam({ name: 'name', description: 'Nombre único de la táctica' })
-    @ApiResponse({ status: 200, description: 'Táctica encontrada.', type: CreateTacticDto })
-    @ApiResponse({ status: 404, description: 'Táctica no encontrada.' })
-    findOne(@Param('name') name: string): Promise<Tactic> {
-        return this.service.findOne(name);
+    @Get(':tacticName') // Usar nombre de parámetro más específico
+    @ApiOperation({ summary: 'Obtiene una táctica por su nombre (ID) dentro de un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
+    @ApiParam({ name: 'tacticName', description: 'Nombre único de la táctica' })
+    @ApiResponse({ status: 200, description: 'Táctica encontrada.', type: TacticResponse })
+    @ApiResponse({ status: 404, description: 'Proyecto o Táctica no encontrada.' })
+    findOne(@Req() req: RequestWithProject, @Param('tacticName') name: string): Promise<Tactic> {
+        const projectId = req.projectId;
+        return this.service.findOne(name, projectId);
     }
 
-    @Patch(':name')
+    @Patch(':tacticName')
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, skipMissingProperties: true }))
-    @ApiOperation({ summary: 'Actualiza una táctica existente' })
-    @ApiParam({ name: 'name', description: 'Nombre único de la táctica a actualizar' })
+    @ApiOperation({ summary: 'Actualiza una táctica existente dentro de un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
+    @ApiParam({ name: 'tacticName', description: 'Nombre único de la táctica a actualizar' })
     @ApiBody({ type: UpdateTacticDto })
-    @ApiResponse({ status: 200, description: 'Táctica actualizada.', type: CreateTacticDto })
-    @ApiResponse({ status: 404, description: 'Táctica, Región o CulturalData no encontrada.' })
+    @ApiResponse({ status: 200, description: 'Táctica actualizada.', type: TacticResponse })
+    @ApiResponse({ status: 404, description: 'Proyecto, Táctica, Región o CulturalData no encontrada.' })
     @ApiResponse({ status: 400, description: 'Datos inválidos.' })
-    update(@Param('name') name: string, @Body() updateDto: UpdateTacticDto): Promise<Tactic> {
-        return this.service.update(name, updateDto);
+    update(@Req() req: RequestWithProject, @Param('tacticName') name: string, @Body() updateDto: UpdateTacticDto): Promise<Tactic> {
+        const projectId = req.projectId;
+        return this.service.update(name, updateDto, projectId);
     }
 
-    @Delete(':name')
-    @ApiOperation({ summary: 'Elimina una táctica' })
-    @ApiParam({ name: 'name', description: 'Nombre único de la táctica a eliminar' })
+    @Delete(':tacticName')
+    @ApiOperation({ summary: 'Elimina una táctica dentro de un proyecto' })
+    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
+    @ApiParam({ name: 'tacticName', description: 'Nombre único de la táctica a eliminar' })
     @ApiResponse({ status: 200, description: 'Táctica eliminada.' })
-    @ApiResponse({ status: 404, description: 'Táctica no encontrada.' })
+    @ApiResponse({ status: 404, description: 'Proyecto o Táctica no encontrada.' })
+    @ApiResponse({ status: 409, description: 'Conflicto al eliminar (referenciada por prompts).' })
     @HttpCode(HttpStatus.OK)
-    remove(@Param('name') name: string): Promise<Tactic> {
-        return this.service.remove(name);
+    remove(@Req() req: RequestWithProject, @Param('tacticName') name: string): Promise<Tactic> {
+        const projectId = req.projectId;
+        return this.service.remove(name, projectId);
     }
 }
