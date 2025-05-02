@@ -1,64 +1,109 @@
 import {
-  Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus, UsePipes, ValidationPipe, Query
+  Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus, UsePipes, ValidationPipe, UseGuards, Request
 } from '@nestjs/common';
 import { PromptAssetVersionService } from './prompt-asset-version.service';
 import { CreatePromptAssetVersionDto } from './dto/create-prompt-asset-version.dto';
 import { UpdatePromptAssetVersionDto } from './dto/update-prompt-asset-version.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { PromptAssetVersion } from '@prisma/client';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ProjectGuard } from '../common/guards/project.guard';
 
-@ApiTags('Prompt Asset Versions')
-@Controller('prompt-asset-versions')
+@ApiTags('Prompt Asset Versions (within Project/Asset)')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, ProjectGuard)
+@Controller('projects/:projectId/assets/:assetKey/versions')
 export class PromptAssetVersionController {
   constructor(private readonly service: PromptAssetVersionService) { }
 
   @Post()
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  @ApiOperation({ summary: 'Crea una nueva versión para un asset (Requiere assetId en el body)' })
+  @ApiOperation({ summary: 'Create a new version for a specific asset within a project' })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiParam({ name: 'assetKey', description: 'Asset Key' })
   @ApiBody({ type: CreatePromptAssetVersionDto })
-  @ApiResponse({ status: 201, description: 'Versión creada.', type: CreatePromptAssetVersionDto })
-  @ApiResponse({ status: 404, description: 'Asset no encontrado.' })
-  @ApiResponse({ status: 409, description: 'La etiqueta de versión ya existe para este asset.' })
+  @ApiResponse({ status: 201, description: 'Version created.', type: CreatePromptAssetVersionDto })
+  @ApiResponse({ status: 400, description: 'Invalid data (e.g., duplicate versionTag).' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
+  @ApiResponse({ status: 404, description: 'Project or Asset not found.' })
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createDto: CreatePromptAssetVersionDto): Promise<PromptAssetVersion> {
-    return this.service.create(createDto);
+  create(
+    @Param('projectId') projectId: string,
+    @Param('assetKey') assetKey: string,
+    @Body() createDto: CreatePromptAssetVersionDto
+  ): Promise<PromptAssetVersion> {
+    return this.service.create(projectId, assetKey, createDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Obtiene todas las versiones de assets' })
-  @ApiResponse({ status: 200, description: 'Lista de versiones de assets.', type: [CreatePromptAssetVersionDto] })
-  findAll(): Promise<PromptAssetVersion[]> {
-    return this.service.findAll();
+  @ApiOperation({ summary: 'Get all versions for a specific asset within a project' })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiParam({ name: 'assetKey', description: 'Asset Key' })
+  @ApiResponse({ status: 200, description: 'List of versions.', type: [CreatePromptAssetVersionDto] })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
+  @ApiResponse({ status: 404, description: 'Project or Asset not found.' })
+  findAll(
+    @Param('projectId') projectId: string,
+    @Param('assetKey') assetKey: string
+  ): Promise<PromptAssetVersion[]> {
+    return this.service.findAllForAsset(projectId, assetKey);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Obtiene una versión de asset por su ID' })
-  @ApiParam({ name: 'id', description: 'ID único de la versión del asset' })
-  @ApiResponse({ status: 200, description: 'Versión encontrada.', type: CreatePromptAssetVersionDto })
-  @ApiResponse({ status: 404, description: 'Versión no encontrada.' })
-  findOne(@Param('id') id: string): Promise<PromptAssetVersion> {
-    return this.service.findOne(id);
+  @Get(':versionTag')
+  @ApiOperation({ summary: 'Get a specific asset version by its tag within a project/asset' })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiParam({ name: 'assetKey', description: 'Asset Key' })
+  @ApiParam({ name: 'versionTag', description: 'Version tag (e.g., v1.0.0)' })
+  @ApiResponse({ status: 200, description: 'Version found.', type: CreatePromptAssetVersionDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
+  @ApiResponse({ status: 404, description: 'Project, Asset, or Version not found.' })
+  findOneByTag(
+    @Param('projectId') projectId: string,
+    @Param('assetKey') assetKey: string,
+    @Param('versionTag') versionTag: string
+  ): Promise<PromptAssetVersion> {
+    return this.service.findOneByTag(projectId, assetKey, versionTag);
   }
 
-  @Patch(':id')
+  @Patch(':versionTag')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, skipMissingProperties: true }))
-  @ApiOperation({ summary: 'Actualiza una versión de asset (solo value y changeMessage)' })
-  @ApiParam({ name: 'id', description: 'ID único de la versión a actualizar' })
+  @ApiOperation({ summary: 'Update a specific asset version by its tag within a project/asset' })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiParam({ name: 'assetKey', description: 'Asset Key' })
+  @ApiParam({ name: 'versionTag', description: 'Version tag to update' })
   @ApiBody({ type: UpdatePromptAssetVersionDto })
-  @ApiResponse({ status: 200, description: 'Versión actualizada.', type: CreatePromptAssetVersionDto })
-  @ApiResponse({ status: 404, description: 'Versión no encontrada.' })
-  @ApiResponse({ status: 400, description: 'Datos inválidos.' })
-  update(@Param('id') id: string, @Body() updateDto: UpdatePromptAssetVersionDto): Promise<PromptAssetVersion> {
-    return this.service.update(id, updateDto);
+  @ApiResponse({ status: 200, description: 'Version updated.', type: CreatePromptAssetVersionDto })
+  @ApiResponse({ status: 400, description: 'Invalid data.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
+  @ApiResponse({ status: 404, description: 'Project, Asset, or Version not found.' })
+  update(
+    @Param('projectId') projectId: string,
+    @Param('assetKey') assetKey: string,
+    @Param('versionTag') versionTag: string,
+    @Body() updateDto: UpdatePromptAssetVersionDto
+  ): Promise<PromptAssetVersion> {
+    return this.service.update(projectId, assetKey, versionTag, updateDto);
   }
 
-  @Delete(':id')
-  @ApiOperation({ summary: 'Elimina una versión de asset' })
-  @ApiParam({ name: 'id', description: 'ID único de la versión a eliminar' })
-  @ApiResponse({ status: 200, description: 'Versión eliminada.', type: CreatePromptAssetVersionDto })
-  @ApiResponse({ status: 404, description: 'Versión no encontrada.' })
+  @Delete(':versionTag')
+  @ApiOperation({ summary: 'Delete a specific asset version by its tag within a project/asset' })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiParam({ name: 'assetKey', description: 'Asset Key' })
+  @ApiParam({ name: 'versionTag', description: 'Version tag to delete' })
+  @ApiResponse({ status: 200, description: 'Version deleted.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
+  @ApiResponse({ status: 404, description: 'Project, Asset, or Version not found.' })
   @HttpCode(HttpStatus.OK)
-  remove(@Param('id') id: string): Promise<PromptAssetVersion> {
-    return this.service.remove(id);
+  remove(
+    @Param('projectId') projectId: string,
+    @Param('assetKey') assetKey: string,
+    @Param('versionTag') versionTag: string
+  ): Promise<PromptAssetVersion> {
+    return this.service.remove(projectId, assetKey, versionTag);
   }
 }

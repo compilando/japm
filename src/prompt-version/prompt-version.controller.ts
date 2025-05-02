@@ -1,55 +1,108 @@
 import {
-  Controller, Get, Post, Body, Patch, Param, Delete, Query, HttpCode, HttpStatus
+  Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, UseGuards, Request, HttpCode, HttpStatus
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { PromptVersionService } from './prompt-version.service';
-import { CreatePromptVersionDto } from '../prompt/dto/create-prompt-version.dto';
 import { UpdatePromptVersionDto } from './dto/update-prompt-version.dto';
 import { PromptVersion } from '@prisma/client';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ProjectGuard } from '../common/guards/project.guard';
+import { CreatePromptVersionDto } from 'src/prompt/dto/create-prompt-version.dto';
 
-@ApiTags('Prompt Versions')
-@Controller('prompt-versions')
+@ApiTags('Prompt Versions (within Project/Prompt)')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, ProjectGuard)
+@Controller('projects/:projectId/prompts/:promptId/versions')
 export class PromptVersionController {
   constructor(private readonly service: PromptVersionService) { }
 
+  @Post()
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  @ApiOperation({ summary: 'Create a new version for a specific prompt within a project' })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiParam({ name: 'promptId', description: 'Prompt CUID' })
+  @ApiBody({ type: CreatePromptVersionDto })
+  @ApiResponse({ status: 201, description: 'Version created.', type: CreatePromptVersionDto })
+  @ApiResponse({ status: 400, description: 'Invalid data (e.g., duplicate versionTag).' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
+  @ApiResponse({ status: 404, description: 'Project or Prompt not found.' })
+  create(
+    @Param('projectId') projectId: string,
+    @Param('promptId') promptId: string,
+    @Body() createDto: CreatePromptVersionDto
+  ): Promise<PromptVersion> {
+    return this.service.create(projectId, promptId, createDto);
+  }
+
   @Get()
-  @ApiOperation({ summary: 'Obtiene todas las versiones de prompts o filtra por prompt ID' })
-  @ApiQuery({ name: 'promptId', required: false, description: 'ID (nombre) del prompt para filtrar versiones' })
-  @ApiResponse({ status: 200, description: 'Lista de versiones.', type: [CreatePromptVersionDto] })
-  findAll(@Query('promptId') promptId?: string): Promise<PromptVersion[]> {
-    if (promptId) {
-      return this.service.findByPromptId(promptId);
-    }
-    return this.service.findAll();
+  @ApiOperation({ summary: 'Get all versions for a specific prompt within a project' })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiParam({ name: 'promptId', description: 'Prompt CUID' })
+  @ApiResponse({ status: 200, description: 'List of versions.', type: [CreatePromptVersionDto] })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
+  @ApiResponse({ status: 404, description: 'Project or Prompt not found.' })
+  findAll(
+    @Param('projectId') projectId: string,
+    @Param('promptId') promptId: string
+  ): Promise<PromptVersion[]> {
+    return this.service.findAllForPrompt(projectId, promptId);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Obtiene una versión de prompt por su ID' })
-  @ApiParam({ name: 'id', description: 'ID único de la versión del prompt' })
-  @ApiResponse({ status: 200, description: 'Versión encontrada.', type: CreatePromptVersionDto })
-  @ApiResponse({ status: 404, description: 'Versión no encontrada.' })
-  findOne(@Param('id') id: string): Promise<PromptVersion> {
-    return this.service.findOne(id);
+  @Get(':versionTag')
+  @ApiOperation({ summary: 'Get a specific prompt version by its tag within a project/prompt' })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiParam({ name: 'promptId', description: 'Prompt CUID' })
+  @ApiParam({ name: 'versionTag', description: 'Version tag (e.g., v1.0.0)' })
+  @ApiResponse({ status: 200, description: 'Version found.', type: CreatePromptVersionDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
+  @ApiResponse({ status: 404, description: 'Project, Prompt, or Version not found.' })
+  findOneByTag(
+    @Param('projectId') projectId: string,
+    @Param('promptId') promptId: string,
+    @Param('versionTag') versionTag: string
+  ): Promise<PromptVersion> {
+    return this.service.findOneByTag(projectId, promptId, versionTag);
   }
 
-  @Patch(':id')
-  @ApiOperation({ summary: 'Actualiza una versión de prompt existente' })
-  @ApiParam({ name: 'id', description: 'ID único de la versión a actualizar' })
+  @Patch(':versionTag')
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, skipMissingProperties: true }))
+  @ApiOperation({ summary: 'Update a specific prompt version by its tag within a project/prompt' })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiParam({ name: 'promptId', description: 'Prompt CUID' })
+  @ApiParam({ name: 'versionTag', description: 'Version tag to update' })
   @ApiBody({ type: UpdatePromptVersionDto })
-  @ApiResponse({ status: 200, description: 'Versión actualizada.', type: CreatePromptVersionDto })
-  @ApiResponse({ status: 404, description: 'Versión no encontrada.' })
-  @ApiResponse({ status: 400, description: 'Datos inválidos.' })
-  update(@Param('id') id: string, @Body() updateDto: UpdatePromptVersionDto): Promise<PromptVersion> {
-    return this.service.update(id, updateDto);
+  @ApiResponse({ status: 200, description: 'Version updated.', type: CreatePromptVersionDto })
+  @ApiResponse({ status: 400, description: 'Invalid data.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
+  @ApiResponse({ status: 404, description: 'Project, Prompt, or Version not found.' })
+  update(
+    @Param('projectId') projectId: string,
+    @Param('promptId') promptId: string,
+    @Param('versionTag') versionTag: string,
+    @Body() updateDto: UpdatePromptVersionDto
+  ): Promise<PromptVersion> {
+    return this.service.update(projectId, promptId, versionTag, updateDto);
   }
 
-  @Delete(':id')
-  @ApiOperation({ summary: 'Elimina una versión de prompt' })
-  @ApiParam({ name: 'id', description: 'ID único de la versión a eliminar' })
-  @ApiResponse({ status: 200, description: 'Versión eliminada.', type: CreatePromptVersionDto })
-  @ApiResponse({ status: 404, description: 'Versión no encontrada.' })
+  @Delete(':versionTag')
+  @ApiOperation({ summary: 'Delete a specific prompt version by its tag within a project/prompt' })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiParam({ name: 'promptId', description: 'Prompt CUID' })
+  @ApiParam({ name: 'versionTag', description: 'Version tag to delete' })
+  @ApiResponse({ status: 200, description: 'Version deleted.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
+  @ApiResponse({ status: 404, description: 'Project, Prompt, or Version not found.' })
   @HttpCode(HttpStatus.OK)
-  remove(@Param('id') id: string): Promise<PromptVersion> {
-    return this.service.remove(id);
+  remove(
+    @Param('projectId') projectId: string,
+    @Param('promptId') promptId: string,
+    @Param('versionTag') versionTag: string
+  ): Promise<PromptVersion> {
+    return this.service.remove(projectId, promptId, versionTag);
   }
 }

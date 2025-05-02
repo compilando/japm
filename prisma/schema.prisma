@@ -60,9 +60,10 @@ model CulturalData {
 }
 
 model Prompt {
-  name            String            @id
+  id              String            @id @default(cuid())
+  name            String
   description     String            @default("")
-  tactic          Tactic? @relation("Prompt_tactic", fields: [tacticId], references: [name])
+  tactic          Tactic?           @relation("Prompt_tactic", fields: [tacticId], references: [name])
   tacticId        String?           @map("tactic")
   versions        PromptVersion[]   @relation("PromptVersion_prompt")
   tags            Tag[]             @relation("PromptTags")
@@ -71,11 +72,12 @@ model Prompt {
 
   @@index([tacticId])
   @@index([projectId])
+  @@unique([projectId, name])
 }
 
 model PromptVersion {
   id                  String             @id @default(cuid())
-  prompt              Prompt             @relation("PromptVersion_prompt", fields: [promptId], references: [name])
+  prompt              Prompt             @relation("PromptVersion_prompt", fields: [promptId], references: [id])
   promptId            String             @map("prompt")
   promptText          String             @default("")
   versionTag          String             @default("v1.0.0")

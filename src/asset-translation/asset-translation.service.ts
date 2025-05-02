@@ -1,41 +1,109 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { CreateAssetTranslationDto } from './dto/create-asset-translation.dto';
 import { UpdateAssetTranslationDto } from './dto/update-asset-translation.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, AssetTranslation } from '@prisma/client';
+import { Prisma, AssetTranslation, PromptAssetVersion } from '@prisma/client';
 import { CreateOrUpdateAssetTranslationDto } from './dto/create-or-update-asset-translation.dto';
 
 @Injectable()
 export class AssetTranslationService {
   constructor(private prisma: PrismaService) { }
 
-  async create(createDto: CreateAssetTranslationDto): Promise<AssetTranslation> {
-    const { versionId, languageCode, value } = createDto;
+  // Helper to verify access to the parent asset version
+  private async verifyVersionAccess(projectId: string, assetKey: string, versionTag: string): Promise<PromptAssetVersion> {
+    const version = await this.prisma.promptAssetVersion.findUnique({
+      where: {
+        assetId_versionTag: { assetId: assetKey, versionTag: versionTag }
+      },
+      include: { asset: true }, // Include asset to check projectId
+    });
+
+    if (!version) {
+      throw new NotFoundException(`PromptAssetVersion with tag "${versionTag}" not found for asset "${assetKey}".`);
+    }
+    if (version.asset.projectId !== projectId) {
+      throw new ForbiddenException(`Access denied to AssetVersion "${versionTag}" for project "${projectId}".`);
+    }
+    return version; // Return the found version
+  }
+
+  async create(projectId: string, assetKey: string, versionTag: string, createDto: CreateAssetTranslationDto): Promise<AssetTranslation> {
+    const version = await this.verifyVersionAccess(projectId, assetKey, versionTag);
+    const { languageCode, value } = createDto;
+
     try {
       return await this.prisma.assetTranslation.create({
         data: {
           value,
           languageCode,
-          version: { // Conectar a la versión del asset
-            connect: { id: versionId }
-          }
+          version: { connect: { id: version.id } } // Connect using the verified version's CUID
         },
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          // Puede ser por ID (cuid) o por la clave única compuesta [versionId, languageCode]
-          throw new ConflictException(`Translation for language "${languageCode}" already exists for version "${versionId}".`);
-        }
-        if (error.code === 'P2025') { // Versión del asset no encontrada
-          throw new NotFoundException(`PromptAssetVersion with ID "${versionId}" not found.`);
-        }
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException(`AssetTranslation for language "${languageCode}" already exists for version "${versionTag}" of asset "${assetKey}".`);
+      }
+      // P2025 should be caught by verifyVersionAccess
+      throw error;
+    }
+  }
+
+  async findAllForVersion(projectId: string, assetKey: string, versionTag: string): Promise<AssetTranslation[]> {
+    const version = await this.verifyVersionAccess(projectId, assetKey, versionTag);
+    return this.prisma.assetTranslation.findMany({
+      where: { versionId: version.id },
+    });
+  }
+
+  async findOneByLanguage(projectId: string, assetKey: string, versionTag: string, languageCode: string): Promise<AssetTranslation> {
+    const version = await this.verifyVersionAccess(projectId, assetKey, versionTag);
+    const translation = await this.prisma.assetTranslation.findUnique({
+      where: {
+        versionId_languageCode: { versionId: version.id, languageCode: languageCode }
+      },
+    });
+
+    if (!translation) {
+      throw new NotFoundException(`AssetTranslation for language "${languageCode}" not found for version "${versionTag}" of asset "${assetKey}".`);
+    }
+    return translation;
+  }
+
+  async update(projectId: string, assetKey: string, versionTag: string, languageCode: string, updateDto: UpdateAssetTranslationDto): Promise<AssetTranslation> {
+    const existingTranslation = await this.findOneByLanguage(projectId, assetKey, versionTag, languageCode);
+    // updateDto should only contain value
+    try {
+      return await this.prisma.assetTranslation.update({
+        where: {
+          id: existingTranslation.id // Use CUID
+        },
+        data: updateDto,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new NotFoundException(`AssetTranslation not found for update.`);
       }
       throw error;
     }
   }
 
-  findAll(): Promise<AssetTranslation[]> {
+  async remove(projectId: string, assetKey: string, versionTag: string, languageCode: string): Promise<AssetTranslation> {
+    const existingTranslation = await this.findOneByLanguage(projectId, assetKey, versionTag, languageCode);
+    try {
+      return await this.prisma.assetTranslation.delete({
+        where: {
+          id: existingTranslation.id // Use CUID
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new NotFoundException(`AssetTranslation not found.`);
+      }
+      throw error;
+    }
+  }
+
+  async findAll(): Promise<AssetTranslation[]> {
     return this.prisma.assetTranslation.findMany({ include: { version: true } });
   }
 
@@ -63,34 +131,6 @@ export class AssetTranslationService {
       where: { versionId_languageCode: { versionId, languageCode } },
       include: { version: false }
     });
-  }
-
-  async update(id: string, updateDto: UpdateAssetTranslationDto): Promise<AssetTranslation> {
-    // Solo se actualiza value
-    try {
-      return await this.prisma.assetTranslation.update({
-        where: { id },
-        data: updateDto,
-      });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new NotFoundException(`AssetTranslation with ID "${id}" not found for update.`);
-      }
-      throw error;
-    }
-  }
-
-  async remove(id: string): Promise<AssetTranslation> {
-    try {
-      return await this.prisma.assetTranslation.delete({
-        where: { id },
-      });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new NotFoundException(`AssetTranslation with ID "${id}" not found`);
-      }
-      throw error;
-    }
   }
 
   async upsertTranslation(versionId: string, dto: CreateOrUpdateAssetTranslationDto): Promise<AssetTranslation> {

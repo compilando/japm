@@ -16,31 +16,28 @@ const toSlug = (str: string) => {
 };
 
 async function main() {
-    console.log(`Start base seeding (Cleanup, User, AI Models, Environments, Regions)...`);
+    console.log(`Start base seeding (User, AI Models, Environments, Regions)...`);
 
-    // --- Optional Cleanup ---
-    console.log('Deleting existing data...');
-    // Delete in reverse order of dependency or use transaction if needed
-    // Adjusted order based on corrected schema dependencies
-    await prisma.promptExecutionLog.deleteMany({});
-    await prisma.promptAssetLink.deleteMany({});
-    await prisma.assetTranslation.deleteMany({});
-    await prisma.promptTranslation.deleteMany({});
-    await prisma.promptVersion.deleteMany({});
-    await prisma.promptAssetVersion.deleteMany({});
-    await prisma.tag.deleteMany({});
-    await prisma.prompt.deleteMany({});
-    await prisma.tactic.deleteMany({});
-    await prisma.culturalData.deleteMany({});
-    await prisma.ragDocumentMetadata.deleteMany({});
-    await prisma.region.deleteMany({});
-    await prisma.environment.deleteMany({});
-    await prisma.promptAsset.deleteMany({});
-    // AIModel is ManyToMany, relation handled by Prisma implicitly? Or delete manually if needed.
-    await prisma.aIModel.deleteMany({}); // Keep for now
-    await prisma.project.deleteMany({});
-    await prisma.user.deleteMany({});
-    console.log('Existing data deleted.');
+    // --- Optional Cleanup (Commented out after DB reset) ---
+    // console.log('Deleting existing data...');
+    // await prisma.promptExecutionLog.deleteMany({});
+    // await prisma.promptAssetLink.deleteMany({});
+    // await prisma.assetTranslation.deleteMany({});
+    // await prisma.promptTranslation.deleteMany({});
+    // await prisma.promptVersion.deleteMany({});
+    // await prisma.promptAssetVersion.deleteMany({});
+    // await prisma.tag.deleteMany({});
+    // await prisma.prompt.deleteMany({});
+    // await prisma.tactic.deleteMany({});
+    // await prisma.culturalData.deleteMany({});
+    // await prisma.ragDocumentMetadata.deleteMany({});
+    // await prisma.region.deleteMany({});
+    // await prisma.environment.deleteMany({});
+    // await prisma.promptAsset.deleteMany({});
+    // await prisma.aIModel.deleteMany({});
+    // await prisma.project.deleteMany({});
+    // await prisma.user.deleteMany({});
+    // console.log('Existing data deleted.');
 
     // --- BASE DATA --- //
 

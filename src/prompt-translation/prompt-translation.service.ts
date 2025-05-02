@@ -1,94 +1,109 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { CreatePromptTranslationDto } from './dto/create-prompt-translation.dto';
 import { UpdatePromptTranslationDto } from './dto/update-prompt-translation.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, PromptTranslation } from '@prisma/client';
+import { Prisma, PromptTranslation, PromptVersion } from '@prisma/client';
 import { CreateOrUpdatePromptTranslationDto } from './dto/create-or-update-prompt-translation.dto';
 
 @Injectable()
 export class PromptTranslationService {
   constructor(private prisma: PrismaService) { }
 
-  async create(createDto: CreatePromptTranslationDto): Promise<PromptTranslation> {
-    const { versionId, languageCode, promptText } = createDto;
+  // Helper to verify access to the parent prompt version
+  private async verifyVersionAccess(projectId: string, promptId: string, versionTag: string): Promise<PromptVersion> {
+    const version = await this.prisma.promptVersion.findUnique({
+      where: {
+        promptId_versionTag: { promptId: promptId, versionTag: versionTag }
+      },
+      include: { prompt: true },
+    });
+
+    if (!version) {
+      throw new NotFoundException(`PromptVersion with tag "${versionTag}" not found for prompt "${promptId}".`);
+    }
+    if (version.prompt.projectId !== projectId) {
+      throw new ForbiddenException(`Access denied to PromptVersion "${versionTag}" for project "${projectId}".`);
+    }
+    return version; // Return the found version
+  }
+
+  async create(projectId: string, promptId: string, versionTag: string, createDto: CreatePromptTranslationDto): Promise<PromptTranslation> {
+    const version = await this.verifyVersionAccess(projectId, promptId, versionTag);
+    const { languageCode, promptText } = createDto;
+
     try {
       return await this.prisma.promptTranslation.create({
         data: {
           promptText,
           languageCode,
-          version: { // Conectar a la versión del prompt
-            connect: { id: versionId }
-          }
+          version: { connect: { id: version.id } } // Connect using the verified version's CUID
         },
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          // Puede ser por ID (cuid) o por la clave única compuesta [versionId, languageCode]
-          throw new ConflictException(`Translation for language "${languageCode}" already exists for version "${versionId}".`);
-        }
-        if (error.code === 'P2025') { // Versión del prompt no encontrada
-          throw new NotFoundException(`PromptVersion with ID "${versionId}" not found.`);
-        }
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException(`Translation for language "${languageCode}" already exists for version "${versionTag}" of prompt "${promptId}".`);
       }
+      // P2025 should be caught by verifyVersionAccess
       throw error;
     }
   }
 
-  findAll(): Promise<PromptTranslation[]> {
-    return this.prisma.promptTranslation.findMany({ include: { version: true } });
-  }
-
-  // Método útil para buscar traducciones de una versión específica
-  findByVersionId(versionId: string): Promise<PromptTranslation[]> {
+  async findAllForVersion(projectId: string, promptId: string, versionTag: string): Promise<PromptTranslation[]> {
+    const version = await this.verifyVersionAccess(projectId, promptId, versionTag);
     return this.prisma.promptTranslation.findMany({
-      where: { versionId },
-      include: { version: false } // No es necesario incluir la versión aquí
+      where: { versionId: version.id },
     });
   }
 
-  async findOne(id: string): Promise<PromptTranslation> {
+  async findOneByLanguage(projectId: string, promptId: string, versionTag: string, languageCode: string): Promise<PromptTranslation> {
+    const version = await this.verifyVersionAccess(projectId, promptId, versionTag);
     const translation = await this.prisma.promptTranslation.findUnique({
-      where: { id },
-      include: { version: { include: { prompt: true } } } // Incluir versión y prompt lógico
+      where: {
+        versionId_languageCode: { versionId: version.id, languageCode: languageCode }
+      },
     });
+
     if (!translation) {
-      throw new NotFoundException(`PromptTranslation with ID "${id}" not found`);
+      throw new NotFoundException(`Translation for language "${languageCode}" not found for version "${versionTag}" of prompt "${promptId}".`);
     }
     return translation;
   }
 
-  // Podríamos necesitar un método findOneByVersionAndLanguage(versionId, languageCode)
-  async findOneByVersionAndLanguage(versionId: string, languageCode: string): Promise<PromptTranslation | null> {
-    return this.prisma.promptTranslation.findUnique({
-      where: { versionId_languageCode: { versionId, languageCode } },
-      include: { version: false }
-    });
-  }
+  async update(projectId: string, promptId: string, versionTag: string, languageCode: string, updateDto: UpdatePromptTranslationDto): Promise<PromptTranslation> {
+    // Verify access and find the specific translation first
+    const existingTranslation = await this.findOneByLanguage(projectId, promptId, versionTag, languageCode);
 
-  async update(id: string, updateDto: UpdatePromptTranslationDto): Promise<PromptTranslation> {
-    // Solo se actualiza promptText según el DTO
+    // updateDto should only contain promptText
     try {
       return await this.prisma.promptTranslation.update({
-        where: { id },
+        where: {
+          id: existingTranslation.id // Use CUID of the translation
+        },
         data: updateDto,
       });
     } catch (error) {
+      // P2025 should be caught by findOneByLanguage
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new NotFoundException(`PromptTranslation with ID "${id}" not found for update.`);
+        throw new NotFoundException(`Translation not found for update.`);
       }
       throw error;
     }
   }
 
-  async remove(id: string): Promise<PromptTranslation> {
+  async remove(projectId: string, promptId: string, versionTag: string, languageCode: string): Promise<PromptTranslation> {
+    // Verify access and find the specific translation first
+    const existingTranslation = await this.findOneByLanguage(projectId, promptId, versionTag, languageCode);
+
     try {
       return await this.prisma.promptTranslation.delete({
-        where: { id },
+        where: {
+          id: existingTranslation.id // Use CUID of the translation
+        },
       });
     } catch (error) {
+      // P2025 should be caught by findOneByLanguage
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new NotFoundException(`PromptTranslation with ID "${id}" not found`);
+        throw new NotFoundException(`Translation not found.`);
       }
       throw error;
     }

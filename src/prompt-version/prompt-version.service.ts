@@ -1,87 +1,135 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-// CreatePromptVersionDto import might be unused now if create method is removed.
-// import { CreatePromptVersionDto } from '../prompt/dto/create-prompt-version.dto'; 
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { UpdatePromptVersionDto } from './dto/update-prompt-version.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, PromptVersion } from '@prisma/client';
+import { Prisma, PromptVersion, Prompt } from '@prisma/client';
+import { CreatePromptVersionDto } from 'src/prompt/dto/create-prompt-version.dto';
 
 @Injectable()
 export class PromptVersionService {
   constructor(private prisma: PrismaService) { }
 
-  // Commented out create method removed below
-  /*
-  async create(createDto: CreatePromptVersionDto): Promise<PromptVersion> {
-    // ... (code referencing non-existent promptId)
+  // Helper to verify prompt access
+  private async verifyPromptAccess(projectId: string, promptId: string): Promise<Prompt> {
+    // Attempt to use findUnique again after DB reset
+    const prompt = await this.prisma.prompt.findUnique({
+      where: { id: promptId },
+    });
+    if (!prompt) {
+      throw new NotFoundException(`Prompt with ID "${promptId}" not found.`);
+    }
+    if (prompt.projectId !== projectId) {
+      throw new ForbiddenException(`Access denied to Prompt "${promptId}" for project "${projectId}".`);
+    }
+    return prompt;
   }
-  */
 
-  findAll(): Promise<PromptVersion[]> {
+  async create(projectId: string, promptId: string, createDto: CreatePromptVersionDto): Promise<PromptVersion> {
+    await this.verifyPromptAccess(projectId, promptId); // Ensure prompt exists in project
+
+    const { versionTag, ...versionData } = createDto;
+    // Use the promptId (CUID) obtained from the route parameter
+
+    try {
+      return await this.prisma.promptVersion.create({
+        data: {
+          ...versionData,
+          versionTag: versionTag || 'v1.0.0', // Default tag if not provided
+          prompt: { connect: { id: promptId } }, // Connect using the prompt CUID
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        // This now catches duplicate versionTag for the SAME promptId (CUID)
+        throw new ConflictException(`Version tag "${versionTag || 'v1.0.0'}" already exists for prompt "${promptId}".`);
+      }
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        // Should be caught by verifyPromptAccess, but kept as fallback
+        throw new NotFoundException(`Prompt with ID "${promptId}" not found.`);
+      }
+      throw error;
+    }
+  }
+
+  async findAllForPrompt(projectId: string, promptId: string): Promise<PromptVersion[]> {
+    await this.verifyPromptAccess(projectId, promptId); // Verify access first
+
     return this.prisma.promptVersion.findMany({
-      include: { prompt: { select: { name: true } } } // Incluir nombre del prompt padre
+      where: { promptId: promptId }, // Filter by prompt CUID
+      orderBy: { createdAt: 'desc' },
     });
   }
 
-  async findOne(id: string): Promise<PromptVersion> {
+  async findOneByTag(projectId: string, promptId: string, versionTag: string): Promise<PromptVersion> {
+    await this.verifyPromptAccess(projectId, promptId);
+
     const version = await this.prisma.promptVersion.findUnique({
-      where: { id },
+      where: {
+        promptId_versionTag: { promptId: promptId, versionTag: versionTag }, // Use composite key
+      },
       include: {
         prompt: true,
         translations: true,
-        assets: { include: { assetVersion: true } } // Incluir info del asset version ligado
+        assets: { include: { assetVersion: { include: { asset: true } } } }
       },
     });
+
     if (!version) {
-      throw new NotFoundException(`PromptVersion with ID "${id}" not found`);
+      throw new NotFoundException(`PromptVersion with tag "${versionTag}" not found for prompt "${promptId}".`);
     }
+    // No need for extra projectId check here as verifyPromptAccess and the query ensure it
     return version;
   }
 
-  // Método útil para buscar versiones de un prompt específico
-  findByPromptId(promptId: string): Promise<PromptVersion[]> {
-    return this.prisma.promptVersion.findMany({
-      where: { promptId },
-      orderBy: { createdAt: 'desc' }, // Ordenar por fecha de creación descendente?
-      include: { prompt: false } // No incluir prompt aquí ya que lo filtramos
-    });
-  }
+  async update(projectId: string, promptId: string, versionTag: string, updateDto: UpdatePromptVersionDto): Promise<PromptVersion> {
+    // Verify access and find the specific version by tag first
+    const existingVersion = await this.findOneByTag(projectId, promptId, versionTag);
 
-  async update(id: string, updateDto: UpdatePromptVersionDto): Promise<PromptVersion> {
-    // No permitir cambiar promptId o versionTag al actualizar.
-    // UpdatePromptVersionDto ahora solo contiene los campos actualizables (promptText, changeMessage)
-    // por lo que podemos pasarlo directamente o desestructurar solo esos.
-    // const { promptText, changeMessage } = updateDto;
-    // const updateData = { promptText, changeMessage };
-    // O simplemente pasar updateDto si estamos seguros que SOLO contiene esos campos.
-    const updateData = updateDto;
+    // Use updateDto directly
 
     try {
       return await this.prisma.promptVersion.update({
-        where: { id },
-        data: updateData,
+        where: {
+          id: existingVersion.id // Use the CUID of the version found
+        },
+        data: updateDto, // Update allowed fields like promptText, changeMessage, status
       });
     } catch (error) {
+      // P2025 should be caught by findOneByTag
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new NotFoundException(`PromptVersion with ID "${id}" not found for update.`);
+        throw new NotFoundException(`PromptVersion not found for update.`);
+      }
+      // Handle other potential errors if necessary
+      throw error;
+    }
+  }
+
+  async remove(projectId: string, promptId: string, versionTag: string): Promise<PromptVersion> {
+    // Verify access and find the specific version by tag first
+    const existingVersion = await this.findOneByTag(projectId, promptId, versionTag);
+
+    // TODO: Add logic? Prevent deleting the last version? Prevent deleting active versions?
+
+    try {
+      return await this.prisma.promptVersion.delete({
+        where: {
+          id: existingVersion.id // Use the CUID of the version found
+        },
+      });
+    } catch (error) {
+      // P2025 should be caught by findOneByTag
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new NotFoundException(`PromptVersion not found.`);
+      }
+      // P2003 could happen if translations, links, logs, etc., block deletion
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new ConflictException(`Cannot delete PromptVersion "${versionTag}" because it is still referenced by other entities (e.g., translations, links, logs).`);
       }
       throw error;
     }
   }
 
-  async remove(id: string): Promise<PromptVersion> {
-    try {
-      // Eliminar una versión puede requerir lógica adicional
-      // (e.g., asegurar que no sea la versión activa de un prompt?)
-      // Por ahora, solo eliminamos.
-      return await this.prisma.promptVersion.delete({
-        where: { id },
-      });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new NotFoundException(`PromptVersion with ID "${id}" not found`);
-      }
-      // P2003 podría ocurrir si hay traducciones o links de assets asociados
-      throw error;
-    }
-  }
+  // Remove or comment out old methods not fitting the new structure
+  // findAll(): Promise<PromptVersion[]> { ... }
+  // findOne(id: string): Promise<PromptVersion> { ... }
+  // findByPromptId(promptId: string): Promise<PromptVersion[]> { ... }
 }

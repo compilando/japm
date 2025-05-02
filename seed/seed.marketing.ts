@@ -30,9 +30,9 @@ async function main() {
         },
     });
     console.log(`Upserted Project: ${marketingProject.name}`);
+    const mktProjectId = marketingProject.id;
 
     // Add prefix to tags
-    const mktProjectId = marketingProject.id;
     const mktPrefix = 'mkt_';
     const mktBaseTags = ['marketing', 'social-media', 'blog-post', 'email-campaign', 'seo'];
     const mktTagsToConnect: { name: string }[] = [];
@@ -56,53 +56,56 @@ async function main() {
     // --- Marketing Assets (Using upsert) ---
     const assetAudience = await prisma.promptAsset.upsert({
         where: { key: 'target-audience-persona' },
-        update: { name: 'Target Audience Persona', type: 'Text Template', projectId: marketingProject.id }, // Use direct projectId
-        create: { key: 'target-audience-persona', name: 'Target Audience Persona', type: 'Text Template', projectId: marketingProject.id } // Use direct projectId
+        update: { name: 'Target Audience Persona', type: 'Text Template', projectId: mktProjectId },
+        create: { key: 'target-audience-persona', name: 'Target Audience Persona', type: 'Text Template', projectId: mktProjectId }
     });
     const assetAudienceV1 = await prisma.promptAssetVersion.upsert({
         where: { assetId_versionTag: { assetId: assetAudience.key, versionTag: 'v1.0.0' } },
         update: { value: 'Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]\n- Pain Points: [Challenges, Needs]', status: 'active' },
-        create: { assetId: assetAudience.key, value: 'Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]\n- Pain Points: [Challenges, Needs]', versionTag: 'v1.0.0', status: 'active' } // Use direct assetId
+        create: { assetId: assetAudience.key, value: 'Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]\n- Pain Points: [Challenges, Needs]', versionTag: 'v1.0.0', status: 'active' }
     });
 
     const assetCTA = await prisma.promptAsset.upsert({
         where: { key: 'call-to-action-phrases' },
-        update: { name: 'Call to Action Phrases', type: 'List', projectId: marketingProject.id }, // Use direct projectId
-        create: { key: 'call-to-action-phrases', name: 'Call to Action Phrases', type: 'List', projectId: marketingProject.id } // Use direct projectId
+        update: { name: 'Call to Action Phrases', type: 'List', projectId: mktProjectId },
+        create: { key: 'call-to-action-phrases', name: 'Call to Action Phrases', type: 'List', projectId: mktProjectId }
     });
     const assetCTAV1 = await prisma.promptAssetVersion.upsert({
         where: { assetId_versionTag: { assetId: assetCTA.key, versionTag: 'v1.0.0' } },
         update: { value: 'Learn More\nShop Now\nSign Up Today\nDownload Free Guide', status: 'active' },
-        create: { assetId: assetCTA.key, value: 'Learn More\nShop Now\nSign Up Today\nDownload Free Guide', versionTag: 'v1.0.0', status: 'active' } // Use direct assetId
+        create: { assetId: assetCTA.key, value: 'Learn More\nShop Now\nSign Up Today\nDownload Free Guide', versionTag: 'v1.0.0', status: 'active' }
     });
     console.log('Upserted Marketing Assets and V1 Versions');
 
     // --- Marketing Prompt: Generate Blog Post Idea ---
+    const promptBlogPostIdeaName = 'generate-blog-post-idea';
     const promptBlogPostIdea = await prisma.prompt.upsert({
-        where: { name: 'generate-blog-post-idea' },
+        where: { projectId_name: { projectId: mktProjectId, name: promptBlogPostIdeaName } },
         update: {
             description: 'Generate blog post ideas for a target audience.',
-            projectId: marketingProject.id, // Use direct projectId
-            tags: { connect: mktTagsToConnect.filter(t => ['mkt_marketing', 'mkt_blog-post'].includes(t.name)) } // Connect prefixed tags
+            tags: { connect: mktTagsToConnect.filter(t => ['mkt_marketing', 'mkt_blog-post'].includes(t.name)) }
         },
         create: {
-            name: 'generate-blog-post-idea',
+            id: undefined,
+            name: promptBlogPostIdeaName,
             description: 'Generate blog post ideas for a target audience.',
-            projectId: marketingProject.id, // Use direct projectId
-            tags: { connect: mktTagsToConnect.filter(t => ['mkt_marketing', 'mkt_blog-post'].includes(t.name)) } // Connect prefixed tags
-        }
+            projectId: mktProjectId,
+            tags: { connect: mktTagsToConnect.filter(t => ['mkt_marketing', 'mkt_blog-post'].includes(t.name)) }
+        },
+        select: { id: true, name: true }
     });
 
     const promptBlogPostIdeaV1 = await prisma.promptVersion.upsert({
-        where: { promptId_versionTag: { promptId: promptBlogPostIdea.name, versionTag: 'v1.0.0' } },
-        update: { status: 'active', activeInEnvironments: { connect: [{ id: devEnvironment.id }] } }, // Use env ID
+        where: { promptId_versionTag: { promptId: promptBlogPostIdea.id, versionTag: 'v1.0.0' } },
+        update: { status: 'active', activeInEnvironments: { connect: [{ id: devEnvironment.id }] } },
         create: {
-            promptId: promptBlogPostIdea.name, // Use direct promptId
+            prompt: { connect: { id: promptBlogPostIdea.id } },
             promptText: `Generate 5 blog post ideas relevant to the following target audience:\n{{target-audience-persona}}\n\nFocus on topics related to: {{Topic Focus}}\n\nEnsure the ideas are engaging and SEO-friendly.`,
             versionTag: 'v1.0.0', status: 'active',
             changeMessage: 'Initial version for generating blog post ideas.',
-            activeInEnvironments: { connect: [{ id: devEnvironment.id }] } // Use env ID
-        }
+            activeInEnvironments: { connect: [{ id: devEnvironment.id }] }
+        },
+        select: { id: true }
     });
     console.log(`Upserted Prompt ${promptBlogPostIdea.name} V1`);
 

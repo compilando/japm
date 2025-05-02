@@ -1482,10 +1482,29 @@
         ]
       }
     },
-    "/prompt-asset-links": {
+    "/projects/{projectId}/prompt-versions/{promptVersionId}/links": {
       "post": {
         "operationId": "PromptAssetLinkController_create",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptVersionId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt Version ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1498,60 +1517,55 @@
         },
         "responses": {
           "201": {
-            "description": "Vínculo creado.",
+            "description": "Link created.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PromptAssetLinkResponse"
+                  "$ref": "#/components/schemas/CreatePromptAssetLinkDto"
                 }
               }
             }
           },
           "400": {
-            "description": "Datos inválidos."
+            "description": "Invalid data."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
           },
           "404": {
-            "description": "Prompt o Asset referenciado no encontrado."
+            "description": "Project, Prompt Version, or Asset Version not found."
           }
         },
-        "summary": "Crear un nuevo vínculo entre prompt y asset",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Link an Asset Version to a Prompt Version within a Project",
         "tags": [
-          "Prompt Asset Links"
+          "Prompt Asset Links (within Project/Version)"
         ]
       },
       "get": {
         "operationId": "PromptAssetLinkController_findAll",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Lista de vínculos.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PromptAssetLinkResponse"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "summary": "Obtener todos los vínculos prompt-asset",
-        "tags": [
-          "Prompt Asset Links"
-        ]
-      }
-    },
-    "/prompt-asset-links/{id}": {
-      "get": {
-        "operationId": "PromptAssetLinkController_findOne",
         "parameters": [
           {
-            "name": "id",
+            "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID del vínculo (CUID)",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptVersionId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt Version ID",
             "schema": {
               "type": "string"
             }
@@ -1559,32 +1573,128 @@
         ],
         "responses": {
           "200": {
-            "description": "Vínculo encontrado.",
+            "description": "List of links.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PromptAssetLinkResponse"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CreatePromptAssetLinkDto"
+                  }
                 }
               }
             }
           },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
           "404": {
-            "description": "Vínculo no encontrado."
+            "description": "Project or Prompt Version not found."
           }
         },
-        "summary": "Obtener un vínculo por ID",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all links for a specific Prompt Version within a Project",
         "tags": [
-          "Prompt Asset Links"
+          "Prompt Asset Links (within Project/Version)"
+        ]
+      }
+    },
+    "/projects/{projectId}/prompt-versions/{promptVersionId}/links/{linkId}": {
+      "get": {
+        "operationId": "PromptAssetLinkController_findOne",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptVersionId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt Version ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "linkId",
+            "required": true,
+            "in": "path",
+            "description": "Link ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Link found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePromptAssetLinkDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
+          "404": {
+            "description": "Project, Prompt Version, or Link not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a specific link by its ID for a Prompt Version within a Project",
+        "tags": [
+          "Prompt Asset Links (within Project/Version)"
         ]
       },
       "patch": {
         "operationId": "PromptAssetLinkController_update",
         "parameters": [
           {
-            "name": "id",
+            "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID del vínculo a actualizar",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptVersionId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt Version ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "linkId",
+            "required": true,
+            "in": "path",
+            "description": "Link ID",
             "schema": {
               "type": "string"
             }
@@ -1602,35 +1712,64 @@
         },
         "responses": {
           "200": {
-            "description": "Vínculo actualizado.",
+            "description": "Link updated.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PromptAssetLinkResponse"
+                  "$ref": "#/components/schemas/CreatePromptAssetLinkDto"
                 }
               }
             }
           },
           "400": {
-            "description": "Datos inválidos."
+            "description": "Invalid data."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
           },
           "404": {
-            "description": "Vínculo no encontrado."
+            "description": "Project, Prompt Version, or Link not found."
           }
         },
-        "summary": "Actualizar un vínculo por ID (campos como isActive, position)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a specific link by its ID for a Prompt Version within a Project",
         "tags": [
-          "Prompt Asset Links"
+          "Prompt Asset Links (within Project/Version)"
         ]
       },
       "delete": {
         "operationId": "PromptAssetLinkController_remove",
         "parameters": [
           {
-            "name": "id",
+            "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID del vínculo a eliminar",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptVersionId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt Version ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "linkId",
+            "required": true,
+            "in": "path",
+            "description": "Link ID",
             "schema": {
               "type": "string"
             }
@@ -1638,15 +1777,26 @@
         ],
         "responses": {
           "200": {
-            "description": "Vínculo eliminado."
+            "description": "Link deleted."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
           },
           "404": {
-            "description": "Vínculo no encontrado."
+            "description": "Project, Prompt Version, or Link not found."
           }
         },
-        "summary": "Eliminar un vínculo por ID",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a specific link by its ID for a Prompt Version within a Project",
         "tags": [
-          "Prompt Asset Links"
+          "Prompt Asset Links (within Project/Version)"
         ]
       }
     },
@@ -2039,24 +2189,42 @@
         ]
       }
     },
-    "/serve-prompt": {
+    "/projects/{projectId}/serve/{environmentName}/{promptName}": {
       "get": {
         "operationId": "ServePromptController_servePrompt",
         "parameters": [
           {
-            "name": "promptId",
-            "required": false,
-            "in": "query",
-            "description": "ID del prompt específico a servir (ignora otros filtros si se provee).",
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "tacticId",
+            "name": "environmentName",
+            "required": true,
+            "in": "path",
+            "description": "Environment name (e.g., staging, production)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptName",
+            "required": true,
+            "in": "path",
+            "description": "The unique name of the prompt within the project",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
             "required": false,
             "in": "query",
-            "description": "ID de la táctica para filtrar prompts (requerido si no se da promptId).",
+            "description": "Optional specific version tag (e.g., \"v1.2.0\"). Defaults to active version.",
             "schema": {
               "type": "string"
             }
@@ -2065,36 +2233,15 @@
             "name": "languageCode",
             "required": false,
             "in": "query",
-            "description": "Código de idioma (e.g., es-ES, en-US) para obtener la traducción. Si no se provee, se usa el texto base de la versión.",
+            "description": "Optional language code (e.g., \"es\"). Defaults to project default or \"en\".",
             "schema": {
-              "example": "es-ES",
               "type": "string"
-            }
-          },
-          {
-            "name": "versionTag",
-            "required": false,
-            "in": "query",
-            "description": "Tag de la versión específica del prompt a servir (e.g., v1.0.0). Ignorado si se usa useLatestActive.",
-            "schema": {
-              "example": "v1.2.1",
-              "type": "string"
-            }
-          },
-          {
-            "name": "useLatestActive",
-            "required": false,
-            "in": "query",
-            "description": "Si es true (por defecto), busca la versión activa más reciente del prompt que coincida con la táctica. Si es false, se debe proveer versionTag.",
-            "schema": {
-              "default": true,
-              "type": "boolean"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Prompt procesado y metadatos.",
+            "description": "Processed prompt and metadata.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2107,15 +2254,26 @@
             }
           },
           "400": {
-            "description": "Parámetros de consulta inválidos."
+            "description": "Invalid parameters."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
           },
           "404": {
-            "description": "Prompt o versión no encontrada."
+            "description": "Project, Environment, Prompt, or active Version not found."
           }
         },
-        "summary": "Obtiene y ensambla un prompt basado en criterios",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Gets and assembles a specific prompt for a given environment within a project",
         "tags": [
-          "Serve Prompt"
+          "Serve Prompt (within Project)"
         ]
       }
     },
@@ -2780,15 +2938,90 @@
         ]
       }
     },
-    "/prompt-versions": {
+    "/projects/{projectId}/prompts/{promptId}/versions": {
+      "post": {
+        "operationId": "PromptVersionController_create",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePromptVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Version created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePromptVersionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid data (e.g., duplicate versionTag)."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
+          "404": {
+            "description": "Project or Prompt not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new version for a specific prompt within a project",
+        "tags": [
+          "Prompt Versions (within Project/Prompt)"
+        ]
+      },
       "get": {
         "operationId": "PromptVersionController_findAll",
         "parameters": [
           {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "promptId",
-            "required": false,
-            "in": "query",
-            "description": "ID (nombre) del prompt para filtrar versiones",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
             "schema": {
               "type": "string"
             }
@@ -2796,7 +3029,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Lista de versiones.",
+            "description": "List of versions.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2807,23 +3040,55 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
+          "404": {
+            "description": "Project or Prompt not found."
           }
         },
-        "summary": "Obtiene todas las versiones de prompts o filtra por prompt ID",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all versions for a specific prompt within a project",
         "tags": [
-          "Prompt Versions"
+          "Prompt Versions (within Project/Prompt)"
         ]
       }
     },
-    "/prompt-versions/{id}": {
+    "/projects/{projectId}/prompts/{promptId}/versions/{versionTag}": {
       "get": {
-        "operationId": "PromptVersionController_findOne",
+        "operationId": "PromptVersionController_findOneByTag",
         "parameters": [
           {
-            "name": "id",
+            "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID único de la versión del prompt",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version tag (e.g., v1.0.0)",
             "schema": {
               "type": "string"
             }
@@ -2831,7 +3096,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Versión encontrada.",
+            "description": "Version found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2840,23 +3105,52 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
           "404": {
-            "description": "Versión no encontrada."
+            "description": "Project, Prompt, or Version not found."
           }
         },
-        "summary": "Obtiene una versión de prompt por su ID",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a specific prompt version by its tag within a project/prompt",
         "tags": [
-          "Prompt Versions"
+          "Prompt Versions (within Project/Prompt)"
         ]
       },
       "patch": {
         "operationId": "PromptVersionController_update",
         "parameters": [
           {
-            "name": "id",
+            "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID único de la versión a actualizar",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version tag to update",
             "schema": {
               "type": "string"
             }
@@ -2874,7 +3168,7 @@
         },
         "responses": {
           "200": {
-            "description": "Versión actualizada.",
+            "description": "Version updated.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2884,25 +3178,54 @@
             }
           },
           "400": {
-            "description": "Datos inválidos."
+            "description": "Invalid data."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
           },
           "404": {
-            "description": "Versión no encontrada."
+            "description": "Project, Prompt, or Version not found."
           }
         },
-        "summary": "Actualiza una versión de prompt existente",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a specific prompt version by its tag within a project/prompt",
         "tags": [
-          "Prompt Versions"
+          "Prompt Versions (within Project/Prompt)"
         ]
       },
       "delete": {
         "operationId": "PromptVersionController_remove",
         "parameters": [
           {
-            "name": "id",
+            "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID único de la versión a eliminar",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version tag to delete",
             "schema": {
               "type": "string"
             }
@@ -2910,29 +3233,61 @@
         ],
         "responses": {
           "200": {
-            "description": "Versión eliminada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatePromptVersionDto"
-                }
-              }
-            }
+            "description": "Version deleted."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
           },
           "404": {
-            "description": "Versión no encontrada."
+            "description": "Project, Prompt, or Version not found."
           }
         },
-        "summary": "Elimina una versión de prompt",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a specific prompt version by its tag within a project/prompt",
         "tags": [
-          "Prompt Versions"
+          "Prompt Versions (within Project/Prompt)"
         ]
       }
     },
-    "/prompt-translation": {
+    "/projects/{projectId}/prompts/{promptId}/versions/{versionTag}/translations": {
       "post": {
         "operationId": "PromptTranslationController_create",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version Tag",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -2945,7 +3300,7 @@
         },
         "responses": {
           "201": {
-            "description": "Traducción creada.",
+            "description": "Translation created.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2955,28 +3310,57 @@
             }
           },
           "400": {
-            "description": "Datos inválidos."
+            "description": "Invalid data (e.g., missing languageCode)."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
           },
           "404": {
-            "description": "Versión del prompt no encontrada."
+            "description": "Project, Prompt, or Version not found."
           },
           "409": {
-            "description": "Conflicto, ya existe una traducción para ese idioma en esa versión."
+            "description": "Translation for this language already exists for this version."
           }
         },
-        "summary": "Crear una nueva traducción para una versión de prompt",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a translation for a specific prompt version within a project",
         "tags": [
-          "Prompt Translation"
+          "Prompt Translations (within Project/Prompt/Version)"
         ]
       },
       "get": {
         "operationId": "PromptTranslationController_findAll",
         "parameters": [
           {
-            "name": "versionId",
-            "required": false,
-            "in": "query",
-            "description": "Filtrar traducciones por el ID de la versión del prompt",
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version Tag",
             "schema": {
               "type": "string"
             }
@@ -2984,7 +3368,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Lista de traducciones.",
+            "description": "List of translations.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2995,23 +3379,64 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
+          "404": {
+            "description": "Project, Prompt, or Version not found."
           }
         },
-        "summary": "Obtener todas las traducciones, opcionalmente filtradas por versionId",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all translations for a specific prompt version within a project",
         "tags": [
-          "Prompt Translation"
+          "Prompt Translations (within Project/Prompt/Version)"
         ]
       }
     },
-    "/prompt-translation/{id}": {
+    "/projects/{projectId}/prompts/{promptId}/versions/{versionTag}/translations/{languageCode}": {
       "get": {
-        "operationId": "PromptTranslationController_findOne",
+        "operationId": "PromptTranslationController_findOneByLanguage",
         "parameters": [
           {
-            "name": "id",
+            "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID de la traducción",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version Tag",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "languageCode",
+            "required": true,
+            "in": "path",
+            "description": "Language code (e.g., es-ES)",
             "schema": {
               "type": "string"
             }
@@ -3019,7 +3444,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Traducción encontrada.",
+            "description": "Translation found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3028,23 +3453,61 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
           "404": {
-            "description": "Traducción no encontrada."
+            "description": "Project, Prompt, Version, or Translation not found."
           }
         },
-        "summary": "Obtener una traducción por su ID (CUID)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a specific translation by language code for a prompt version",
         "tags": [
-          "Prompt Translation"
+          "Prompt Translations (within Project/Prompt/Version)"
         ]
       },
       "patch": {
         "operationId": "PromptTranslationController_update",
         "parameters": [
           {
-            "name": "id",
+            "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID de la traducción a actualizar",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version Tag",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "languageCode",
+            "required": true,
+            "in": "path",
+            "description": "Language code of the translation to update",
             "schema": {
               "type": "string"
             }
@@ -3062,7 +3525,7 @@
         },
         "responses": {
           "200": {
-            "description": "Traducción actualizada.",
+            "description": "Translation updated.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3072,53 +3535,54 @@
             }
           },
           "400": {
-            "description": "Datos inválidos."
+            "description": "Invalid data."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
           },
           "404": {
-            "description": "Traducción no encontrada."
+            "description": "Project, Prompt, Version, or Translation not found."
           }
         },
-        "summary": "Actualizar una traducción por su ID",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a specific translation by language code for a prompt version",
         "tags": [
-          "Prompt Translation"
+          "Prompt Translations (within Project/Prompt/Version)"
         ]
       },
       "delete": {
         "operationId": "PromptTranslationController_remove",
         "parameters": [
           {
-            "name": "id",
+            "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID de la traducción a eliminar",
+            "description": "Project ID",
             "schema": {
               "type": "string"
             }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Traducción eliminada."
           },
-          "404": {
-            "description": "Traducción no encontrada."
-          }
-        },
-        "summary": "Eliminar una traducción por su ID",
-        "tags": [
-          "Prompt Translation"
-        ]
-      }
-    },
-    "/prompt-translation/by-version/{versionId}/{languageCode}": {
-      "get": {
-        "operationId": "PromptTranslationController_findOneByVersionAndLanguage",
-        "parameters": [
           {
-            "name": "versionId",
+            "name": "promptId",
             "required": true,
             "in": "path",
-            "description": "ID de la versión del prompt",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version Tag",
             "schema": {
               "type": "string"
             }
@@ -3127,7 +3591,7 @@
             "name": "languageCode",
             "required": true,
             "in": "path",
-            "description": "Código de idioma (xx-XX)",
+            "description": "Language code of the translation to delete",
             "schema": {
               "type": "string"
             }
@@ -3135,29 +3599,52 @@
         ],
         "responses": {
           "200": {
-            "description": "Traducción encontrada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatePromptTranslationDto"
-                }
-              }
-            }
+            "description": "Translation deleted."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
           },
           "404": {
-            "description": "Traducción no encontrada para esa combinación."
+            "description": "Project, Prompt, Version, or Translation not found."
           }
         },
-        "summary": "Obtener una traducción específica por versión y código de idioma",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a specific translation by language code for a prompt version",
         "tags": [
-          "Prompt Translation"
+          "Prompt Translations (within Project/Prompt/Version)"
         ]
       }
     },
-    "/prompt-asset-versions": {
+    "/projects/{projectId}/assets/{assetKey}/versions": {
       "post": {
         "operationId": "PromptAssetVersionController_create",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetKey",
+            "required": true,
+            "in": "path",
+            "description": "Asset Key",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -3170,7 +3657,7 @@
         },
         "responses": {
           "201": {
-            "description": "Versión creada.",
+            "description": "Version created.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3179,24 +3666,54 @@
               }
             }
           },
-          "404": {
-            "description": "Asset no encontrado."
+          "400": {
+            "description": "Invalid data (e.g., duplicate versionTag)."
           },
-          "409": {
-            "description": "La etiqueta de versión ya existe para este asset."
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
+          "404": {
+            "description": "Project or Asset not found."
           }
         },
-        "summary": "Crea una nueva versión para un asset (Requiere assetId en el body)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new version for a specific asset within a project",
         "tags": [
-          "Prompt Asset Versions"
+          "Prompt Asset Versions (within Project/Asset)"
         ]
       },
       "get": {
         "operationId": "PromptAssetVersionController_findAll",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetKey",
+            "required": true,
+            "in": "path",
+            "description": "Asset Key",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Lista de versiones de assets.",
+            "description": "List of versions.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3207,23 +3724,55 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
+          "404": {
+            "description": "Project or Asset not found."
           }
         },
-        "summary": "Obtiene todas las versiones de assets",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all versions for a specific asset within a project",
         "tags": [
-          "Prompt Asset Versions"
+          "Prompt Asset Versions (within Project/Asset)"
         ]
       }
     },
-    "/prompt-asset-versions/{id}": {
+    "/projects/{projectId}/assets/{assetKey}/versions/{versionTag}": {
       "get": {
-        "operationId": "PromptAssetVersionController_findOne",
+        "operationId": "PromptAssetVersionController_findOneByTag",
         "parameters": [
           {
-            "name": "id",
+            "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID único de la versión del asset",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetKey",
+            "required": true,
+            "in": "path",
+            "description": "Asset Key",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version tag (e.g., v1.0.0)",
             "schema": {
               "type": "string"
             }
@@ -3231,7 +3780,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Versión encontrada.",
+            "description": "Version found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3240,23 +3789,52 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
           "404": {
-            "description": "Versión no encontrada."
+            "description": "Project, Asset, or Version not found."
           }
         },
-        "summary": "Obtiene una versión de asset por su ID",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a specific asset version by its tag within a project/asset",
         "tags": [
-          "Prompt Asset Versions"
+          "Prompt Asset Versions (within Project/Asset)"
         ]
       },
       "patch": {
         "operationId": "PromptAssetVersionController_update",
         "parameters": [
           {
-            "name": "id",
+            "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID único de la versión a actualizar",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetKey",
+            "required": true,
+            "in": "path",
+            "description": "Asset Key",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version tag to update",
             "schema": {
               "type": "string"
             }
@@ -3274,7 +3852,7 @@
         },
         "responses": {
           "200": {
-            "description": "Versión actualizada.",
+            "description": "Version updated.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3284,25 +3862,54 @@
             }
           },
           "400": {
-            "description": "Datos inválidos."
+            "description": "Invalid data."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
           },
           "404": {
-            "description": "Versión no encontrada."
+            "description": "Project, Asset, or Version not found."
           }
         },
-        "summary": "Actualiza una versión de asset (solo value y changeMessage)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a specific asset version by its tag within a project/asset",
         "tags": [
-          "Prompt Asset Versions"
+          "Prompt Asset Versions (within Project/Asset)"
         ]
       },
       "delete": {
         "operationId": "PromptAssetVersionController_remove",
         "parameters": [
           {
-            "name": "id",
+            "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID único de la versión a eliminar",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetKey",
+            "required": true,
+            "in": "path",
+            "description": "Asset Key",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version tag to delete",
             "schema": {
               "type": "string"
             }
@@ -3310,29 +3917,61 @@
         ],
         "responses": {
           "200": {
-            "description": "Versión eliminada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatePromptAssetVersionDto"
-                }
-              }
-            }
+            "description": "Version deleted."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
           },
           "404": {
-            "description": "Versión no encontrada."
+            "description": "Project, Asset, or Version not found."
           }
         },
-        "summary": "Elimina una versión de asset",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a specific asset version by its tag within a project/asset",
         "tags": [
-          "Prompt Asset Versions"
+          "Prompt Asset Versions (within Project/Asset)"
         ]
       }
     },
-    "/asset-translation": {
+    "/projects/{projectId}/assets/{assetKey}/versions/{versionTag}/translations": {
       "post": {
         "operationId": "AssetTranslationController_create",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetKey",
+            "required": true,
+            "in": "path",
+            "description": "Asset Key",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version Tag",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -3345,7 +3984,7 @@
         },
         "responses": {
           "201": {
-            "description": "Traducción creada.",
+            "description": "Translation created.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3355,28 +3994,57 @@
             }
           },
           "400": {
-            "description": "Datos inválidos."
+            "description": "Invalid data."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
           },
           "404": {
-            "description": "Versión del asset no encontrada."
+            "description": "Project, Asset, or Version not found."
           },
           "409": {
-            "description": "Conflicto, ya existe una traducción para ese idioma en esa versión."
+            "description": "Translation for this language already exists for this version."
           }
         },
-        "summary": "Crear una nueva traducción para una versión de asset",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a translation for a specific asset version within a project",
         "tags": [
-          "Asset Translation"
+          "Asset Translations (within Project/Asset/Version)"
         ]
       },
       "get": {
         "operationId": "AssetTranslationController_findAll",
         "parameters": [
           {
-            "name": "versionId",
-            "required": false,
-            "in": "query",
-            "description": "Filtrar traducciones por el ID de la versión del asset",
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetKey",
+            "required": true,
+            "in": "path",
+            "description": "Asset Key",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version Tag",
             "schema": {
               "type": "string"
             }
@@ -3384,7 +4052,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Lista de traducciones.",
+            "description": "List of translations.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3395,23 +4063,64 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
+          "404": {
+            "description": "Project, Asset, or Version not found."
           }
         },
-        "summary": "Obtener todas las traducciones de assets, opcionalmente filtradas por versionId",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all translations for a specific asset version within a project",
         "tags": [
-          "Asset Translation"
+          "Asset Translations (within Project/Asset/Version)"
         ]
       }
     },
-    "/asset-translation/{id}": {
+    "/projects/{projectId}/assets/{assetKey}/versions/{versionTag}/translations/{languageCode}": {
       "get": {
-        "operationId": "AssetTranslationController_findOne",
+        "operationId": "AssetTranslationController_findOneByLanguage",
         "parameters": [
           {
-            "name": "id",
+            "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID de la traducción",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetKey",
+            "required": true,
+            "in": "path",
+            "description": "Asset Key",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version Tag",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "languageCode",
+            "required": true,
+            "in": "path",
+            "description": "Language code (e.g., es-ES)",
             "schema": {
               "type": "string"
             }
@@ -3419,7 +4128,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Traducción encontrada.",
+            "description": "Translation found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3428,23 +4137,61 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
           "404": {
-            "description": "Traducción no encontrada."
+            "description": "Project, Asset, Version, or Translation not found."
           }
         },
-        "summary": "Obtener una traducción de asset por su ID (CUID)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a specific translation by language code for an asset version",
         "tags": [
-          "Asset Translation"
+          "Asset Translations (within Project/Asset/Version)"
         ]
       },
       "patch": {
         "operationId": "AssetTranslationController_update",
         "parameters": [
           {
-            "name": "id",
+            "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID de la traducción a actualizar",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetKey",
+            "required": true,
+            "in": "path",
+            "description": "Asset Key",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version Tag",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "languageCode",
+            "required": true,
+            "in": "path",
+            "description": "Language code of the translation to update",
             "schema": {
               "type": "string"
             }
@@ -3462,7 +4209,7 @@
         },
         "responses": {
           "200": {
-            "description": "Traducción actualizada.",
+            "description": "Translation updated.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3472,53 +4219,54 @@
             }
           },
           "400": {
-            "description": "Datos inválidos."
+            "description": "Invalid data."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
           },
           "404": {
-            "description": "Traducción no encontrada."
+            "description": "Project, Asset, Version, or Translation not found."
           }
         },
-        "summary": "Actualizar una traducción de asset por su ID",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a specific translation by language code for an asset version",
         "tags": [
-          "Asset Translation"
+          "Asset Translations (within Project/Asset/Version)"
         ]
       },
       "delete": {
         "operationId": "AssetTranslationController_remove",
         "parameters": [
           {
-            "name": "id",
+            "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID de la traducción a eliminar",
+            "description": "Project ID",
             "schema": {
               "type": "string"
             }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Traducción eliminada."
           },
-          "404": {
-            "description": "Traducción no encontrada."
-          }
-        },
-        "summary": "Eliminar una traducción de asset por su ID",
-        "tags": [
-          "Asset Translation"
-        ]
-      }
-    },
-    "/asset-translation/by-version/{versionId}/{languageCode}": {
-      "get": {
-        "operationId": "AssetTranslationController_findOneByVersionAndLanguage",
-        "parameters": [
           {
-            "name": "versionId",
+            "name": "assetKey",
             "required": true,
             "in": "path",
-            "description": "ID de la versión del asset",
+            "description": "Asset Key",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Version Tag",
             "schema": {
               "type": "string"
             }
@@ -3527,7 +4275,7 @@
             "name": "languageCode",
             "required": true,
             "in": "path",
-            "description": "Código de idioma (xx-XX)",
+            "description": "Language code of the translation to delete",
             "schema": {
               "type": "string"
             }
@@ -3535,22 +4283,26 @@
         ],
         "responses": {
           "200": {
-            "description": "Traducción encontrada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateAssetTranslationDto"
-                }
-              }
-            }
+            "description": "Translation deleted."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
           },
           "404": {
-            "description": "Traducción no encontrada para esa combinación."
+            "description": "Project, Asset, Version, or Translation not found."
           }
         },
-        "summary": "Obtener una traducción de asset específica por versión y código de idioma",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a specific translation by language code for an asset version",
         "tags": [
-          "Asset Translation"
+          "Asset Translations (within Project/Asset/Version)"
         ]
       }
     },
@@ -4509,57 +5261,6 @@
         "required": [
           "promptVersionId",
           "assetVersionId"
-        ]
-      },
-      "PromptAssetLinkResponse": {
-        "type": "object",
-        "properties": {
-          "promptVersionId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "ID de la PromptVersion a la que se vincula el asset."
-          },
-          "assetVersionId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "ID de la PromptAssetVersion que se vincula."
-          },
-          "usageContext": {
-            "type": "string",
-            "description": "Contexto de uso o propósito de este asset en el prompt.",
-            "example": "Nombre del producto"
-          },
-          "position": {
-            "type": "number",
-            "minimum": 0,
-            "description": "Orden posicional del asset dentro del prompt (si aplica).",
-            "example": 1
-          },
-          "insertionLogic": {
-            "type": "string",
-            "description": "Lógica de inserción condicional (formato a definir).",
-            "example": "variable_exists:user_name"
-          },
-          "isRequired": {
-            "type": "boolean",
-            "description": "Indica si el asset es requerido para el prompt (default: true)."
-          },
-          "prompt": {
-            "$ref": "#/components/schemas/CreatePromptDto"
-          },
-          "asset": {
-            "$ref": "#/components/schemas/CreatePromptAssetDto"
-          },
-          "id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "promptVersionId",
-          "assetVersionId",
-          "prompt",
-          "asset",
-          "id"
         ]
       },
       "UpdatePromptAssetLinkDto": {
