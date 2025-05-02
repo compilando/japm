@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { CreatePromptVersionDto } from './dto/create-prompt-version.dto';
+// CreatePromptVersionDto import might be unused now if create method is removed.
+// import { CreatePromptVersionDto } from '../prompt/dto/create-prompt-version.dto'; 
 import { UpdatePromptVersionDto } from './dto/update-prompt-version.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, PromptVersion } from '@prisma/client';
@@ -8,36 +9,16 @@ import { Prisma, PromptVersion } from '@prisma/client';
 export class PromptVersionService {
   constructor(private prisma: PrismaService) { }
 
+  // Commented out create method removed below
+  /*
   async create(createDto: CreatePromptVersionDto): Promise<PromptVersion> {
-    const { promptId, ...restData } = createDto;
-    try {
-      return await this.prisma.promptVersion.create({
-        data: {
-          ...restData, // promptText, versionTag, changeMessage
-          prompt: { // Conectar al prompt lógico
-            connect: { name: promptId } // Usar el 'name' del prompt como FK
-          }
-        },
-      });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          // Puede ser por ID (cuid) o por la clave única compuesta [promptId, versionTag]
-          throw new ConflictException(`Version "${createDto.versionTag}" already exists for prompt "${promptId}".`);
-        }
-        if (error.code === 'P2025') { // Prompt lógico no encontrado
-          throw new NotFoundException(`Prompt with ID "${promptId}" not found.`);
-        }
-      }
-      throw error;
-    }
+    // ... (code referencing non-existent promptId)
   }
+  */
 
   findAll(): Promise<PromptVersion[]> {
-    // Considerar paginación o filtrado si la lista crece mucho
-    // Excluir relaciones complejas por defecto?
     return this.prisma.promptVersion.findMany({
-      include: { prompt: true } // Incluir el prompt lógico asociado
+      include: { prompt: { select: { name: true } } } // Incluir nombre del prompt padre
     });
   }
 

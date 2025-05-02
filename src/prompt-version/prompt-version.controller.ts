@@ -3,7 +3,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { PromptVersionService } from './prompt-version.service';
-import { CreatePromptVersionDto } from './dto/create-prompt-version.dto';
+import { CreatePromptVersionDto } from '../prompt/dto/create-prompt-version.dto';
 import { UpdatePromptVersionDto } from './dto/update-prompt-version.dto';
 import { PromptVersion } from '@prisma/client';
 
@@ -11,18 +11,6 @@ import { PromptVersion } from '@prisma/client';
 @Controller('prompt-versions')
 export class PromptVersionController {
   constructor(private readonly service: PromptVersionService) { }
-
-  @Post()
-  @ApiOperation({ summary: 'Crea una nueva versión de un prompt existente' })
-  @ApiBody({ type: CreatePromptVersionDto })
-  @ApiResponse({ status: 201, description: 'Versión creada.', type: CreatePromptVersionDto })
-  @ApiResponse({ status: 400, description: 'Datos inválidos.' })
-  @ApiResponse({ status: 404, description: 'Prompt no encontrado.' })
-  @ApiResponse({ status: 409, description: 'La versión ya existe para este prompt.' })
-  @HttpCode(HttpStatus.CREATED)
-  create(@Body() createDto: CreatePromptVersionDto): Promise<PromptVersion> {
-    return this.service.create(createDto);
-  }
 
   @Get()
   @ApiOperation({ summary: 'Obtiene todas las versiones de prompts o filtra por prompt ID' })

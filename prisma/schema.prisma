@@ -165,6 +165,7 @@ model PromptAssetLink {
   insertionLogic  String?
   isRequired      Boolean            @default(true)
 
+  @@unique([promptVersionId, assetVersionId])
   @@index([promptVersionId])
   @@index([assetVersionId])
 }

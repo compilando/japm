@@ -179,46 +179,54 @@ export class PromptService {
 
     // Refactorizado: Actualiza metadatos del Prompt (desc, tactic, tags)
     async update(name: string, updateDto: UpdatePromptDto): Promise<PromptWithRelations> {
-        const { tacticId, tags, ...restData } = updateDto;
+        // Extraer explícitamente los campos conocidos del DTO
+        const { tacticId, tagIds, description } = updateDto;
 
-        let data: Prisma.PromptUpdateInput = { ...restData }; // description
+        // Construir el objeto de datos para Prisma explícitamente
+        let data: Prisma.PromptUpdateInput = {};
+
+        // Añadir campos solo si están definidos en el DTO
+        if (description !== undefined) {
+            data.description = description;
+        }
 
         if (tacticId !== undefined) {
             data.tactic = tacticId ? { connect: { name: tacticId } } : { disconnect: true };
         }
 
-        // --- Manejo de Tags --- //
-        if (tags !== undefined) {
-            if (tags === null || tags.length === 0) {
-                data.tags = { set: [] }; // Desconectar todos
-            } else {
-                const tagsToConnectOrCreate = tags.map(tagName => ({
-                    where: { name: tagName },
-                    create: { name: tagName },
-                }));
-                data.tags = { set: [], connectOrCreate: tagsToConnectOrCreate }; // Reemplazar con la nueva lista
-            }
+        if (tagIds !== undefined) {
+            // Usar 'set' para reemplazar completamente las relaciones de tags por los IDs proporcionados
+            data.tags = {
+                set: tagIds.map(id => ({ id: id }))
+            };
+        }
+        // Si tagIds es undefined, no se añade `data.tags`, por lo que Prisma no modifica las etiquetas existentes.
+
+        // Verificar si se proporcionó algún dato para actualizar
+        if (Object.keys(data).length === 0) {
+            // Si no hay nada que actualizar, podemos devolver el prompt existente para evitar una llamada innecesaria a la BD.
+            // Opcionalmente, podrías lanzar un BadRequestException si esperas que siempre haya algo que actualizar.
+            console.warn(`Update called for prompt "${name}" with no data to change.`);
+            return this.findOne(name);
         }
 
         try {
-            // Actualizamos primero
+            // Actualizamos el prompt con los datos construidos
             await this.prisma.prompt.update({
                 where: { name },
-                data,
+                data, // Pasar el objeto 'data' construido explícitamente
             });
-            // Luego hacemos findOne para devolver la estructura completa actualizada
+            // Devolvemos la entidad actualizada con todas las relaciones
             return this.findOne(name);
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError) {
                 if (error.code === 'P2025') {
-                    // Este error puede ocurrir si el prompt no existe, o si un Tactic/Tag referenciado en connectOrCreate no se encuentra (aunque create debería prevenirlo)
-                    throw new NotFoundException(`Prompt with NAME "${name}" not found, or related Tactic/Tag could not be connected/found.`);
-                } else if (error.code === 'P2002') {
-                    // Este error podría ocurrir si se intenta crear un tag con un nombre que ya existe durante el connectOrCreate.
-                    const target = (error.meta?.target as string[])?.join(', ');
-                    throw new ConflictException(`A tag with name in [${target}] might already exist unexpectedly.`);
+                    // Puede ser que el prompt no exista, o un tacticId o tagId no exista.
+                    throw new NotFoundException(`Prompt with NAME "${name}" not found, or related Tactic/Tag with provided ID could not be found.`);
                 }
             }
+            // Re-lanzar otros errores inesperados
+            console.error(`Error updating prompt ${name}:`, error);
             throw error;
         }
     }

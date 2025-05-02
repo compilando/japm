@@ -2378,45 +2378,6 @@
       }
     },
     "/prompt-versions": {
-      "post": {
-        "operationId": "PromptVersionController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePromptVersionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Versión creada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatePromptVersionDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos inválidos."
-          },
-          "404": {
-            "description": "Prompt no encontrado."
-          },
-          "409": {
-            "description": "La versión ya existe para este prompt."
-          }
-        },
-        "summary": "Crea una nueva versión de un prompt existente",
-        "tags": [
-          "Prompt Versions"
-        ]
-      },
       "get": {
         "operationId": "PromptVersionController_findAll",
         "parameters": [
@@ -3761,14 +3722,16 @@
             "description": "ID de la táctica a asociar, o null para desasociar.",
             "example": "small_talk_continuacion"
           },
-          "tags": {
-            "description": "Lista completa de nombres de etiquetas a asociar (reemplaza las existentes). Array vacío para quitar todas.",
+          "tagIds": {
+            "description": "Lista completa de IDs de etiquetas a asociar (reemplaza las existentes). Array vacío para quitar todas.",
             "example": [
-              "despedida"
+              "cl...uuid1",
+              "cl...uuid2"
             ],
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         }
@@ -3798,30 +3761,36 @@
         "properties": {
           "promptText": {
             "type": "string",
-            "description": "Texto completo del prompt para esta versión.",
-            "example": "Translate the following text to Spanish: {{text_to_translate}}"
-          },
-          "promptId": {
-            "type": "string",
-            "description": "Identificador único del prompt lógico al que pertenece esta versión.",
-            "example": "translate_english_to_spanish"
+            "description": "Texto BASE del prompt para esta nueva versión."
           },
           "versionTag": {
             "type": "string",
-            "default": "v1.0.0",
-            "pattern": "/^v\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)*)?(\\+[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)*)?$/",
-            "description": "Etiqueta de versión semántica (e.g., v1.0.0, v1.1.0-beta). Por defecto v1.0.0",
-            "example": "v1.0.0"
+            "description": "Etiqueta única para esta versión dentro del prompt (e.g., v1.1.0, beta-feature-x).",
+            "example": "v1.1.0"
           },
           "changeMessage": {
             "type": "string",
-            "description": "Mensaje describiendo los cambios en esta versión.",
-            "example": "Initial version."
+            "description": "Mensaje describiendo los cambios en esta versión."
+          },
+          "assetLinks": {
+            "description": "Lista de versiones de assets a vincular a esta versión del prompt.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetVersionLinkDto"
+            }
+          },
+          "initialTranslations": {
+            "description": "Traducciones iniciales opcionales para esta nueva versión.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InitialTranslationDto"
+            }
           }
         },
         "required": [
           "promptText",
-          "promptId"
+          "versionTag",
+          "assetLinks"
         ]
       },
       "CreateOrUpdatePromptTranslationDto": {
@@ -4307,13 +4276,25 @@
         "properties": {
           "promptText": {
             "type": "string",
-            "description": "Texto completo del prompt para esta versión.",
-            "example": "Translate the following text to Spanish: {{text_to_translate}}"
+            "description": "Texto BASE del prompt para esta nueva versión."
           },
           "changeMessage": {
             "type": "string",
-            "description": "Mensaje describiendo los cambios en esta versión.",
-            "example": "Initial version."
+            "description": "Mensaje describiendo los cambios en esta versión."
+          },
+          "assetLinks": {
+            "description": "Lista de versiones de assets a vincular a esta versión del prompt.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetVersionLinkDto"
+            }
+          },
+          "initialTranslations": {
+            "description": "Traducciones iniciales opcionales para esta nueva versión.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InitialTranslationDto"
+            }
           }
         }
       },

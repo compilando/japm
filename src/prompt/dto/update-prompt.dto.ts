@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsArray } from 'class-validator';
+import { IsOptional, IsString, IsArray, IsUUID } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 // No usar PartialType/OmitType para tener control explícito sobre los tipos actualizables
@@ -13,9 +13,9 @@ export class UpdatePromptDto {
     @IsString()
     tacticId?: string | null;
 
-    @ApiPropertyOptional({ description: 'Lista completa de nombres de etiquetas a asociar (reemplaza las existentes). Array vacío para quitar todas.', example: ['despedida'] })
+    @ApiPropertyOptional({ description: 'Lista completa de IDs de etiquetas a asociar (reemplaza las existentes). Array vacío para quitar todas.', example: ['cl...uuid1', 'cl...uuid2'], type: [String] })
     @IsOptional()
     @IsArray()
-    @IsString({ each: true })
-    tags?: string[];
+    @IsUUID('all', { each: true })
+    tagIds?: string[];
 } 
