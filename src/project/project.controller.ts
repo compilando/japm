@@ -7,7 +7,7 @@ import { Project } from '@prisma/client'; // Assuming Project type is generated 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Importar JwtAuthGuard
 
 @ApiTags('Projects')
-@Controller('projects')
+@Controller('api/projects')
 export class ProjectController {
     constructor(private readonly projectService: ProjectService) { }
 

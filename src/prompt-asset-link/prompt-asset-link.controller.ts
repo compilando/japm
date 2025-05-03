@@ -23,7 +23,7 @@ class PromptAssetLinkResponse extends CreatePromptAssetLinkDto {
 @ApiTags('Prompt Asset Links (within Project/Version)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
-@Controller('projects/:projectId/prompt-versions/:promptVersionId/links')
+@Controller('api/projects/:projectId/prompt-versions/:promptVersionId/links')
 export class PromptAssetLinkController {
     constructor(private readonly service: PromptAssetLinkService) { }
 

@@ -6,7 +6,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { AIModel } from '@prisma/client';
 
 @ApiTags('AI Models')
-@Controller('ai-models') // Route prefix
+@Controller('api/ai-models') // Route prefix
 export class AiModelController {
     constructor(private readonly aiModelService: AiModelService) { }
 

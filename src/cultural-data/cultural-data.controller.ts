@@ -2,10 +2,11 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, Validation
 import { CulturalDataService } from './cultural-data.service';
 import { CreateCulturalDataDto } from './dto/create-cultural-data.dto';
 import { UpdateCulturalDataDto } from './dto/update-cultural-data.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiProperty } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiProperty, ApiBearerAuth } from '@nestjs/swagger';
 import { CulturalData, Region } from '@prisma/client';
 import { CreateRegionDto } from '../region/dto/create-region.dto';
 import { ProjectGuard } from '../common/guards/project.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request as ExpressRequest } from 'express';
 
 // Define interface for request with projectId
@@ -24,7 +25,8 @@ class CulturalDataResponse extends CreateCulturalDataDto {
 }
 
 @ApiTags('Cultural Data')
-@UseGuards(ProjectGuard)
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('/api/projects/:projectId/cultural-data')
 export class CulturalDataController {
     constructor(private readonly culturalDataService: CulturalDataService) { }

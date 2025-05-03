@@ -6,7 +6,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/s
 import { User } from '@prisma/client'; // Importar el tipo User de Prisma
 
 @ApiTags('Users') // Tag para agrupar en Swagger
-@Controller('users') // Ruta base para este controlador
+@Controller('api/users') // Ruta base para este controlador
 export class UserController {
     constructor(private readonly userService: UserService) { }
 

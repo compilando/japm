@@ -1,28 +1,7 @@
 {
   "openapi": "3.0.0",
   "paths": {
-    "/": {
-      "get": {
-        "operationId": "AppController_getHello",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "App"
-        ]
-      }
-    },
-    "/users": {
+    "/api/users": {
       "post": {
         "operationId": "UserController_create",
         "parameters": [],
@@ -80,7 +59,7 @@
         ]
       }
     },
-    "/users/{id}": {
+    "/api/users/{id}": {
       "get": {
         "operationId": "UserController_findOne",
         "parameters": [
@@ -187,7 +166,7 @@
         ]
       }
     },
-    "/auth/register": {
+    "/api/auth/register": {
       "post": {
         "operationId": "AuthController_register",
         "parameters": [],
@@ -225,7 +204,7 @@
         ]
       }
     },
-    "/auth/login": {
+    "/api/auth/login": {
       "post": {
         "operationId": "AuthController_login",
         "parameters": [],
@@ -260,7 +239,7 @@
         ]
       }
     },
-    "/auth/profile": {
+    "/api/auth/profile": {
       "get": {
         "operationId": "AuthController_getProfile",
         "parameters": [],
@@ -335,6 +314,11 @@
             "description": "languageCode ya existe."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear una nueva región para un proyecto específico",
         "tags": [
           "Regions"
@@ -368,6 +352,11 @@
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener todas las regiones para un proyecto específico",
         "tags": [
           "Regions"
@@ -412,6 +401,11 @@
             "description": "Proyecto o Región no encontrada."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener una región específica dentro de un proyecto",
         "tags": [
           "Regions"
@@ -467,6 +461,11 @@
             "description": "Proyecto o Región no encontrada."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar una región específica dentro de un proyecto",
         "tags": [
           "Regions"
@@ -502,6 +501,11 @@
             "description": "Proyecto o Región no encontrada."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar una región específica dentro de un proyecto",
         "tags": [
           "Regions"
@@ -550,6 +554,11 @@
             "description": "Proyecto o Región referenciada no encontrada."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear nuevos datos culturales dentro de un proyecto",
         "tags": [
           "Cultural Data"
@@ -586,6 +595,11 @@
             "description": "Proyecto no encontrado."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener todos los datos culturales de un proyecto",
         "tags": [
           "Cultural Data"
@@ -630,6 +644,11 @@
             "description": "Proyecto o Datos culturales no encontrados."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener datos culturales por ID dentro de un proyecto",
         "tags": [
           "Cultural Data"
@@ -685,6 +704,11 @@
             "description": "Proyecto o Datos culturales no encontrados."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar datos culturales por ID dentro de un proyecto",
         "tags": [
           "Cultural Data"
@@ -723,6 +747,11 @@
             "description": "Conflicto al eliminar (referenciado por otras entidades)."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar datos culturales por ID dentro de un proyecto",
         "tags": [
           "Cultural Data"
@@ -774,6 +803,11 @@
             "description": "Conflicto, ya existe una táctica con ese nombre en el proyecto."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crea una nueva táctica conversacional dentro de un proyecto",
         "tags": [
           "Tactics"
@@ -810,6 +844,11 @@
             "description": "Proyecto no encontrado."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtiene todas las tácticas conversacionales de un proyecto",
         "tags": [
           "Tactics"
@@ -854,6 +893,11 @@
             "description": "Proyecto o Táctica no encontrada."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtiene una táctica por su nombre (ID) dentro de un proyecto",
         "tags": [
           "Tactics"
@@ -909,6 +953,11 @@
             "description": "Proyecto, Táctica, Región o CulturalData no encontrada."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualiza una táctica existente dentro de un proyecto",
         "tags": [
           "Tactics"
@@ -947,6 +996,11 @@
             "description": "Conflicto al eliminar (referenciada por prompts)."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Elimina una táctica dentro de un proyecto",
         "tags": [
           "Tactics"
@@ -998,6 +1052,11 @@
             "description": "Conflicto, ya existe un prompt con ese nombre en el proyecto."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crea un nuevo prompt lógico dentro de un proyecto",
         "tags": [
           "Prompts"
@@ -1034,6 +1093,11 @@
             "description": "Proyecto no encontrado."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtiene todos los prompts lógicos de un proyecto",
         "tags": [
           "Prompts"
@@ -1078,6 +1142,11 @@
             "description": "Proyecto o Prompt no encontrado."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtiene un prompt lógico por su nombre dentro de un proyecto",
         "tags": [
           "Prompts"
@@ -1133,6 +1202,11 @@
             "description": "Proyecto, Prompt, Tactic o Tag no encontrado."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualiza metadatos de un prompt lógico (descripción, tactic, tags) dentro de un proyecto",
         "tags": [
           "Prompts"
@@ -1171,6 +1245,11 @@
             "description": "Conflicto al eliminar (revisar relaciones sin Cascade)."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Elimina un prompt lógico (y sus versiones asociadas por Cascade) dentro de un proyecto",
         "tags": [
           "Prompts"
@@ -1224,6 +1303,11 @@
             "description": "Conflicto (e.g., versionTag ya existe para este prompt)."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear una nueva versión para un prompt existente en el proyecto.",
         "tags": [
           "Prompts"
@@ -1283,6 +1367,11 @@
             "description": "Proyecto o Versión no encontrada."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Añadir o actualizar una traducción para una versión específica de prompt en el proyecto.",
         "tags": [
           "Prompts"
@@ -1327,6 +1416,11 @@
             "description": "Conflicto, ya existe un asset con esa key en el proyecto."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crea un nuevo prompt asset (y su primera versión) dentro de un proyecto",
         "tags": [
           "Prompt Assets"
@@ -1353,6 +1447,11 @@
             "description": "Proyecto no encontrado."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtiene todos los prompt assets de un proyecto",
         "tags": [
           "Prompt Assets"
@@ -1390,6 +1489,11 @@
             "description": "Proyecto o Asset no encontrado."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtiene un prompt asset por su key dentro de un proyecto",
         "tags": [
           "Prompt Assets"
@@ -1438,6 +1542,11 @@
             "description": "Proyecto o Asset no encontrado."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualiza metadatos de un prompt asset (nombre, descripción, etc.) dentro de un proyecto",
         "tags": [
           "Prompt Assets"
@@ -1476,13 +1585,18 @@
             "description": "Conflicto al eliminar (revisar relaciones sin Cascade)."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Elimina un prompt asset (y sus versiones/traducciones por Cascade) dentro de un proyecto",
         "tags": [
           "Prompt Assets"
         ]
       }
     },
-    "/projects/{projectId}/prompt-versions/{promptVersionId}/links": {
+    "/api/projects/{projectId}/prompt-versions/{promptVersionId}/links": {
       "post": {
         "operationId": "PromptAssetLinkController_create",
         "parameters": [
@@ -1606,7 +1720,7 @@
         ]
       }
     },
-    "/projects/{projectId}/prompt-versions/{promptVersionId}/links/{linkId}": {
+    "/api/projects/{projectId}/prompt-versions/{promptVersionId}/links/{linkId}": {
       "get": {
         "operationId": "PromptAssetLinkController_findOne",
         "parameters": [
@@ -1842,6 +1956,11 @@
             "description": "Proyecto o Región referenciada no encontrada."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crear metadatos para un documento RAG dentro de un proyecto",
         "tags": [
           "RAG Document Metadata"
@@ -1878,6 +1997,11 @@
             "description": "Proyecto no encontrado."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener todos los metadatos de documentos RAG de un proyecto",
         "tags": [
           "RAG Document Metadata"
@@ -1922,6 +2046,11 @@
             "description": "Proyecto o Metadatos no encontrados."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtener metadatos por ID dentro de un proyecto",
         "tags": [
           "RAG Document Metadata"
@@ -1977,6 +2106,11 @@
             "description": "Proyecto, Metadatos o Región referenciada no encontrada."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualizar metadatos por ID dentro de un proyecto",
         "tags": [
           "RAG Document Metadata"
@@ -2015,13 +2149,18 @@
             "description": "Conflicto al eliminar (referenciado por otras entidades)."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Eliminar metadatos por ID dentro de un proyecto",
         "tags": [
           "RAG Document Metadata"
         ]
       }
     },
-    "/health": {
+    "/api/health": {
       "get": {
         "operationId": "HealthController_check",
         "parameters": [],
@@ -2189,7 +2328,7 @@
         ]
       }
     },
-    "/projects/{projectId}/serve/{environmentName}/{promptName}": {
+    "/api/projects/{projectId}/serve/{environmentName}/{promptName}": {
       "get": {
         "operationId": "ServePromptController_servePrompt",
         "parameters": [
@@ -2277,7 +2416,7 @@
         ]
       }
     },
-    "/projects/mine": {
+    "/api/projects/mine": {
       "get": {
         "operationId": "ProjectController_findMine",
         "parameters": [],
@@ -2310,7 +2449,7 @@
         ]
       }
     },
-    "/projects": {
+    "/api/projects": {
       "post": {
         "operationId": "ProjectController_create",
         "parameters": [],
@@ -2368,7 +2507,7 @@
         ]
       }
     },
-    "/projects/{id}": {
+    "/api/projects/{id}": {
       "get": {
         "operationId": "ProjectController_findOne",
         "parameters": [
@@ -2482,7 +2621,7 @@
         ]
       }
     },
-    "/ai-models": {
+    "/api/ai-models": {
       "post": {
         "operationId": "AiModelController_create",
         "parameters": [],
@@ -2543,7 +2682,7 @@
         ]
       }
     },
-    "/ai-models/{id}": {
+    "/api/ai-models/{id}": {
       "get": {
         "operationId": "AiModelController_findOne",
         "parameters": [
@@ -2705,6 +2844,11 @@
             "description": "Conflicto, ya existe una etiqueta con ese nombre en el proyecto."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crea una nueva etiqueta para un proyecto",
         "tags": [
           "Tags"
@@ -2741,6 +2885,11 @@
             "description": "Proyecto no encontrado."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtiene todas las etiquetas de un proyecto",
         "tags": [
           "Tags"
@@ -2785,6 +2934,11 @@
             "description": "Proyecto o Etiqueta no encontrada."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtiene una etiqueta por su ID dentro de un proyecto",
         "tags": [
           "Tags"
@@ -2843,6 +2997,11 @@
             "description": "Conflicto, ya existe una etiqueta con el nuevo nombre en el proyecto."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualiza una etiqueta existente en un proyecto",
         "tags": [
           "Tags"
@@ -2888,6 +3047,11 @@
             "description": "Conflicto, la etiqueta está en uso."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Elimina una etiqueta de un proyecto",
         "tags": [
           "Tags"
@@ -2932,13 +3096,18 @@
             "description": "Proyecto o Etiqueta no encontrada."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtiene una etiqueta por su nombre dentro de un proyecto",
         "tags": [
           "Tags"
         ]
       }
     },
-    "/projects/{projectId}/prompts/{promptId}/versions": {
+    "/api/projects/{projectId}/prompts/{promptId}/versions": {
       "post": {
         "operationId": "PromptVersionController_create",
         "parameters": [
@@ -3062,7 +3231,7 @@
         ]
       }
     },
-    "/projects/{projectId}/prompts/{promptId}/versions/{versionTag}": {
+    "/api/projects/{projectId}/prompts/{promptId}/versions/{versionTag}": {
       "get": {
         "operationId": "PromptVersionController_findOneByTag",
         "parameters": [
@@ -3256,7 +3425,7 @@
         ]
       }
     },
-    "/projects/{projectId}/prompts/{promptId}/versions/{versionTag}/translations": {
+    "/api/projects/{projectId}/prompts/{promptId}/versions/{versionTag}/translations": {
       "post": {
         "operationId": "PromptTranslationController_create",
         "parameters": [
@@ -3401,7 +3570,7 @@
         ]
       }
     },
-    "/projects/{projectId}/prompts/{promptId}/versions/{versionTag}/translations/{languageCode}": {
+    "/api/projects/{projectId}/prompts/{promptId}/versions/{versionTag}/translations/{languageCode}": {
       "get": {
         "operationId": "PromptTranslationController_findOneByLanguage",
         "parameters": [
@@ -3622,7 +3791,7 @@
         ]
       }
     },
-    "/projects/{projectId}/assets/{assetKey}/versions": {
+    "/api/projects/{projectId}/assets/{assetKey}/versions": {
       "post": {
         "operationId": "PromptAssetVersionController_create",
         "parameters": [
@@ -3746,7 +3915,7 @@
         ]
       }
     },
-    "/projects/{projectId}/assets/{assetKey}/versions/{versionTag}": {
+    "/api/projects/{projectId}/assets/{assetKey}/versions/{versionTag}": {
       "get": {
         "operationId": "PromptAssetVersionController_findOneByTag",
         "parameters": [
@@ -3940,7 +4109,7 @@
         ]
       }
     },
-    "/projects/{projectId}/assets/{assetKey}/versions/{versionTag}/translations": {
+    "/api/projects/{projectId}/assets/{assetKey}/versions/{versionTag}/translations": {
       "post": {
         "operationId": "AssetTranslationController_create",
         "parameters": [
@@ -4085,7 +4254,7 @@
         ]
       }
     },
-    "/projects/{projectId}/assets/{assetKey}/versions/{versionTag}/translations/{languageCode}": {
+    "/api/projects/{projectId}/assets/{assetKey}/versions/{versionTag}/translations/{languageCode}": {
       "get": {
         "operationId": "AssetTranslationController_findOneByLanguage",
         "parameters": [
@@ -4351,6 +4520,11 @@
             "description": "Conflicto, ya existe un entorno con ese nombre en el proyecto."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Crea un nuevo entorno para un proyecto",
         "tags": [
           "Environments"
@@ -4387,6 +4561,11 @@
             "description": "Proyecto no encontrado."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtiene todos los entornos de un proyecto",
         "tags": [
           "Environments"
@@ -4431,6 +4610,11 @@
             "description": "Proyecto o Entorno no encontrado."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtiene un entorno por su ID dentro de un proyecto",
         "tags": [
           "Environments"
@@ -4489,6 +4673,11 @@
             "description": "Conflicto, ya existe un entorno con el nuevo nombre en el proyecto."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Actualiza un entorno existente en un proyecto",
         "tags": [
           "Environments"
@@ -4531,6 +4720,11 @@
             "description": "Proyecto o Entorno no encontrado."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Elimina un entorno de un proyecto",
         "tags": [
           "Environments"
@@ -4575,6 +4769,11 @@
             "description": "Proyecto o Entorno no encontrado."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Obtiene un entorno por su nombre dentro de un proyecto",
         "tags": [
           "Environments"

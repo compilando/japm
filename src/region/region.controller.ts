@@ -2,9 +2,10 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, Validation
 import { RegionService } from './region.service';
 import { CreateRegionDto } from './dto/create-region.dto';
 import { UpdateRegionDto } from './dto/update-region.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { Region } from '@prisma/client';
 import { ProjectGuard } from '../common/guards/project.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request as ExpressRequest } from 'express';
 
 // Extend Express Request interface to include projectId attached by the guard
@@ -13,7 +14,8 @@ interface RequestWithProject extends ExpressRequest {
 }
 
 @ApiTags('Regions')
-@UseGuards(ProjectGuard)
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('/api/projects/:projectId/regions')
 export class RegionController {
     constructor(private readonly regionService: RegionService) { }

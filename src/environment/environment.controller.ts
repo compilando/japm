@@ -2,9 +2,10 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, Validation
 import { EnvironmentService } from './environment.service';
 import { CreateEnvironmentDto } from './dto/create-environment.dto';
 import { UpdateEnvironmentDto } from './dto/update-environment.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { Environment } from '@prisma/client';
 import { ProjectGuard } from '../common/guards/project.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request as ExpressRequest } from 'express';
 
 // Definir interfaz para el request con projectId
@@ -13,7 +14,8 @@ interface RequestWithProject extends ExpressRequest {
 }
 
 @ApiTags('Environments')
-@UseGuards(ProjectGuard)
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('/api/projects/:projectId/environments')
 export class EnvironmentController {
     constructor(private readonly service: EnvironmentService) { }

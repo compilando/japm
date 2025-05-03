@@ -2,9 +2,10 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, Validation
 import { PromptAssetService } from './prompt-asset.service';
 import { CreatePromptAssetDto } from './dto/create-prompt-asset.dto';
 import { UpdatePromptAssetDto } from './dto/update-prompt-asset.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { PromptAsset, PromptAssetVersion } from '@prisma/client';
 import { ProjectGuard } from '../common/guards/project.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request as ExpressRequest } from 'express';
 
 interface RequestWithProject extends ExpressRequest {
@@ -12,7 +13,8 @@ interface RequestWithProject extends ExpressRequest {
 }
 
 @ApiTags('Prompt Assets')
-@UseGuards(ProjectGuard)
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('/api/projects/:projectId/prompt-assets')
 export class PromptAssetController {
     constructor(private readonly service: PromptAssetService) { }

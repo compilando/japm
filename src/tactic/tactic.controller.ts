@@ -2,11 +2,12 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, Validation
 import { TacticService } from './tactic.service';
 import { CreateTacticDto } from './dto/create-tactic.dto';
 import { UpdateTacticDto } from './dto/update-tactic.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiProperty } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiProperty, ApiBearerAuth } from '@nestjs/swagger';
 import { Tactic, Region, CulturalData } from '@prisma/client';
 import { CreateRegionDto } from '../region/dto/create-region.dto'; // Para el DTO de respuesta
 import { CreateCulturalDataDto } from '../cultural-data/dto/create-cultural-data.dto'; // Para el DTO de respuesta
 import { ProjectGuard } from '../common/guards/project.guard'; // Import guard
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Import JwtAuthGuard
 import { Request as ExpressRequest } from 'express';
 
 // Define interface for request with projectId
@@ -35,7 +36,8 @@ class TacticResponse {
 }
 
 @ApiTags('Tactics')
-@UseGuards(ProjectGuard)
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('/api/projects/:projectId/tactics') // Nueva ruta base
 export class TacticController {
     constructor(private readonly service: TacticService) { }

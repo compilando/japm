@@ -2,9 +2,10 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, Validation
 import { TagService } from './tag.service';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { Tag } from '@prisma/client';
 import { ProjectGuard } from '../common/guards/project.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request as ExpressRequest } from 'express';
 
 // Definir interfaz para el request con projectId
@@ -15,7 +16,8 @@ interface RequestWithProject extends ExpressRequest {
 // Devolveremos la entidad Tag completa en las respuestas.
 
 @ApiTags('Tags')
-@UseGuards(ProjectGuard)
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('/api/projects/:projectId/tags')
 export class TagController {
   constructor(private readonly service: TagService) { }

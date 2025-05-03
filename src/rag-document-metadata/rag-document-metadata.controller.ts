@@ -2,10 +2,11 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, Validation
 import { RagDocumentMetadataService } from './rag-document-metadata.service';
 import { CreateRagDocumentMetadataDto } from './dto/create-rag-document-metadata.dto';
 import { UpdateRagDocumentMetadataDto } from './dto/update-rag-document-metadata.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiProperty } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiProperty, ApiBearerAuth } from '@nestjs/swagger';
 import { RagDocumentMetadata, Region } from '@prisma/client';
 import { CreateRegionDto } from '../region/dto/create-region.dto'; // Para respuesta
 import { ProjectGuard } from '../common/guards/project.guard'; // Import guard
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Import JwtAuthGuard
 import { Request as ExpressRequest } from 'express';
 
 // Define interface for request with projectId
@@ -26,7 +27,8 @@ class RagDocumentMetadataResponse extends CreateRagDocumentMetadataDto {
 }
 
 @ApiTags('RAG Document Metadata')
-@UseGuards(ProjectGuard)
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('/api/projects/:projectId/rag-document-metadata') // Nueva ruta base
 export class RagDocumentMetadataController {
     constructor(private readonly service: RagDocumentMetadataService) { }

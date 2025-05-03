@@ -12,7 +12,7 @@ import { ProjectGuard } from '../common/guards/project.guard';
 @ApiTags('Prompt Translations (within Project/Prompt/Version)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
-@Controller('projects/:projectId/prompts/:promptId/versions/:versionTag/translations')
+@Controller('api/projects/:projectId/prompts/:promptId/versions/:versionTag/translations')
 export class PromptTranslationController {
   constructor(private readonly service: PromptTranslationService) { }
 

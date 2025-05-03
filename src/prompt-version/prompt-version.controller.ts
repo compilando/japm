@@ -12,7 +12,7 @@ import { CreatePromptVersionDto } from 'src/prompt/dto/create-prompt-version.dto
 @ApiTags('Prompt Versions (within Project/Prompt)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
-@Controller('projects/:projectId/prompts/:promptId/versions')
+@Controller('api/projects/:projectId/prompts/:promptId/versions')
 export class PromptVersionController {
   constructor(private readonly service: PromptVersionService) { }
 

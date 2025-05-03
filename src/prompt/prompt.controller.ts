@@ -5,9 +5,10 @@ import { UpdatePromptDto } from './dto/update-prompt.dto';
 // import { TestPromptDto } from './dto/test-prompt.dto'; // Ya no se usa
 import { CreatePromptVersionDto } from './dto/create-prompt-version.dto';
 import { CreateOrUpdatePromptTranslationDto } from './dto/create-or-update-prompt-translation.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { Prompt, PromptVersion, PromptTranslation } from '@prisma/client'; // Importar solo tipos necesarios
 import { ProjectGuard } from '../common/guards/project.guard'; // Importar guard
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Import JwtAuthGuard
 import { Request as ExpressRequest } from 'express';
 
 // Definir interfaz para el request con projectId
@@ -18,7 +19,8 @@ interface RequestWithProject extends ExpressRequest {
 // Clases DTO de parámetros eliminadas completamente
 
 @ApiTags('Prompts')
-@UseGuards(ProjectGuard) // Aplicar guard a todo el controlador
+@ApiBearerAuth() // Add Swagger decorator
+@UseGuards(JwtAuthGuard, ProjectGuard) // Aplicar JwtAuthGuard ANTES que ProjectGuard
 @Controller('/api/projects/:projectId/prompts') // Nueva ruta base
 export class PromptController {
     constructor(private readonly service: PromptService) { }

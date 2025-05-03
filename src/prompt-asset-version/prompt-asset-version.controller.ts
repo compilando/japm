@@ -12,7 +12,7 @@ import { ProjectGuard } from '../common/guards/project.guard';
 @ApiTags('Prompt Asset Versions (within Project/Asset)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
-@Controller('projects/:projectId/assets/:assetKey/versions')
+@Controller('api/projects/:projectId/assets/:assetKey/versions')
 export class PromptAssetVersionController {
   constructor(private readonly service: PromptAssetVersionService) { }
 

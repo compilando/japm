@@ -17,7 +17,7 @@ class ServePromptOptionsDto {
 @ApiTags('Serve Prompt (within Project)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
-@Controller('projects/:projectId/serve')
+@Controller('api/projects/:projectId/serve')
 export class ServePromptController {
     constructor(private readonly service: ServePromptService) { }
 
