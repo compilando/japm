@@ -63,7 +63,32 @@ async function main() {
     });
     console.log(`Upserted default project: ${defaultProject.name}`);
 
-    // 3. Create AI Models (Still global ManyToMany based on schema)
+    // 3. Create Generic Tags for Default Project
+    console.log('Upserting Generic Tags...');
+    const genericTags = [
+        { name: 'Core', description: 'Core functionality or widely used.' },
+        { name: 'Experimental', description: 'Features under development or testing.' },
+        { name: 'Deprecated', description: 'Features planned for removal.' },
+        { name: 'UI/Frontend', description: 'Related to User Interface.' },
+        { name: 'Backend', description: 'Related to backend logic or services.' },
+        { name: 'Marketing', description: 'Related to marketing campaigns or content.' },
+        { name: 'Internal', description: 'For internal tools or processes.' },
+    ];
+
+    for (const tagData of genericTags) {
+        await prisma.tag.upsert({
+            where: { projectId_name: { name: tagData.name, projectId: defaultProject.id } },
+            update: { description: tagData.description }, // Update description if tag exists
+            create: {
+                name: tagData.name,
+                description: tagData.description,
+                projectId: defaultProject.id, // Associate with default project
+            },
+        });
+        console.log(`Upserted Tag: ${tagData.name}`);
+    }
+
+    // 4. Create AI Models (Still global ManyToMany based on schema)
     console.log('Upserting AI Models...');
     const aiModelsData = [
         { id: 'gpt-4-turbo', name: 'gpt-4-turbo-2024-04-09', provider: 'OpenAI', apiIdentifier: 'gpt-4-turbo-2024-04-09', description: 'Latest GPT-4 Turbo model', contextWindow: 128000, supportsJson: true, maxTokens: 4096 },
@@ -83,7 +108,7 @@ async function main() {
         console.log(`Upserted AI Model: ${modelData.name}`);
     }
 
-    // 4. Create Environments (Associated with Default Project)
+    // 5. Create Environments (Associated with Default Project)
     console.log('Upserting Environments...');
     const environments = [
         { name: 'development', description: 'For active development and testing' },
@@ -105,7 +130,7 @@ async function main() {
         console.log(`Upserted Environment: ${envData.name}`);
     }
 
-    // 5. Create ES Region and CulturalData (Associated with Default Project)
+    // 6. Create ES Region and CulturalData (Associated with Default Project)
     console.log('Upserting Region ES...');
     const regionES = await prisma.region.upsert({
         where: { languageCode: 'es-ES' },
@@ -133,7 +158,7 @@ async function main() {
     });
     console.log(`Upserted CulturalData for ES (ID: direct-and-formal)`);
 
-    // 6. Create US Region and CulturalData (Associated with Default Project)
+    // 7. Create US Region and CulturalData (Associated with Default Project)
     console.log('Upserting Region US...');
     const regionUS = await prisma.region.upsert({
         where: { languageCode: 'en-US' },

@@ -1,6 +1,5 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 import { RegionModule } from './region/region.module';
@@ -24,10 +23,16 @@ import { AssetTranslationModule } from './asset-translation/asset-translation.mo
 import { ExecutionLogModule } from './execution-log/execution-log.module';
 import { EnvironmentModule } from './environment/environment.module';
 import { AuthModule } from './auth/auth.module';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 60 * 5,
+    }),
     PrismaModule,
     UserModule,
     AuthModule,
@@ -38,7 +43,6 @@ import { AuthModule } from './auth/auth.module';
     PromptAssetModule,
     PromptAssetLinkModule,
     RagDocumentMetadataModule,
-    PrismaModule,
     HealthModule,
     ServePromptModule,
     ProjectModule,
@@ -50,7 +54,6 @@ import { AuthModule } from './auth/auth.module';
     AssetTranslationModule,
     ExecutionLogModule,
     EnvironmentModule,
-    TagModule,
   ],
   controllers: [AppController],
   providers: [AppService],

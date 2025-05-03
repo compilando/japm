@@ -1,4 +1,6 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, HttpCode, HttpStatus, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, HttpCode, HttpStatus, Req, UseGuards, Inject, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { EnvironmentService } from './environment.service';
 import { CreateEnvironmentDto } from './dto/create-environment.dto';
 import { UpdateEnvironmentDto } from './dto/update-environment.dto';
@@ -18,7 +20,15 @@ interface RequestWithProject extends ExpressRequest {
 @UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('/api/projects/:projectId/environments')
 export class EnvironmentController {
-    constructor(private readonly service: EnvironmentService) { }
+    constructor(
+        private readonly service: EnvironmentService,
+        @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    ) { }
+
+    // Helper function to get the cache key for the findAll endpoint
+    private getFindAllCacheKey(projectId: string): string {
+        return `/api/projects/${projectId}/environments`;
+    }
 
     @Post()
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
@@ -30,18 +40,25 @@ export class EnvironmentController {
     @ApiResponse({ status: 404, description: 'Proyecto no encontrado.' })
     @ApiResponse({ status: 409, description: 'Conflicto, ya existe un entorno con ese nombre en el proyecto.' })
     @HttpCode(HttpStatus.CREATED)
-    create(@Req() req: RequestWithProject, @Body() createDto: CreateEnvironmentDto): Promise<Environment> {
+    async create(@Req() req: RequestWithProject, @Body() createDto: CreateEnvironmentDto): Promise<Environment> {
         const projectId = req.projectId;
-        return this.service.create(createDto, projectId);
+        const newEnvironment = await this.service.create(createDto, projectId);
+        // Invalidate cache
+        const cacheKey = this.getFindAllCacheKey(projectId);
+        await this.cacheManager.del(cacheKey);
+        console.log(`Cache invalidated for key: ${cacheKey}`);
+        return newEnvironment;
     }
 
     @Get()
+    @UseInterceptors(CacheInterceptor)
     @ApiOperation({ summary: 'Obtiene todos los entornos de un proyecto' })
     @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
     @ApiResponse({ status: 200, description: 'Lista de entornos.', type: [CreateEnvironmentDto] })
     @ApiResponse({ status: 404, description: 'Proyecto no encontrado.' })
     findAll(@Req() req: RequestWithProject): Promise<Environment[]> {
         const projectId = req.projectId;
+        // console.log(`Cache MISS: EnvironmentController.findAll(${projectId}) executed`);
         return this.service.findAll(projectId);
     }
 
@@ -77,13 +94,20 @@ export class EnvironmentController {
     @ApiResponse({ status: 404, description: 'Proyecto o Entorno no encontrado.' })
     @ApiResponse({ status: 400, description: 'Datos inválidos.' })
     @ApiResponse({ status: 409, description: 'Conflicto, ya existe un entorno con el nuevo nombre en el proyecto.' })
-    update(
+    async update(
         @Req() req: RequestWithProject,
         @Param('environmentId') environmentId: string,
         @Body() updateDto: UpdateEnvironmentDto
     ): Promise<Environment> {
         const projectId = req.projectId;
-        return this.service.update(environmentId, updateDto, projectId);
+        const updatedEnvironment = await this.service.update(environmentId, updateDto, projectId);
+        // Invalidate cache
+        const cacheKey = this.getFindAllCacheKey(projectId);
+        await this.cacheManager.del(cacheKey);
+        console.log(`Cache invalidated for key: ${cacheKey}`);
+        // Optionally invalidate findOne cache: `/api/projects/${projectId}/environments/${environmentId}`
+        // Optionally invalidate findByName cache: `/api/projects/${projectId}/environments/by-name/${updatedEnvironment.name}` (and potentially old name)
+        return updatedEnvironment;
     }
 
     @Delete(':environmentId')
@@ -93,8 +117,15 @@ export class EnvironmentController {
     @ApiResponse({ status: 200, description: 'Entorno eliminado.', type: CreateEnvironmentDto })
     @ApiResponse({ status: 404, description: 'Proyecto o Entorno no encontrado.' })
     @HttpCode(HttpStatus.OK)
-    remove(@Req() req: RequestWithProject, @Param('environmentId') environmentId: string): Promise<Environment> {
+    async remove(@Req() req: RequestWithProject, @Param('environmentId') environmentId: string): Promise<Environment> {
         const projectId = req.projectId;
-        return this.service.remove(environmentId, projectId);
+        // Consider getting the environment name before deleting if needed for findByName cache invalidation
+        const removedEnvironment = await this.service.remove(environmentId, projectId);
+        // Invalidate cache
+        const cacheKey = this.getFindAllCacheKey(projectId);
+        await this.cacheManager.del(cacheKey);
+        console.log(`Cache invalidated for key: ${cacheKey}`);
+        // Optionally invalidate findOne/findByName caches
+        return removedEnvironment;
     }
 } 
