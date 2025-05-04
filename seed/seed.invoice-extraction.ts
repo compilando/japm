@@ -61,6 +61,33 @@ async function main() {
     console.log(`Upserted Project: ${invoiceProject.name}`);
     const invProjectId = invoiceProject.id;
 
+    // Create specific AI models for this project
+    const invGpt4o = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: invProjectId, name: 'gpt-4o-2024-05-13' } },
+        update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
+        create: { projectId: invProjectId, name: 'gpt-4o-2024-05-13', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
+        select: { id: true }
+    });
+    const invGpt4oMini = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: invProjectId, name: 'gpt-4o-mini-2024-07-18' } },
+        update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
+        create: { projectId: invProjectId, name: 'gpt-4o-mini-2024-07-18', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
+        select: { id: true }
+    });
+    const invClaudeOpus = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: invProjectId, name: 'claude-3-opus-20240229' } },
+        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
+        create: { projectId: invProjectId, name: 'claude-3-opus-20240229', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
+        select: { id: true }
+    });
+    const invClaudeHaiku = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: invProjectId, name: 'claude-3-haiku-20240307' } },
+        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
+        create: { projectId: invProjectId, name: 'claude-3-haiku-20240307', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
+        select: { id: true }
+    });
+    console.log(`Upserted AI Models for project ${invProjectId}`);
+
     // 2. Upsert Invoice Extraction Tags with prefix
     const invPrefix = 'inv_';
     const invBaseTags = ['invoice', 'data-extraction', 'ocr', 'structured-data', 'json-output', 'pdf-processing'];
@@ -165,15 +192,15 @@ async function main() {
         update: {
             promptText: `Given the following text extracted from an invoice via OCR:\n\`\`\`\n{{Invoice OCR Text}}\n\`\`\`\n\nExtract the following fields: {{invoice-standard-fields}}.\n\nFormat the output as a JSON object conforming to this schema:\n{{invoice-json-schema}}\n\nIf a field is not found, use null as the value. Pay close attention to dates and amounts.`,
             status: 'active',
-            aiModelId: gpt4Model.id, // Connect global AI model
+            aiModelId: invGpt4o.id, // Connect project-specific AI model
             activeInEnvironments: { set: [{ id: prodEnvironment.id }] }
         },
         create: {
             promptId: promptExtract.id,
             promptText: `Given the following text extracted from an invoice via OCR:\n\`\`\`\n{{Invoice OCR Text}}\n\`\`\`\n\nExtract the following fields: {{invoice-standard-fields}}.\n\nFormat the output as a JSON object conforming to this schema:\n{{invoice-json-schema}}\n\nIf a field is not found, use null as the value. Pay close attention to dates and amounts.`,
             versionTag: 'v1.0.0', status: 'active',
-            changeMessage: 'Initial version for extracting invoice data to JSON using GPT-4.',
-            aiModelId: gpt4Model.id, // Connect global AI model
+            changeMessage: 'Initial version for extracting invoice data to JSON using GPT-4o.',
+            aiModelId: invGpt4o.id, // Connect project-specific AI model
             activeInEnvironments: { connect: [{ id: prodEnvironment.id }] }
         },
         select: { id: true }

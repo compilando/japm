@@ -34,8 +34,35 @@ async function main() {
     });
     console.log(`Upserted Project: ${educationProject.name}`);
 
-    // Upsert Educational Tags with prefix
+    // Create specific AI models for this project
     const eduProjectId = educationProject.id;
+    const eduGpt4o = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: eduProjectId, name: 'gpt-4o-2024-05-13' } },
+        update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
+        create: { projectId: eduProjectId, name: 'gpt-4o-2024-05-13', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
+        select: { id: true }
+    });
+    const eduGpt4oMini = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: eduProjectId, name: 'gpt-4o-mini-2024-07-18' } },
+        update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
+        create: { projectId: eduProjectId, name: 'gpt-4o-mini-2024-07-18', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
+        select: { id: true }
+    });
+    const eduClaudeOpus = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: eduProjectId, name: 'claude-3-opus-20240229' } },
+        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
+        create: { projectId: eduProjectId, name: 'claude-3-opus-20240229', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
+        select: { id: true }
+    });
+    const eduClaudeHaiku = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: eduProjectId, name: 'claude-3-haiku-20240307' } },
+        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
+        create: { projectId: eduProjectId, name: 'claude-3-haiku-20240307', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
+        select: { id: true }
+    });
+    console.log(`Upserted AI Models for project ${eduProjectId}`);
+
+    // Upsert Educational Tags with prefix
     const eduPrefix = 'edu_';
     const eduBaseTags = ['education', 'biology', 'quiz', 'explanation', 'tutoring', 'high-school', 'assessment'];
     const eduTagMap: Map<string, string> = new Map(); // Map tagName to tagId
@@ -117,24 +144,18 @@ async function main() {
     const promptExplainV1 = await prisma.promptVersion.upsert({
         where: { promptId_versionTag: { promptId: promptExplain.id, versionTag: 'v1.0.0' } },
         update: {
-            promptText: `Explain the following biological concept: {{Concept Name}}.
-            Use this definition as a starting point if relevant: {{definition-cell-biology}} (Modify based on actual concept).
-            Target Audience: High School Student.
-            Required Style: {{explanation-style-analogy}}
-            Keep the explanation under 150 words.`,
+            promptText: `Explain the following biological concept: {{Concept Name}}.\n            Use this definition as a starting point if relevant: {{definition-cell-biology}} (Modify based on actual concept).\n            Target Audience: High School Student.\n            Required Style: {{explanation-style-analogy}}\n            Keep the explanation under 150 words.`,
             status: 'active',
-            activeInEnvironments: { set: [{ id: stagingEnvironment.id }] }
+            activeInEnvironments: { set: [{ id: stagingEnvironment.id }] },
+            aiModelId: eduGpt4o.id // Assign default AI model
         },
         create: {
             promptId: promptExplain.id, // Use ID
-            promptText: `Explain the following biological concept: {{Concept Name}}.
-            Use this definition as a starting point if relevant: {{definition-cell-biology}} (Modify based on actual concept).
-            Target Audience: High School Student.
-            Required Style: {{explanation-style-analogy}}
-            Keep the explanation under 150 words.`,
+            promptText: `Explain the following biological concept: {{Concept Name}}.\n            Use this definition as a starting point if relevant: {{definition-cell-biology}} (Modify based on actual concept).\n            Target Audience: High School Student.\n            Required Style: {{explanation-style-analogy}}\n            Keep the explanation under 150 words.`,
             versionTag: 'v1.0.0', status: 'active',
             changeMessage: 'Initial prompt for explaining concepts with analogies.',
-            activeInEnvironments: { connect: [{ id: stagingEnvironment.id }] }
+            activeInEnvironments: { connect: [{ id: stagingEnvironment.id }] },
+            aiModelId: eduGpt4o.id // Assign default AI model
         },
         select: { id: true }
     });
@@ -174,26 +195,18 @@ async function main() {
     const promptQuizV1 = await prisma.promptVersion.upsert({
         where: { promptId_versionTag: { promptId: promptQuiz.id, versionTag: 'v1.0.0' } },
         update: {
-            promptText: `Generate a multiple-choice question (MCQ) suitable for a high school biology student on the topic of: {{Topic}}.
-            The question should test understanding, not just recall.
-            Provide 4 plausible options (A, B, C, D), with only one correct answer.
-            Format the output EXACTLY like this template:
-            {{mcq-template-4-options}}
-            Ensure the explanation clearly states why the correct answer is right and the others are wrong.`,
+            promptText: `Generate a multiple-choice question (MCQ) suitable for a high school biology student on the topic of: {{Topic}}.\n            The question should test understanding, not just recall.\n            Provide 4 plausible options (A, B, C, D), with only one correct answer.\n            Format the output EXACTLY like this template:\n            {{mcq-template-4-options}}\n            Ensure the explanation clearly states why the correct answer is right and the others are wrong.`,
             status: 'active',
-            activeInEnvironments: { set: [{ id: stagingEnvironment.id }, { id: testingEnvironment.id }] }
+            activeInEnvironments: { set: [{ id: stagingEnvironment.id }, { id: testingEnvironment.id }] },
+            aiModelId: eduGpt4o.id // Assign default AI model
         },
         create: {
             promptId: promptQuiz.id, // Use ID
-            promptText: `Generate a multiple-choice question (MCQ) suitable for a high school biology student on the topic of: {{Topic}}.
-            The question should test understanding, not just recall.
-            Provide 4 plausible options (A, B, C, D), with only one correct answer.
-            Format the output EXACTLY like this template:
-            {{mcq-template-4-options}}
-            Ensure the explanation clearly states why the correct answer is right and the others are wrong.`,
+            promptText: `Generate a multiple-choice question (MCQ) suitable for a high school biology student on the topic of: {{Topic}}.\n            The question should test understanding, not just recall.\n            Provide 4 plausible options (A, B, C, D), with only one correct answer.\n            Format the output EXACTLY like this template:\n            {{mcq-template-4-options}}\n            Ensure the explanation clearly states why the correct answer is right and the others are wrong.`,
             versionTag: 'v1.0.0', status: 'active',
             changeMessage: 'Initial prompt for generating MCQs.',
-            activeInEnvironments: { connect: [{ id: stagingEnvironment.id }, { id: testingEnvironment.id }] }
+            activeInEnvironments: { connect: [{ id: stagingEnvironment.id }, { id: testingEnvironment.id }] },
+            aiModelId: eduGpt4o.id // Assign default AI model
         },
         select: { id: true }
     });

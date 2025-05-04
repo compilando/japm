@@ -35,8 +35,35 @@ async function main() {
     });
     console.log(`Upserted Project: ${ragProject.name}`);
 
-    // --- Upsert RAG Tags with prefix ---
+    // Create specific AI models for this project
     const ragProjectId = ragProject.id;
+    const ragGpt4o = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: ragProjectId, name: 'gpt-4o-2024-05-13' } },
+        update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
+        create: { projectId: ragProjectId, name: 'gpt-4o-2024-05-13', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
+        select: { id: true }
+    });
+    const ragGpt4oMini = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: ragProjectId, name: 'gpt-4o-mini-2024-07-18' } },
+        update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
+        create: { projectId: ragProjectId, name: 'gpt-4o-mini-2024-07-18', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
+        select: { id: true }
+    });
+    const ragClaudeOpus = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: ragProjectId, name: 'claude-3-opus-20240229' } },
+        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
+        create: { projectId: ragProjectId, name: 'claude-3-opus-20240229', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
+        select: { id: true }
+    });
+    const ragClaudeHaiku = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: ragProjectId, name: 'claude-3-haiku-20240307' } },
+        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
+        create: { projectId: ragProjectId, name: 'claude-3-haiku-20240307', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
+        select: { id: true }
+    });
+    console.log(`Upserted AI Models for project ${ragProjectId}`);
+
+    // --- Upsert RAG Tags with prefix ---
     const ragPrefix = 'rag_';
     const ragBaseTags = ['rag', 'internal-kb', 'hr-policy', 'employee-faq', 'compliance'];
     const ragTagMap: Map<string, string> = new Map(); // Map tagName to tagId
@@ -140,7 +167,8 @@ async function main() {
         update: {
             promptText: `{{rag-system-instruction}}\n\n            Context Documents:\n            --- START CONTEXT ---\n            {{Retrieved Context Chunks}}\n            --- END CONTEXT ---\n\n            User Question: {{User Question}}\n\n            Answer based ONLY on the context above. Use this citation format: {{rag-citation-format}}. If the answer isn't in the context, respond with: {{rag-not-found-response}}.\n\n            Answer:`,
             status: 'active',
-            activeInEnvironments: { set: [{ id: productionEnvironment.id }, { id: stagingEnvironment.id }] }
+            activeInEnvironments: { set: [{ id: productionEnvironment.id }, { id: stagingEnvironment.id }] },
+            aiModelId: ragGpt4o.id // Assign default AI model
         },
         create: {
             promptId: promptRagQuery.id, // Use ID
@@ -148,7 +176,8 @@ async function main() {
             versionTag: 'v1.0.0',
             status: 'active',
             changeMessage: 'Initial RAG prompt using system instructions and context.',
-            activeInEnvironments: { connect: [{ id: productionEnvironment.id }, { id: stagingEnvironment.id }] }
+            activeInEnvironments: { connect: [{ id: productionEnvironment.id }, { id: stagingEnvironment.id }] },
+            aiModelId: ragGpt4o.id // Assign default AI model
         },
         select: { id: true }
     });

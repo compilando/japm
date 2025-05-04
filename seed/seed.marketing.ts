@@ -32,6 +32,33 @@ async function main() {
     console.log(`Upserted Project: ${marketingProject.name}`);
     const mktProjectId = marketingProject.id;
 
+    // Create specific AI models for this project
+    const mktGpt4o = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: mktProjectId, name: 'gpt-4o-2024-05-13' } },
+        update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
+        create: { projectId: mktProjectId, name: 'gpt-4o-2024-05-13', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
+        select: { id: true }
+    });
+    const mktGpt4oMini = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: mktProjectId, name: 'gpt-4o-mini-2024-07-18' } },
+        update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
+        create: { projectId: mktProjectId, name: 'gpt-4o-mini-2024-07-18', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
+        select: { id: true }
+    });
+    const mktClaudeOpus = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: mktProjectId, name: 'claude-3-opus-20240229' } },
+        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
+        create: { projectId: mktProjectId, name: 'claude-3-opus-20240229', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
+        select: { id: true }
+    });
+    const mktClaudeHaiku = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: mktProjectId, name: 'claude-3-haiku-20240307' } },
+        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
+        create: { projectId: mktProjectId, name: 'claude-3-haiku-20240307', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
+        select: { id: true }
+    });
+    console.log(`Upserted AI Models for project ${mktProjectId}`);
+
     // Upsert Marketing Tags with prefix
     const mktPrefix = 'mkt_';
     const mktBaseTags = ['marketing', 'social-media', 'blog-post', 'email-campaign', 'seo'];
@@ -104,14 +131,16 @@ async function main() {
         update: {
             promptText: `Generate 5 blog post ideas relevant to the following target audience:\n{{target-audience-persona}}\n\nFocus on topics related to: {{Topic Focus}}\n\nEnsure the ideas are engaging and SEO-friendly.`,
             status: 'active',
-            activeInEnvironments: { set: [{ id: devEnvironment.id }] }
+            activeInEnvironments: { set: [{ id: devEnvironment.id }] },
+            aiModelId: mktGpt4o.id // Assign default AI model
         },
         create: {
             promptId: promptBlogPostIdea.id,
             promptText: `Generate 5 blog post ideas relevant to the following target audience:\n{{target-audience-persona}}\n\nFocus on topics related to: {{Topic Focus}}\n\nEnsure the ideas are engaging and SEO-friendly.`,
             versionTag: 'v1.0.0', status: 'active',
             changeMessage: 'Initial version for generating blog post ideas.',
-            activeInEnvironments: { connect: [{ id: devEnvironment.id }] }
+            activeInEnvironments: { connect: [{ id: devEnvironment.id }] },
+            aiModelId: mktGpt4o.id // Assign default AI model
         },
         select: { id: true }
     });

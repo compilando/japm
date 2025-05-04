@@ -240,21 +240,26 @@ model Project {
 
 model AIModel {
   id            String    @id @default(cuid())
-  name          String    // Ej: GPT-4 Turbo, Claude 3 Sonnet - Removed @unique
+  name          String    // Removed global @unique
   provider      String?   // Ej: OpenAI, Anthropic, Google
   description   String?
   apiIdentifier String?   // Identificador para llamadas API (e.g., "gpt-4o-2024-05-13")
   apiKeyEnvVar  String?   // Nombre de la variable de entorno para la API Key (e.g., "OPENAI_API_KEY") - Made optional
-  temperature   Float?    @default(0.7)
+  temperature   Float?    // Added temperature field
   createdAt     DateTime  @default(now())
   maxTokens     Int?
   supportsJson  Boolean @default(false)
   contextWindow Int?   // Tamaño máximo de contexto
 
-  promptVersions PromptVersion[] // Relación existente
-  project        Project?        @relation("ProjectModels", fields: [projectId], references: [id]) // Relación opcional con proyecto
-  projectId      String?         @map("project")
+  // Re-add relation to Project
+  project       Project   @relation("ProjectModels", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId     String    // Re-add projectId field
 
+  // Keep back-relation to PromptVersion
+  promptVersions PromptVersion[]
+
+  // Re-add project-specific constraints
+  @@unique([projectId, name]) // Name must be unique within a project
   @@index([projectId])
 }
 

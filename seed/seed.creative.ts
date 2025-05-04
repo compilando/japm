@@ -30,8 +30,35 @@ async function main() {
     });
     console.log(`Upserted Project: ${creativeProject.name}`);
 
-    // Upsert Creative Tags with prefix
+    // Create specific AI models for this project
     const crProjectId = creativeProject.id;
+    const crGpt4o = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: crProjectId, name: 'gpt-4o-2024-05-13' } },
+        update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
+        create: { projectId: crProjectId, name: 'gpt-4o-2024-05-13', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
+        select: { id: true }
+    });
+    const crGpt4oMini = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: crProjectId, name: 'gpt-4o-mini-2024-07-18' } },
+        update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
+        create: { projectId: crProjectId, name: 'gpt-4o-mini-2024-07-18', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
+        select: { id: true }
+    });
+    const crClaudeOpus = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: crProjectId, name: 'claude-3-opus-20240229' } },
+        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
+        create: { projectId: crProjectId, name: 'claude-3-opus-20240229', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
+        select: { id: true }
+    });
+    const crClaudeHaiku = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: crProjectId, name: 'claude-3-haiku-20240307' } },
+        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
+        create: { projectId: crProjectId, name: 'claude-3-haiku-20240307', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
+        select: { id: true }
+    });
+    console.log(`Upserted AI Models for project ${crProjectId}`);
+
+    // Upsert Creative Tags with prefix
     const crPrefix = 'cr_';
     const crBaseTags = ['creative-writing', 'sci-fi', 'character-dev', 'world-building', 'dialogue', 'plot-outline', 'adaptation'];
     const crTagMap: Map<string, string> = new Map(); // Map tagName to tagId
@@ -116,14 +143,16 @@ async function main() {
             promptText: `Write a short scene (approx. 300 words) set in {{setting-neo-kyoto}}.\n            Characters involved: {{main-char-profile-jax}} and {{Secondary Character Description}}.\n            Scene Goal: {{Scene Goal / Conflict}}.\n            Dialogue should reflect the characters\' personalities and the {{narrative-tone-noir}}.\n            Focus on showing, not telling. Include brief descriptions of actions and environment.`,
             status: 'active',
             changeMessage: 'Initial prompt for generating dialogue scenes. (Updated via upsert)',
-            activeInEnvironments: { set: [{ id: devEnvironment.id }] } // Use set for update
+            activeInEnvironments: { set: [{ id: devEnvironment.id }] }, // Use set for update
+            aiModelId: crGpt4o.id // Assign default AI model
         },
         create: {
             promptId: promptGenScene.id,
             promptText: `Write a short scene (approx. 300 words) set in {{setting-neo-kyoto}}.\n            Characters involved: {{main-char-profile-jax}} and {{Secondary Character Description}}.\n            Scene Goal: {{Scene Goal / Conflict}}.\n            Dialogue should reflect the characters\' personalities and the {{narrative-tone-noir}}.\n            Focus on showing, not telling. Include brief descriptions of actions and environment.`,
             versionTag: 'v1.0.0', status: 'active',
             changeMessage: 'Initial prompt for generating dialogue scenes.',
-            activeInEnvironments: { connect: [{ id: devEnvironment.id }] }
+            activeInEnvironments: { connect: [{ id: devEnvironment.id }] },
+            aiModelId: crGpt4o.id // Assign default AI model
         },
         select: { id: true }
     });

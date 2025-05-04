@@ -43,6 +43,33 @@ async function main() {
     console.log(`Upserted Project: ${codeGenProject.name}`);
     const cgProjectId = codeGenProject.id;
 
+    // Create specific AI models for this project
+    const cgGpt4o = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: cgProjectId, name: 'gpt-4o-2024-05-13' } },
+        update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
+        create: { projectId: cgProjectId, name: 'gpt-4o-2024-05-13', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
+        select: { id: true }
+    });
+    const cgGpt4oMini = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: cgProjectId, name: 'gpt-4o-mini-2024-07-18' } },
+        update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
+        create: { projectId: cgProjectId, name: 'gpt-4o-mini-2024-07-18', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
+        select: { id: true }
+    });
+    const cgClaudeOpus = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: cgProjectId, name: 'claude-3-opus-20240229' } },
+        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
+        create: { projectId: cgProjectId, name: 'claude-3-opus-20240229', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
+        select: { id: true }
+    });
+    const cgClaudeHaiku = await prisma.aIModel.upsert({
+        where: { projectId_name: { projectId: cgProjectId, name: 'claude-3-haiku-20240307' } },
+        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
+        create: { projectId: cgProjectId, name: 'claude-3-haiku-20240307', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
+        select: { id: true }
+    });
+    console.log(`Upserted AI Models for project ${cgProjectId}`);
+
     // 2. Upsert common asset and its version
     const assetPythonImports = await prisma.promptAsset.upsert({
         where: { key: 'python-standard-imports' },
@@ -137,21 +164,16 @@ async function main() {
             - Include type hints.
             - Add a concise docstring explaining what the function does, its arguments, and what it returns.`,
             status: 'active',
-            activeInEnvironments: { set: [{ id: devEnvironment.id }] } // Use set for updates
+            activeInEnvironments: { set: [{ id: devEnvironment.id }] }, // Use set for updates
+            aiModelId: cgGpt4o.id // Assign default AI model
         },
         create: {
             promptId: promptGenFunc.id,
-            promptText: `Generate a Python function that performs the following task: {{Task Description}}.
-            Requirements:
-            - Input arguments: {{Input Arguments}}
-            - Return value: {{Return Value}}
-            - Include standard imports: {{python-standard-imports}}
-            - Implement basic error handling using this template: {{python-try-except-template}}
-            - Include type hints.
-            - Add a concise docstring explaining what the function does, its arguments, and what it returns.`,
+            promptText: `Generate a Python function that performs the following task: {{Task Description}}.\\n            Requirements:\\n            - Input arguments: {{Input Arguments}}\\n            - Return value: {{Return Value}}\\n            - Include standard imports: {{python-standard-imports}}\\n            - Implement basic error handling using this template: {{python-try-except-template}}\\n            - Include type hints.\\n            - Add a concise docstring explaining what the function does, its arguments, and what it returns.`,
             versionTag: 'v1.0.0', status: 'active',
             changeMessage: 'Initial version for generating Python functions with error handling and imports.',
-            activeInEnvironments: { connect: [{ id: devEnvironment.id }] }
+            activeInEnvironments: { connect: [{ id: devEnvironment.id }] },
+            aiModelId: cgGpt4o.id // Assign default AI model
         },
         select: { id: true }
     });
@@ -189,16 +211,18 @@ async function main() {
     const promptGenTestV1 = await prisma.promptVersion.upsert({
         where: { promptId_versionTag: { promptId: promptGenTest.id, versionTag: 'v1.0.0' } },
         update: {
-            promptText: `Generate a Python unit test class using the 'unittest' module for the following function:\n\n\`\`\`python\n{{Function Code}}\n\`\`\`\n\nUse this structure:\n{{python-unittest-structure}}\n\nCreate test cases covering:\n- {{Test Case 1 Description}}\n- {{Test Case 2 Description}}\n- (Optional) Edge cases: {{Edge Cases Description}}`,
+            promptText: `Generate a Python unit test class using the \\'unittest\\' module for the following function:\\n\\n\\\`\\\`\\\`python\\n{{Function Code}}\\n\\\`\\\`\\\`\\n\\nUse this structure:\\n{{python-unittest-structure}}\\n\\nCreate test cases covering:\\n- {{Test Case 1 Description}}\\n- {{Test Case 2 Description}}\\n- (Optional) Edge cases: {{Edge Cases Description}}`,
             status: 'active',
-            activeInEnvironments: { set: [{ id: devEnvironment.id }, { id: testEnvironment.id }] } // Use set for update
+            activeInEnvironments: { set: [{ id: devEnvironment.id }, { id: testEnvironment.id }] }, // Use set for update
+            aiModelId: cgGpt4o.id // Assign default AI model
         },
         create: {
             promptId: promptGenTest.id,
-            promptText: `Generate a Python unit test class using the 'unittest' module for the following function:\n\n\`\`\`python\n{{Function Code}}\n\`\`\`\n\nUse this structure:\n{{python-unittest-structure}}\n\nCreate test cases covering:\n- {{Test Case 1 Description}}\n- {{Test Case 2 Description}}\n- (Optional) Edge cases: {{Edge Cases Description}}`,
+            promptText: `Generate a Python unit test class using the \\'unittest\\' module for the following function:\\n\\n\\\`\\\`\\\`python\\n{{Function Code}}\\n\\\`\\\`\\\`\\n\\nUse this structure:\\n{{python-unittest-structure}}\\n\\nCreate test cases covering:\\n- {{Test Case 1 Description}}\\n- {{Test Case 2 Description}}\\n- (Optional) Edge cases: {{Edge Cases Description}}`,
             versionTag: 'v1.0.0', status: 'active',
             changeMessage: 'Initial version for generating Python unit tests.',
-            activeInEnvironments: { connect: [{ id: devEnvironment.id }, { id: testEnvironment.id }] }
+            activeInEnvironments: { connect: [{ id: devEnvironment.id }, { id: testEnvironment.id }] },
+            aiModelId: cgGpt4o.id // Assign default AI model
         },
         select: { id: true }
     });

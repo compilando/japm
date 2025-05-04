@@ -166,10 +166,14 @@ CREATE TABLE "AIModel" (
     "provider" TEXT,
     "description" TEXT,
     "apiIdentifier" TEXT,
+    "apiKeyEnvVar" TEXT,
+    "temperature" REAL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "maxTokens" INTEGER,
     "supportsJson" BOOLEAN NOT NULL DEFAULT false,
-    "contextWindow" INTEGER
+    "contextWindow" INTEGER,
+    "projectId" TEXT NOT NULL,
+    CONSTRAINT "AIModel_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -321,7 +325,10 @@ CREATE UNIQUE INDEX "Tag_project_name_key" ON "Tag"("project", "name");
 CREATE INDEX "Project_ownerUser_idx" ON "Project"("ownerUser");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "AIModel_name_key" ON "AIModel"("name");
+CREATE INDEX "AIModel_projectId_idx" ON "AIModel"("projectId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "AIModel_projectId_name_key" ON "AIModel"("projectId", "name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Environment_name_key" ON "Environment"("name");

@@ -88,24 +88,110 @@ async function main() {
         console.log(`Upserted Tag: ${tagData.name}`);
     }
 
+    // --- Remove/Comment out the old global AI Model seeding ---
+    /*
     // 4. Create AI Models (Still global ManyToMany based on schema)
     console.log('Upserting AI Models...');
     const aiModelsData = [
         { id: 'gpt-4-turbo', name: 'gpt-4-turbo-2024-04-09', provider: 'OpenAI', apiIdentifier: 'gpt-4-turbo-2024-04-09', description: 'Latest GPT-4 Turbo model', contextWindow: 128000, supportsJson: true, maxTokens: 4096 },
-        { id: 'gpt-4o', name: 'gpt-4o-2024-05-13', provider: 'OpenAI', apiIdentifier: 'gpt-4o-2024-05-13', description: 'Latest omni model from OpenAI', contextWindow: 128000, supportsJson: true, maxTokens: 4096 },
-        { id: 'claude-3-opus', name: 'claude-3-opus-20240229', provider: 'Anthropic', apiIdentifier: 'claude-3-opus-20240229', description: 'Most powerful Claude 3 model', contextWindow: 200000, supportsJson: true, maxTokens: 4096 },
-        { id: 'claude-3-sonnet', name: 'claude-3-sonnet-20240229', provider: 'Anthropic', apiIdentifier: 'claude-3-sonnet-20240229', description: 'Balanced Claude 3 model', contextWindow: 200000, supportsJson: true, maxTokens: 4096 },
-        { id: 'claude-3-haiku', name: 'claude-3-haiku-20240307', provider: 'Anthropic', apiIdentifier: 'claude-3-haiku-20240307', description: 'Fastest Claude 3 model', contextWindow: 200000, supportsJson: true, maxTokens: 4096 },
-        { id: 'gemini-1.5-pro', name: 'gemini-1.5-pro-latest', provider: 'Google', apiIdentifier: 'gemini-1.5-pro-latest', description: 'Latest Gemini Pro model', contextWindow: 1000000, supportsJson: true, maxTokens: 8192 },
-        { id: 'gemini-1.0-pro', name: 'gemini-1.0-pro', provider: 'Google', apiIdentifier: 'gemini-1.0-pro', description: 'Standard Gemini Pro model', contextWindow: 32000, supportsJson: true, maxTokens: 2048 },
+        // ... other old models ...
     ];
     for (const modelData of aiModelsData) {
         await prisma.aIModel.upsert({
-            where: { id: modelData.id }, // Use ID for upsert
+            where: { id: modelData.id }, 
             update: { ...modelData },
             create: modelData,
         });
         console.log(`Upserted AI Model: ${modelData.name}`);
+    }
+    */
+
+    // 4. Create Specific AI Models for the Default Project
+    console.log(`Upserting specific AI Models for project: ${defaultProject.id}...`);
+    const projectAiModels = [
+        {
+            id: 'gpt-4o', // Keep ID globally unique for simplicity, but scoped by project logic
+            name: 'GPT-4o',
+            provider: 'OpenAI',
+            apiIdentifier: 'gpt-4o',
+            description: 'Fast, intelligent, flexible GPT model',
+            temperature: 0.7,
+            apiKeyEnvVar: 'OPENAI_API_KEY', // Example env var name
+            supportsJson: true,
+            contextWindow: 128000,
+            maxTokens: 4096
+        },
+        {
+            id: 'gpt-4o-mini',
+            name: 'GPT-4o mini',
+            provider: 'OpenAI',
+            apiIdentifier: 'gpt-4o-mini',
+            description: 'Fast, affordable small model for focused tasks',
+            temperature: 0.7,
+            apiKeyEnvVar: 'OPENAI_API_KEY',
+            supportsJson: true,
+            contextWindow: 128000, // Check actual value if needed
+            maxTokens: 4096 // Check actual value if needed
+        },
+        {
+            id: 'claude-3-opus',
+            name: 'Claude 3 Opus',
+            provider: 'Anthropic',
+            apiIdentifier: 'claude-3-opus-20240229',
+            description: 'Most powerful reasoning model (Claude)',
+            temperature: 0.7,
+            apiKeyEnvVar: 'ANTHROPIC_API_KEY', // Example env var name
+            supportsJson: true,
+            contextWindow: 200000,
+            maxTokens: 4096
+        },
+        {
+            id: 'claude-3-haiku',
+            name: 'Claude 3 Haiku',
+            provider: 'Anthropic',
+            apiIdentifier: 'claude-3-haiku-20240307',
+            description: 'Fastest, most cost-effective model (Claude)',
+            temperature: 0.7,
+            apiKeyEnvVar: 'ANTHROPIC_API_KEY',
+            supportsJson: true,
+            contextWindow: 200000,
+            maxTokens: 4096
+        },
+    ];
+
+    for (const modelData of projectAiModels) {
+        await prisma.aIModel.upsert({
+            where: {
+                // Use the project-specific unique constraint
+                projectId_name: { projectId: defaultProject.id, name: modelData.name }
+            },
+            update: {
+                // Update all fields except projectId and name
+                provider: modelData.provider,
+                description: modelData.description,
+                apiIdentifier: modelData.apiIdentifier,
+                maxTokens: modelData.maxTokens,
+                supportsJson: modelData.supportsJson,
+                contextWindow: modelData.contextWindow,
+                temperature: modelData.temperature,
+                apiKeyEnvVar: modelData.apiKeyEnvVar,
+                // id: modelData.id, // ID is auto-generated by cuid() on create, cannot be updated like this
+            },
+            create: {
+                // Let cuid() generate the ID on create
+                name: modelData.name,
+                provider: modelData.provider,
+                description: modelData.description,
+                apiIdentifier: modelData.apiIdentifier,
+                maxTokens: modelData.maxTokens,
+                supportsJson: modelData.supportsJson,
+                contextWindow: modelData.contextWindow,
+                temperature: modelData.temperature,
+                apiKeyEnvVar: modelData.apiKeyEnvVar,
+                projectId: defaultProject.id, // Connect to the project
+            },
+        });
+        console.log(`Upserted AI Model: ${modelData.name} for project ${defaultProject.id}`);
     }
 
     // 5. Create Environments (Associated with Default Project)
