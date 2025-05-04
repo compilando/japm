@@ -233,31 +233,29 @@ model Project {
   tags                Tag[]                @relation("ProjectTags")
   environments        Environment[]        @relation("ProjectEnvironments")
   promptExecutionLogs PromptExecutionLog[] @relation("ProjectLogs")
+  aiModels            AIModel[]            @relation("ProjectModels")
 
   @@index([ownerUserId])
 }
 
 model AIModel {
   id            String    @id @default(cuid())
-  name          String    @unique // Ej: GPT-4 Turbo, Claude 3 Sonnet
+  name          String    // Ej: GPT-4 Turbo, Claude 3 Sonnet - Removed @unique
   provider      String?   // Ej: OpenAI, Anthropic, Google
   description   String?
-  apiIdentifier String?   // Identificador para llamadas API
+  apiIdentifier String?   // Identificador para llamadas API (e.g., "gpt-4o-2024-05-13")
+  apiKeyEnvVar  String?   // Nombre de la variable de entorno para la API Key (e.g., "OPENAI_API_KEY") - Made optional
+  temperature   Float?    @default(0.7)
   createdAt     DateTime  @default(now())
   maxTokens     Int?
   supportsJson  Boolean @default(false)
   contextWindow Int?   // Tamaño máximo de contexto
 
-  // Add back-relation to PromptVersion
-  promptVersions PromptVersion[]
+  promptVersions PromptVersion[] // Relación existente
+  project        Project?        @relation("ProjectModels", fields: [projectId], references: [id]) // Relación opcional con proyecto
+  projectId      String?         @map("project")
 
-  // Remove relation to Project
-  // project       Project   @relation("ProjectModels", fields: [projectId], references: [id], onDelete: Cascade)
-  // projectId     String    @map("project")
-
-  // Remove project-specific constraints
-  // @@unique([projectId, name])
-  // @@index([projectId])
+  @@index([projectId])
 }
 
 model Environment {

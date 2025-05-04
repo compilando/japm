@@ -41,8 +41,8 @@ async function main() {
         select: { id: true }
     });
     // Find base AI Model (assuming it exists and is global)
-    const gpt4Model = await prisma.aIModel.findUniqueOrThrow({
-        where: { name: 'gpt-4o-2024-05-13' }, // Use an existing model name from base seed
+    const gpt4Model = await prisma.aIModel.findFirstOrThrow({
+        where: { name: 'gpt-4o-2024-05-13' }, // Assuming name is unique enough *within seed data*
         select: { id: true }
     });
 

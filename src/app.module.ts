@@ -25,6 +25,7 @@ import { EnvironmentModule } from './environment/environment.module';
 import { AuthModule } from './auth/auth.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { LlmExecutionModule } from './llm-execution/llm-execution.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { AppService } from './app.service';
     AssetTranslationModule,
     ExecutionLogModule,
     EnvironmentModule,
+    LlmExecutionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

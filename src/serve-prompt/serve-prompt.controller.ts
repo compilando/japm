@@ -1,52 +1,40 @@
-import { Controller, Get, Param, Query, UsePipes, ValidationPipe, UseGuards, Request, BadRequestException } from '@nestjs/common';
+import { Controller, Param, Query, UsePipes, ValidationPipe, UseGuards, Request, Post, Body } from '@nestjs/common';
 import { ServePromptService } from './serve-prompt.service';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ProjectGuard } from '../common/guards/project.guard';
-import { ApiProperty } from '@nestjs/swagger';
+import { ExecutePromptParamsDto } from './dto/execute-prompt-params.dto';
+import { ExecutePromptQueryDto } from './dto/execute-prompt-query.dto';
+import { ExecutePromptBodyDto } from './dto/execute-prompt-body.dto';
 
-// DTO for optional query parameters like versionTag and languageCode
-class ServePromptOptionsDto {
-    @ApiProperty({ required: false, description: 'Optional specific version tag (e.g., \"v1.2.0\"). Defaults to active version.' })
-    versionTag?: string;
-
-    @ApiProperty({ required: false, description: 'Optional language code (e.g., \"es\"). Defaults to project default or \"en\".' })
-    languageCode?: string;
-}
-
-@ApiTags('Serve Prompt (within Project)')
+@ApiTags('Serve Prompt')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, ProjectGuard)
-@Controller('api/projects/:projectId/serve')
+@UseGuards(JwtAuthGuard)
+@Controller('serve-prompt')
 export class ServePromptController {
     constructor(private readonly service: ServePromptService) { }
 
-    @Get(':environmentName/:promptName')
+    @Post('execute/:projectId/:promptName/:versionTag')
+    @UseGuards(ProjectGuard)
     @UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
-    @ApiOperation({ summary: 'Gets and assembles a specific prompt for a given environment within a project' })
+    @ApiOperation({ summary: 'Assembles and prepares a specific prompt version for execution with provided variables' })
     @ApiParam({ name: 'projectId', description: 'Project ID' })
-    @ApiParam({ name: 'environmentName', description: 'Environment name (e.g., staging, production)' })
     @ApiParam({ name: 'promptName', description: 'The unique name of the prompt within the project' })
-    @ApiQuery({ name: 'versionTag', required: false, description: 'Optional specific version tag (e.g., \"v1.2.0\"). Defaults to active version.' })
-    @ApiQuery({ name: 'languageCode', required: false, description: 'Optional language code (e.g., \"es\"). Defaults to project default or \"en\".' })
-    @ApiResponse({ status: 200, description: 'Processed prompt and metadata.', schema: { example: { processedPrompt: "string", metadata: {} } } })
-    @ApiResponse({ status: 404, description: 'Project, Environment, Prompt, or active Version not found.' })
+    @ApiParam({ name: 'versionTag', description: 'Specific version tag (e.g., \"v1.2.0\")' })
+    @ApiQuery({ name: 'languageCode', required: false, description: 'Optional language code for translation (e.g., \"es\")' })
+    @ApiQuery({ name: 'environmentName', required: false, description: 'Optional environment context (currently informational)' })
+    @ApiBody({ type: ExecutePromptBodyDto, description: 'Input variables for the prompt' })
+    @ApiResponse({ status: 200, description: 'Processed prompt text ready for execution and metadata.', schema: { example: { processedPrompt: "string", metadata: {} } } })
+    @ApiResponse({ status: 404, description: 'Project, Prompt, or Version not found.' })
+    @ApiResponse({ status: 400, description: 'Invalid parameters or failed template rendering.' })
     @ApiResponse({ status: 401, description: 'Unauthorized.' })
     @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
-    @ApiResponse({ status: 400, description: 'Invalid parameters.' })
-    async servePrompt(
-        @Param('projectId') projectId: string,
-        @Param('environmentName') environmentName: string,
-        @Param('promptName') promptName: string,
-        @Query() options: ServePromptOptionsDto,
+    async executePrompt(
+        @Param() params: ExecutePromptParamsDto,
+        @Query() query: ExecutePromptQueryDto,
+        @Body() body: ExecutePromptBodyDto,
         @Request() req
     ): Promise<{ processedPrompt: string; metadata: any }> {
-        return this.service.serveProjectPrompt(
-            projectId,
-            environmentName,
-            promptName,
-            options.languageCode,
-            options.versionTag,
-        );
+        return this.service.executePromptVersion(params, query, body);
     }
 }

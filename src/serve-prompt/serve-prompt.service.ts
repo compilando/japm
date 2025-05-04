@@ -1,27 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ServePromptQueryDto } from './dto/serve-prompt-query.dto';
 import { Prisma, Prompt, PromptVersion, PromptAssetVersion, PromptTranslation, AssetTranslation, Environment } from '@prisma/client';
 // import { TemplateService } from '../template/template.service'; // Comentado temporalmente
-
-// Tipo helper para obtener el payload con relaciones profundas
-type PromptVersionWithDetails = Prisma.PromptVersionGetPayload<{
-    include: {
-        prompt: true;
-        translations: true;
-        assets: {
-            include: {
-                assetVersion: {
-                    include: {
-                        asset: true;
-                        translations: true;
-                    }
-                }
-            }
-        }
-        activeInEnvironments: true;
-    }
-}>;
+import { ExecutePromptParamsDto } from './dto/execute-prompt-params.dto';
+import { ExecutePromptQueryDto } from './dto/execute-prompt-query.dto';
+import { ExecutePromptBodyDto } from './dto/execute-prompt-body.dto';
 
 @Injectable()
 export class ServePromptService {
@@ -30,44 +13,30 @@ export class ServePromptService {
         // private templateService: TemplateService // Comentado temporalmente
     ) { }
 
-    async serveProjectPrompt(
-        projectId: string,
-        environmentName: string,
-        promptName: string,
-        languageCode?: string,
-        versionTag?: string,
-        context?: Record<string, any>
+    /**
+     * Executes a specific prompt version with given variables.
+     * Handles translation and basic asset substitution.
+     * @returns The processed prompt text ready for execution.
+     */
+    async executePromptVersion(
+        params: ExecutePromptParamsDto,
+        query: ExecutePromptQueryDto,
+        body: ExecutePromptBodyDto
     ): Promise<{ processedPrompt: string; metadata: any }> {
-        let targetPrompt: Prompt | null = null;
+        const { projectId, promptName, versionTag } = params;
+        const { languageCode, environmentName } = query;
+        const { variables } = body;
 
-        // 1. Find the target Environment within the Project
-        const environment = await this.prisma.environment.findUnique({
-            where: { projectId_name: { projectId, name: environmentName } },
-            include: { activePromptVersions: { select: { id: true } } }
+        // 1. Find the Prompt within the Project
+        const prompt = await this.prisma.prompt.findUnique({
+            where: { projectId_name: { projectId, name: promptName } },
         });
 
-        if (!environment) {
-            throw new NotFoundException(`Environment "${environmentName}" not found in project "${projectId}".`);
-        }
-
-        // Determine default language if not provided
-        const finalLanguageCode = languageCode || 'en';
-
-        // 2. Find the Prompt within the Project using findFirst as workaround
-        targetPrompt = await this.prisma.prompt.findFirst({
-            where: {
-                projectId: projectId,
-                name: promptName
-            },
-        });
-
-        if (!targetPrompt) {
+        if (!prompt) {
             throw new NotFoundException(`Prompt "${promptName}" not found in project "${projectId}".`);
         }
 
-        // 3. Determine the PromptVersion to use
-        let versionToUse: PromptVersionWithDetails | null = null;
-
+        // 2. Find the specific PromptVersion
         const includeRelations = {
             prompt: true,
             translations: true,
@@ -76,92 +45,85 @@ export class ServePromptService {
                     assetVersion: { include: { asset: true, translations: true } }
                 }
             },
-            activeInEnvironments: true,
         };
 
-        if (versionTag) {
-            versionToUse = await this.prisma.promptVersion.findUnique({
-                where: {
-                    promptId_versionTag: { promptId: promptName, versionTag },
-                    prompt: { projectId: projectId }
-                },
-                include: includeRelations,
-            });
-            if (!versionToUse) {
-                throw new NotFoundException(`Version "${versionTag}" for prompt "${promptName}" in project "${projectId}" not found.`);
-            }
-            const isActive = versionToUse.activeInEnvironments.some(env => env.id === environment.id);
-            if (!isActive) {
-                console.warn(`Requested version ${versionTag} is not explicitly active in environment ${environmentName}. Serving anyway.`);
-            }
-        } else {
-            const activeVersion = await this.prisma.promptVersion.findFirst({
-                where: {
-                    promptId: promptName,
-                    prompt: { projectId: projectId },
-                    activeInEnvironments: { some: { id: environment.id } }
-                },
-                include: includeRelations,
-                orderBy: { createdAt: 'desc' }
-            });
+        const versionToUse = await this.prisma.promptVersion.findUnique({
+            where: {
+                promptId_versionTag: { promptId: prompt.id, versionTag },
+            },
+            include: includeRelations,
+        });
 
-            if (!activeVersion) {
-                throw new NotFoundException(`No active version found for prompt "${promptName}" in environment "${environmentName}" for project "${projectId}".`);
-            }
-            versionToUse = activeVersion;
+        if (!versionToUse) {
+            throw new NotFoundException(`Version "${versionTag}" for prompt "${promptName}" (ID: ${prompt.id}) in project "${projectId}" not found.`);
         }
 
-        // 4. Get base prompt text (translated if possible)
+        // 3. Determine language and get base prompt text
+        const finalLanguageCode = languageCode;
         let basePromptText = versionToUse.promptText;
-        const promptTranslation = versionToUse.translations.find(t => t.languageCode === finalLanguageCode);
-        if (promptTranslation) {
-            basePromptText = promptTranslation.promptText;
+
+        if (finalLanguageCode) {
+            const promptTranslation = versionToUse.translations.find(t => t.languageCode === finalLanguageCode);
+            if (promptTranslation) {
+                basePromptText = promptTranslation.promptText;
+            } else {
+                console.warn(`Translation for languageCode "${finalLanguageCode}" not found for prompt "${promptName}" v${versionTag}. Falling back to base text.`);
+            }
         }
 
-        // 5. Prepare asset context
+        // 4. Prepare asset context (basic substitution)
         const assetContext: Record<string, string> = {};
         for (const link of versionToUse.assets) {
             const assetVersion = link.assetVersion;
             const assetKey = assetVersion.asset.key;
             let assetValue = assetVersion.value;
-            const assetTranslation = assetVersion.translations.find(t => t.languageCode === finalLanguageCode);
-            if (assetTranslation) {
-                assetValue = assetTranslation.value;
+
+            if (finalLanguageCode) {
+                const assetTranslation = assetVersion.translations.find(t => t.languageCode === finalLanguageCode);
+                if (assetTranslation) {
+                    assetValue = assetTranslation.value;
+                }
             }
             assetContext[assetKey] = assetValue;
         }
 
-        // 6. Combine contexts and render
-        const finalContext = { ...assetContext, ...context };
+        // 5. Combine contexts and render
+        const finalContext = { ...assetContext, ...variables };
         let processedPrompt: string;
         try {
             processedPrompt = basePromptText.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
                 const trimmedKey = key.trim();
-                return finalContext.hasOwnProperty(trimmedKey) ? finalContext[trimmedKey] : match;
+                if (finalContext.hasOwnProperty(trimmedKey)) {
+                    return String(finalContext[trimmedKey]);
+                }
+                console.warn(`Placeholder {{${trimmedKey}}} not found in provided variables or assets.`);
+                return match;
             });
         } catch (error) {
             console.error("Error rendering prompt template:", error);
             throw new BadRequestException(`Failed to render prompt template: ${error.message}`);
         }
 
-        // 7. Prepare metadata
-        const metadata = {
-            projectId: projectId,
-            environmentName: environmentName,
-            promptName: targetPrompt.name,
-            promptVersionId: versionToUse.id,
-            promptVersionTag: versionToUse.versionTag,
-            languageUsed: promptTranslation ? finalLanguageCode : 'default',
-            assetsUsed: versionToUse.assets.map(link => {
-                const assetTranslation = link.assetVersion.translations.find(t => t.languageCode === finalLanguageCode);
-                return {
-                    key: link.assetVersion.asset.key,
-                    versionId: link.assetVersion.id,
-                    versionTag: link.assetVersion.versionTag,
-                    languageUsed: assetTranslation ? finalLanguageCode : 'default'
-                };
-            })
-        };
+         // 6. Prepare metadata
+         const metadata = {
+             projectId: projectId,
+             promptName: prompt.name,
+             promptVersionId: versionToUse.id,
+             promptVersionTag: versionToUse.versionTag,
+             languageUsed: finalLanguageCode ? (versionToUse.translations.some(t => t.languageCode === finalLanguageCode) ? finalLanguageCode : 'base_language_fallback') : 'base_language',
+             assetsUsed: versionToUse.assets.map(link => {
+                 const assetTranslation = finalLanguageCode ? link.assetVersion.translations.find(t => t.languageCode === finalLanguageCode) : null;
+                 return {
+                     key: link.assetVersion.asset.key,
+                     versionId: link.assetVersion.id,
+                     versionTag: link.assetVersion.versionTag,
+                     languageUsed: finalLanguageCode ? (assetTranslation ? finalLanguageCode : 'base_asset_fallback') : 'base_asset'
+                 };
+             }),
+             variablesProvided: Object.keys(variables),
+             environmentName: environmentName
+         };
+
 
         return { processedPrompt, metadata };
     }
