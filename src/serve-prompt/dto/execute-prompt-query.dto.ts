@@ -7,5 +7,5 @@ export class ExecutePromptQueryDto {
 
   @IsOptional()
   @IsString()
-  environmentName?: string; // Nota: La lógica para usar environmentName necesita implementación
+  environmentName?: string; // Note: Logic to use environmentName needs implementation
 } 

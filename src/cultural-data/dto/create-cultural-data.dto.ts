@@ -2,34 +2,34 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsInt, IsNotEmpty, IsLocale, Length } from 'class-validator';
 
 export class CreateCulturalDataDto {
-    @ApiProperty({ description: 'ID único para estos datos culturales (formato slug)', example: 'direct-and-formal' })
+    @ApiProperty({ description: 'Unique ID for this cultural data (slug format)', example: 'direct-and-formal' })
     @IsString()
     @IsNotEmpty()
     id: string;
 
-    @ApiProperty({ description: 'ID de la región asociada (código de idioma xx-XX)', example: 'es-ES' })
+    @ApiProperty({ description: 'Associated region ID (xx-XX language code)', example: 'es-ES' })
     @IsString()
     @IsNotEmpty()
     @IsLocale()
     @Length(5, 5)
     regionId: string;
 
-    @ApiProperty({ description: 'Nivel de formalidad (opcional)', required: false, example: 5 })
+    @ApiProperty({ description: 'Formality level (optional)', required: false, example: 5 })
     @IsInt()
     @IsOptional()
     formalityLevel?: number;
 
-    @ApiProperty({ description: 'Estilo de comunicación (opcional)', required: false, example: 'Directo' })
+    @ApiProperty({ description: 'Communication style (optional)', required: false, example: 'Direct' })
     @IsString()
     @IsOptional()
     style?: string;
 
-    @ApiProperty({ description: 'Consideraciones culturales (opcional)', required: false })
+    @ApiProperty({ description: 'Cultural considerations (optional)', required: false })
     @IsString()
     @IsOptional()
     considerations?: string;
 
-    @ApiProperty({ description: 'Notas adicionales (opcional)', required: false })
+    @ApiProperty({ description: 'Additional notes (optional)', required: false })
     @IsString()
     @IsOptional()
     notes?: string;

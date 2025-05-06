@@ -2,64 +2,77 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsArray, ValidateNested, IsDefined, Length, IsInt } from 'class-validator';
 import { Type } from 'class-transformer';
 
-// DTO anidado para especificar qué versión de asset vincular
+// Nested DTO to specify which asset version to link
 class AssetVersionLinkDto {
-    @ApiProperty({ description: 'ID de la PromptAssetVersion a vincular.' })
+    // @ApiProperty({ description: 'ID de la PromptAssetVersion a vincular.' })
+    @ApiProperty({ description: 'ID of the PromptAssetVersion to link.' })
     @IsString()
     @IsDefined()
     assetVersionId: string;
 
-    @ApiPropertyOptional({ description: 'Contexto de uso (opcional).' })
+    // @ApiPropertyOptional({ description: 'Contexto de uso (opcional).' })
+    @ApiPropertyOptional({ description: 'Usage context (optional).' })
     @IsString()
     @IsOptional()
     usageContext?: string;
 
-    @ApiPropertyOptional({ description: 'Posición/orden (opcional).' })
+    // @ApiPropertyOptional({ description: 'Posición/orden (opcional).' })
+    @ApiPropertyOptional({ description: 'Position/order (optional).' })
     @IsInt()
     @IsOptional()
     position?: number;
 }
 
-// DTO anidado para traducciones iniciales (igual que en CreatePromptDto)
+// Nested DTO for initial translations (same as in CreatePromptDto)
 class InitialTranslationDto {
-    @ApiProperty({ description: 'Código de idioma (e.g., es-ES).', example: 'es-ES' })
+    // @ApiProperty({ description: 'Código de idioma (e.g., es-ES).', example: 'es-ES' })
+    @ApiProperty({ description: 'Language code (e.g., es-ES).', example: 'es-ES' })
     @IsString()
     @Length(2, 10)
     languageCode: string;
 
-    @ApiProperty({ description: 'Texto traducido del prompt para esta versión.' })
+    // @ApiProperty({ description: 'Texto traducido del prompt para esta versión.' })
+    @ApiProperty({ description: 'Translated prompt text for this version.' })
     @IsString()
     @IsDefined()
     promptText: string;
 }
 
 export class CreatePromptVersionDto {
-    @ApiProperty({ description: 'Texto BASE del prompt para esta nueva versión.' })
+    // @ApiProperty({ description: 'Texto BASE del prompt para esta nueva versión.' })
+    @ApiProperty({ description: 'BASE prompt text for this new version.' })
     @IsString()
     @IsDefined()
     promptText: string;
 
-    @ApiProperty({ description: 'Etiqueta única para esta versión dentro del prompt (e.g., v1.1.0, beta-feature-x).', example: 'v1.1.0' })
+    // @ApiProperty({ description: 'Etiqueta única para esta versión dentro del prompt (e.g., v1.1.0, beta-feature-x).', example: 'v1.1.0' })
+    @ApiProperty({ description: 'Unique tag for this version within the prompt (e.g., v1.1.0, beta-feature-x).', example: 'v1.1.0' })
     @IsString()
     @IsDefined()
     versionTag: string;
 
-    @ApiPropertyOptional({ description: 'Mensaje describiendo los cambios en esta versión.' })
+    // @ApiPropertyOptional({ description: 'Mensaje describiendo los cambios en esta versión.' })
+    @ApiPropertyOptional({ description: 'Message describing the changes in this version.' })
     @IsString()
     @IsOptional()
     changeMessage?: string;
 
-    @ApiProperty({ description: 'Lista de versiones de assets a vincular a esta versión del prompt.', type: [AssetVersionLinkDto] })
+    // @ApiProperty({ description: 'Lista de versiones de assets a vincular a esta versión del prompt.', type: [AssetVersionLinkDto] })
+    @ApiProperty({ description: 'List of asset versions to link to this prompt version.', type: [AssetVersionLinkDto] })
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => AssetVersionLinkDto)
-    // Permitimos un array vacío si esta versión no usa assets,
-    // pero el array debe estar presente.
+    // Allow an empty array if this version uses no assets,
+    // but the array must be present.
     @IsDefined()
     assetLinks: AssetVersionLinkDto[];
 
+    // @ApiPropertyOptional({
+    //     description: 'Traducciones iniciales opcionales para esta nueva versión.',
+    //     type: [InitialTranslationDto]
+    // })
     @ApiPropertyOptional({
-        description: 'Traducciones iniciales opcionales para esta nueva versión.',
+        description: 'Optional initial translations for this new version.',
         type: [InitialTranslationDto]
     })
     @IsArray()

@@ -3,7 +3,7 @@ import { IsObject, IsOptional } from 'class-validator';
 
 export class TestPromptDto {
     @ApiProperty({
-        description: 'Variables de contexto clave-valor para reemplazar en el prompt.',
+        description: 'Key-value context variables to replace in the prompt.',
         type: Object,
         example: { customer_name: 'ACME Corp', location: 'Madrid' },
         required: false

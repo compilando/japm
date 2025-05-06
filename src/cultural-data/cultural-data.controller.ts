@@ -14,12 +14,12 @@ interface RequestWithProject extends ExpressRequest {
     projectId: string;
 }
 
-// Definir un DTO de respuesta que incluya la región (opcional)
+// Define a response DTO that includes the region (optional)
 class CulturalDataResponse extends CreateCulturalDataDto {
     @ApiProperty({ type: () => CreateRegionDto })
-    region?: Region; // Region es opcional si se permite desconectar
+    region?: Region; // Region is optional if disconnecting is allowed
 
-    // Añadir projectId si se quiere mostrar en la respuesta
+    // Add projectId if you want to show it in the response
     @ApiProperty()
     projectId: string;
 }
@@ -33,33 +33,33 @@ export class CulturalDataController {
 
     @Post()
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-    @ApiOperation({ summary: 'Crear nuevos datos culturales dentro de un proyecto' })
-    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
+    @ApiOperation({ summary: 'Creates new cultural data within a project' })
+    @ApiParam({ name: 'projectId', description: 'Project ID', type: String })
     @ApiBody({ type: CreateCulturalDataDto })
-    @ApiResponse({ status: 201, description: 'Datos culturales creados.', type: CulturalDataResponse })
-    @ApiResponse({ status: 400, description: 'Datos inválidos.' })
-    @ApiResponse({ status: 404, description: 'Proyecto o Región referenciada no encontrada.' })
+    @ApiResponse({ status: 201, description: 'Cultural data created.', type: CulturalDataResponse })
+    @ApiResponse({ status: 400, description: 'Invalid data.' })
+    @ApiResponse({ status: 404, description: 'Project or referenced Region not found.' })
     create(@Req() req: RequestWithProject, @Body() createDto: CreateCulturalDataDto): Promise<CulturalData> {
         const projectId = req.projectId;
         return this.culturalDataService.create(createDto, projectId);
     }
 
     @Get()
-    @ApiOperation({ summary: 'Obtener todos los datos culturales de un proyecto' })
-    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
-    @ApiResponse({ status: 200, description: 'Lista de datos culturales.', type: [CulturalDataResponse] })
-    @ApiResponse({ status: 404, description: 'Proyecto no encontrado.' })
+    @ApiOperation({ summary: 'Gets all cultural data for a project' })
+    @ApiParam({ name: 'projectId', description: 'Project ID', type: String })
+    @ApiResponse({ status: 200, description: 'List of cultural data.', type: [CulturalDataResponse] })
+    @ApiResponse({ status: 404, description: 'Project not found.' })
     findAll(@Req() req: RequestWithProject): Promise<CulturalData[]> {
         const projectId = req.projectId;
         return this.culturalDataService.findAll(projectId);
     }
 
     @Get(':culturalDataId')
-    @ApiOperation({ summary: 'Obtener datos culturales por ID dentro de un proyecto' })
-    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
-    @ApiParam({ name: 'culturalDataId', description: 'ID de los datos culturales', type: String })
-    @ApiResponse({ status: 200, description: 'Datos culturales encontrados.', type: CulturalDataResponse })
-    @ApiResponse({ status: 404, description: 'Proyecto o Datos culturales no encontrados.' })
+    @ApiOperation({ summary: 'Gets cultural data by ID within a project' })
+    @ApiParam({ name: 'projectId', description: 'Project ID', type: String })
+    @ApiParam({ name: 'culturalDataId', description: 'ID of the cultural data', type: String })
+    @ApiResponse({ status: 200, description: 'Cultural data found.', type: CulturalDataResponse })
+    @ApiResponse({ status: 404, description: 'Project or Cultural data not found.' })
     findOne(@Req() req: RequestWithProject, @Param('culturalDataId') id: string): Promise<CulturalData> {
         const projectId = req.projectId;
         return this.culturalDataService.findOne(id, projectId);
@@ -67,25 +67,25 @@ export class CulturalDataController {
 
     @Patch(':culturalDataId')
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, skipMissingProperties: true }))
-    @ApiOperation({ summary: 'Actualizar datos culturales por ID dentro de un proyecto' })
-    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
-    @ApiParam({ name: 'culturalDataId', description: 'ID a actualizar', type: String })
+    @ApiOperation({ summary: 'Updates cultural data by ID within a project' })
+    @ApiParam({ name: 'projectId', description: 'Project ID', type: String })
+    @ApiParam({ name: 'culturalDataId', description: 'ID to update', type: String })
     @ApiBody({ type: UpdateCulturalDataDto })
-    @ApiResponse({ status: 200, description: 'Datos culturales actualizados.', type: CulturalDataResponse })
-    @ApiResponse({ status: 404, description: 'Proyecto o Datos culturales no encontrados.' })
-    @ApiResponse({ status: 400, description: 'Datos inválidos.' })
+    @ApiResponse({ status: 200, description: 'Cultural data updated.', type: CulturalDataResponse })
+    @ApiResponse({ status: 404, description: 'Project or Cultural data not found.' })
+    @ApiResponse({ status: 400, description: 'Invalid data.' })
     update(@Req() req: RequestWithProject, @Param('culturalDataId') id: string, @Body() updateDto: UpdateCulturalDataDto): Promise<CulturalData> {
         const projectId = req.projectId;
         return this.culturalDataService.update(id, updateDto, projectId);
     }
 
     @Delete(':culturalDataId')
-    @ApiOperation({ summary: 'Eliminar datos culturales por ID dentro de un proyecto' })
-    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
-    @ApiParam({ name: 'culturalDataId', description: 'ID a eliminar', type: String })
-    @ApiResponse({ status: 200, description: 'Datos culturales eliminados.' })
-    @ApiResponse({ status: 404, description: 'Proyecto o Datos culturales no encontrados.' })
-    @ApiResponse({ status: 409, description: 'Conflicto al eliminar (referenciado por otras entidades).' })
+    @ApiOperation({ summary: 'Deletes cultural data by ID within a project' })
+    @ApiParam({ name: 'projectId', description: 'Project ID', type: String })
+    @ApiParam({ name: 'culturalDataId', description: 'ID to delete', type: String })
+    @ApiResponse({ status: 200, description: 'Cultural data deleted.' })
+    @ApiResponse({ status: 404, description: 'Project or Cultural data not found.' })
+    @ApiResponse({ status: 409, description: 'Conflict on delete (referenced by other entities).' })
     remove(@Req() req: RequestWithProject, @Param('culturalDataId') id: string): Promise<CulturalData> {
         const projectId = req.projectId;
         return this.culturalDataService.remove(id, projectId);

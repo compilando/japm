@@ -2,32 +2,32 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsTimeZone, IsLocale, IsDefined, Length } from 'class-validator';
 
 export class CreateRegionDto {
-    @ApiProperty({ description: 'Código de idioma único que actúa como ID', example: 'de-DE' })
-    @IsLocale() // Valida formato como xx-XX
+    @ApiProperty({ description: 'Unique language code acting as ID', example: 'de-DE' })
+    @IsLocale() // Validates format like xx-XX
     @IsDefined()
-    @Length(5, 5) // Asegurar formato xx-XX
-    languageCode: string; // Ahora es el ID
+    @Length(5, 5) // Ensure xx-XX format
+    languageCode: string; // Now serves as the ID
 
-    @ApiProperty({ description: 'Nombre de la región', example: 'Alemania' })
+    @ApiProperty({ description: 'Name of the region', example: 'Germany' })
     @IsString()
     name: string;
 
-    @ApiPropertyOptional({ description: 'languageCode de la región padre (opcional)', example: 'eu' })
+    @ApiPropertyOptional({ description: 'languageCode of the parent region (optional)', example: 'eu' })
     @IsString()
     @IsOptional()
-    parentRegionId?: string; // Referencia a languageCode padre
+    parentRegionId?: string; // Reference to parent languageCode
 
-    @ApiPropertyOptional({ description: 'Zona horaria', example: 'Europe/Berlin' })
+    @ApiPropertyOptional({ description: 'Time zone', example: 'Europe/Berlin' })
     @IsTimeZone()
     @IsOptional()
     timeZone?: string;
 
-    @ApiPropertyOptional({ description: 'Nivel de formalidad por defecto (opcional)', example: 'Formal' })
+    @ApiPropertyOptional({ description: 'Default formality level (optional)', example: 'Formal' })
     @IsString()
     @IsOptional()
     defaultFormalityLevel?: string;
 
-    @ApiPropertyOptional({ description: 'Notas adicionales (opcional)' })
+    @ApiPropertyOptional({ description: 'Additional notes (optional)' })
     @IsString()
     @IsOptional()
     notes?: string;

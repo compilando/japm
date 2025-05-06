@@ -31,7 +31,6 @@ model Region {
   defaultFormalityLevel    String?
   notes                    String                @default("")
   culturalData             CulturalData[]        @relation("CulturalData_region")
-  tactics                  Tactic[]              @relation("Tactic_region")
   from_Region_parentRegion Region[]              @relation("Region_parentRegion")
   from_RagDocumentMetadata RagDocumentMetadata[] @relation("RagDocumentMetadata_region")
 
@@ -50,29 +49,35 @@ model CulturalData {
   style               String               @default("")
   considerations      String               @default("")
   notes               String               @default("")
-  tactics             Tactic[]             @relation("Tactic_culturalData")
 
   project             Project              @relation("ProjectCulturalData", fields: [projectId], references: [id], onDelete: Cascade)
   projectId           String               @map("project")
 
+  // --- Añadir relación inversa opcional a Tactic (si aplica) ---
+  tactic              Tactic?              @relation("TacticCulturalData", fields: [tacticId], references: [id], onDelete: SetNull)
+  tacticId            String?              @map("tactic") @unique // @unique asegura relación 1-a-1
+
   @@index([regionId])
   @@index([projectId])
+  @@index([tacticId]) // Si se añade tacticId
 }
 
 model Prompt {
   id              String            @id @default(cuid())
   name            String
   description     String            @default("")
-  tactic          Tactic?           @relation("Prompt_tactic", fields: [tacticId], references: [name])
-  tacticId        String?           @map("tactic")
   versions        PromptVersion[]   @relation("PromptVersion_prompt")
   tags            Tag[]             @relation("PromptTags")
   project         Project           @relation("ProjectPrompts", fields: [projectId], references: [id], onDelete: Cascade)
   projectId       String            @map("project")
 
-  @@index([tacticId])
+  // --- Añadir relación a Tactic ---
+  tactic          Tactic?           @relation(fields: [tacticId], references: [id], onDelete: SetNull)
+  tacticId        String?           // Clave foránea opcional para Tactic
+
   @@index([projectId])
   @@unique([projectId, name])
+  @@index([tacticId]) // Añadir índice para la nueva clave foránea
 }
 
 model PromptVersion {
@@ -95,22 +100,6 @@ model PromptVersion {
   @@unique([promptId, versionTag])
   @@index([promptId])
   @@index([aiModelId]) // Index the new FK
-}
-
-model Tactic {
-  name           String               @id
-  region         Region?              @relation("Tactic_region", fields: [regionId], references: [languageCode])
-  regionId       String?              @map("region")
-  culturalData   CulturalData?        @relation("Tactic_culturalData", fields: [culturalDataId], references: [id])
-  culturalDataId String?
-  tacticsConfig  String?
-  prompts        Prompt[]             @relation("Prompt_tactic")
-  project        Project              @relation("ProjectTactics", fields: [projectId], references: [id], onDelete: Cascade)
-  projectId      String               @map("project")
-
-  @@index([regionId])
-  @@index([culturalDataId])
-  @@index([projectId])
 }
 
 model PromptTranslation {
@@ -211,6 +200,9 @@ model Tag {
   project     Project  @relation("ProjectTags", fields: [projectId], references: [id], onDelete: Cascade)
   projectId   String   @map("project")
 
+  // --- Añadir relación inversa ---
+  // tactics             Tactic[]             @relation("ProjectTactics") // Añadir relación inversa // ESTO ESTABA MAL AQUÍ
+
   @@unique([projectId, name])
   @@index([projectId])
 }
@@ -224,7 +216,6 @@ model Project {
   updatedAt           DateTime             @updatedAt
 
   owner               User?                @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
-  tactics             Tactic[]             @relation("ProjectTactics")
   prompts             Prompt[]             @relation("ProjectPrompts")
   assets              PromptAsset[]        @relation("ProjectAssets")
   regions             Region[]             @relation("ProjectRegions")
@@ -234,6 +225,9 @@ model Project {
   environments        Environment[]        @relation("ProjectEnvironments")
   promptExecutionLogs PromptExecutionLog[] @relation("ProjectLogs")
   aiModels            AIModel[]            @relation("ProjectModels")
+
+  // --- Añadir relación inversa ---
+  tactics             Tactic[]             @relation("ProjectTactics") // Añadir relación inversa
 
   @@index([ownerUserId])
 }
@@ -312,4 +306,42 @@ model PromptExecutionLog {
   @@index([environmentId])
   @@index([userId])
   @@index([timestamp]) // Indexar timestamp para búsquedas por fecha
+}
+
+// --- Add New Model Below ---
+
+model SystemPrompt {
+  id           String    @id @default(cuid())
+  name         String    @unique // Nombre único para identificarlo (e.g., 'summarize_text', 'translate_es_en')
+  description  String?   // Descripción opcional
+  promptText   String    // El texto base del prompt del sistema
+  category     String?   // Categoría opcional para agruparlos (e.g., 'summarization', 'translation')
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Nota: Sin relación directa con Project, User, Tactic, etc.
+}
+
+// --- Añadir nuevo modelo Tactic ---
+model Tactic {
+  id            String        @id @default(cuid())
+  name          String        // Asumiendo que 'name' es el identificador único usado en connect: { name: ... }
+  description   String?
+  culturalData  CulturalData? @relation("TacticCulturalData") // Asumiendo una relación uno a uno o uno a muchos opcional con CulturalData basado en el código
+  // Si la relación con CulturalData es muchos a muchos o diferente, ajustar aquí.
+  // Por ejemplo, si CulturalData debe tener una referencia a Tactic:
+  // culturalData CulturalData[] @relation("TacticCulturalData") // En Tactic
+  // tactic Tactic? @relation("TacticCulturalData", fields: [tacticId], references: [id]) // En CulturalData
+  // tacticId String? // En CulturalData
+
+  // Relación con Project (asumiendo que una Tactic pertenece a un Proyecto)
+  project       Project       @relation("ProjectTactics", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId     String        @map("project")
+
+  // Relación inversa con Prompt
+  prompts       Prompt[]
+
+  @@unique([projectId, name]) // Nombre único dentro del proyecto
+  @@index([projectId])
+  // Añadir índice para la relación con CulturalData si es necesario, ej: @@index([culturalDataId])
 }

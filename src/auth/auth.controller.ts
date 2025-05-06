@@ -1,19 +1,19 @@
 import { Controller, Request, Post, UseGuards, Get, Body, UsePipes, ValidationPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LocalAuthGuard } from './guards/local-auth.guard'; // Crearemos este guard
-import { JwtAuthGuard } from './guards/jwt-auth.guard'; // Crearemos este guard
+import { LocalAuthGuard } from './guards/local-auth.guard'; // We will create this guard
+import { JwtAuthGuard } from './guards/jwt-auth.guard'; // We will create this guard
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ApiTags, ApiBody, ApiOperation, ApiResponse, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
 import { User } from '@prisma/client';
 
-// DTO para la respuesta de Login
+// DTO for Login response
 class LoginResponse {
     @ApiProperty()
     access_token: string;
 }
 
-// DTO para la respuesta de Registro/Perfil (sin password)
+// DTO for Register/Profile response (without password)
 class UserProfileResponse {
     @ApiProperty()
     id: string;
@@ -24,7 +24,6 @@ class UserProfileResponse {
     @ApiProperty()
     createdAt: Date;
 }
-
 
 @ApiTags('Authentication')
 @Controller('api/auth')
@@ -42,30 +41,30 @@ export class AuthController {
         return this.authService.register(registerDto);
     }
 
-    // Usa LocalAuthGuard para activar LocalStrategy
+    // Use LocalAuthGuard to activate LocalStrategy
     @UseGuards(LocalAuthGuard)
     @Post('login')
     @ApiOperation({ summary: 'Log in a user' })
     @ApiBody({ type: LoginDto })
     @ApiResponse({ status: 200, description: 'Login successful, returns JWT token.', type: LoginResponse })
     @ApiResponse({ status: 401, description: 'Unauthorized (Invalid Credentials).' })
-    @HttpCode(HttpStatus.OK) // Cambia de 201 a 200 para login
+    @HttpCode(HttpStatus.OK) // Change from 201 to 200 for login
     async login(@Request() req): Promise<{ access_token: string }> {
-        // LocalAuthGuard (via LocalStrategy) ya validó y adjuntó user a req.user
-        return this.authService.login(req.user); // user aquí no tiene password
+        // LocalAuthGuard (via LocalStrategy) already validated and attached user to req.user
+        return this.authService.login(req.user); // user here does not have password
     }
 
-    // Protegido por JwtAuthGuard
+    // Protected by JwtAuthGuard
     @UseGuards(JwtAuthGuard)
     @Get('profile')
     @ApiOperation({ summary: 'Get current user profile' })
-    @ApiBearerAuth() // Indica que requiere Bearer token en Swagger
+    @ApiBearerAuth() // Indicates Bearer token required in Swagger
     @ApiResponse({ status: 200, description: 'User profile data.', type: UserProfileResponse })
     @ApiResponse({ status: 401, description: 'Unauthorized (Invalid or missing token).' })
     getProfile(@Request() req): Promise<Omit<User, 'password'>> {
-        // JwtAuthGuard (via JwtStrategy) validó el token y adjuntó datos a req.user
-        // Asumiendo que JwtStrategy.validate devuelve { userId: string, email: string }
-        // Necesitamos obtener el perfil completo desde el servicio
+        // JwtAuthGuard (via JwtStrategy) validated the token and attached data to req.user
+        // Assuming JwtStrategy.validate returns { userId: string, email: string }
+        // We need to get the full profile from the service
         return this.authService.getProfile(req.user.userId);
     }
 } 

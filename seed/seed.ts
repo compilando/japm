@@ -19,25 +19,26 @@ async function main() {
     console.log(`Start base seeding (User, AI Models, Environments, Regions)...`);
 
     // --- Optional Cleanup (Commented out after DB reset) ---
-    // console.log('Deleting existing data...');
-    // await prisma.promptExecutionLog.deleteMany({});
-    // await prisma.promptAssetLink.deleteMany({});
-    // await prisma.assetTranslation.deleteMany({});
-    // await prisma.promptTranslation.deleteMany({});
-    // await prisma.promptVersion.deleteMany({});
-    // await prisma.promptAssetVersion.deleteMany({});
-    // await prisma.tag.deleteMany({});
-    // await prisma.prompt.deleteMany({});
-    // await prisma.tactic.deleteMany({});
-    // await prisma.culturalData.deleteMany({});
-    // await prisma.ragDocumentMetadata.deleteMany({});
-    // await prisma.region.deleteMany({});
-    // await prisma.environment.deleteMany({});
-    // await prisma.promptAsset.deleteMany({});
-    // await prisma.aIModel.deleteMany({});
-    // await prisma.project.deleteMany({});
-    // await prisma.user.deleteMany({});
-    // console.log('Existing data deleted.');
+    /*
+        console.log('Deleting existing data...');
+        await prisma.promptExecutionLog.deleteMany({});
+        await prisma.promptAssetLink.deleteMany({});
+        await prisma.assetTranslation.deleteMany({});
+        await prisma.promptTranslation.deleteMany({});
+        await prisma.promptVersion.deleteMany({});
+        await prisma.promptAssetVersion.deleteMany({});
+        await prisma.tag.deleteMany({});
+        await prisma.prompt.deleteMany({});
+        await prisma.culturalData.deleteMany({});
+        await prisma.ragDocumentMetadata.deleteMany({});
+        await prisma.region.deleteMany({});
+        await prisma.environment.deleteMany({});
+        await prisma.promptAsset.deleteMany({});
+        await prisma.aIModel.deleteMany({});
+        await prisma.project.deleteMany({});
+        await prisma.user.deleteMany({});
+        console.log('Existing data deleted.');
+    */
 
     // --- BASE DATA --- //
 
@@ -87,24 +88,6 @@ async function main() {
         });
         console.log(`Upserted Tag: ${tagData.name}`);
     }
-
-    // --- Remove/Comment out the old global AI Model seeding ---
-    /*
-    // 4. Create AI Models (Still global ManyToMany based on schema)
-    console.log('Upserting AI Models...');
-    const aiModelsData = [
-        { id: 'gpt-4-turbo', name: 'gpt-4-turbo-2024-04-09', provider: 'OpenAI', apiIdentifier: 'gpt-4-turbo-2024-04-09', description: 'Latest GPT-4 Turbo model', contextWindow: 128000, supportsJson: true, maxTokens: 4096 },
-        // ... other old models ...
-    ];
-    for (const modelData of aiModelsData) {
-        await prisma.aIModel.upsert({
-            where: { id: modelData.id }, 
-            update: { ...modelData },
-            create: modelData,
-        });
-        console.log(`Upserted AI Model: ${modelData.name}`);
-    }
-    */
 
     // 4. Create Specific AI Models for the Default Project
     console.log(`Upserting specific AI Models for project: ${defaultProject.id}...`);
@@ -272,7 +255,55 @@ async function main() {
     });
     console.log(`Upserted CulturalData for US (ID: en-US)`);
 
-    console.log(`Base seeding finished.`);
+    console.log('Upserted CulturalData for US (ID: standard-business)');
+
+    // --- EXAMPLE: Seeding a Prompt (Optional, customize as needed) ---
+    /*
+        console.log('Seeding example prompt...');
+        const examplePrompt = await prisma.prompt.upsert({
+            where: { projectId_name: { name: 'example-greeting', projectId: defaultProject.id } },
+            update: { description: 'Simple greeting prompt' },
+            create: {
+                name: 'example-greeting',
+                description: 'Simple greeting prompt',
+                projectId: defaultProject.id,
+                // tacticId: tacticES.name, // Example: Link to a tactic if needed
+                tags: {
+                    connect: [{ projectId_name: { name: 'Core', projectId: defaultProject.id } }]
+                }
+            }
+        });
+    
+        const examplePromptVersion = await prisma.promptVersion.upsert({
+            where: { promptId_versionTag: { promptId: examplePrompt.id, versionTag: 'v1.0.0' } },
+            update: { promptText: 'Hello there! How can I assist you today?' },
+            create: {
+                promptId: examplePrompt.id,
+                versionTag: 'v1.0.0',
+                promptText: 'Hello there! How can I assist you today?',
+                status: 'draft',
+                // aiModelId: projectAiModels.find(m => m.name === 'GPT-4o')?.id // Link to an AI Model if needed (ensure ID exists)
+                // Ensure aiModelId exists or handle null case
+                aiModel: projectAiModels.find(m => m.name === 'GPT-4o') ? { connect: { id: projectAiModels.find(m => m.name === 'GPT-4o')?.id } } : undefined
+            }
+        });
+        console.log(`Seeded prompt: ${examplePrompt.name} Version: ${examplePromptVersion.versionTag}`);
+    */
+
+    // --- Seeding System Prompts (Example) ---
+    /*
+    console.log('Seeding example system prompts...');
+    await prisma.systemPrompt.createMany({
+        data: [
+            { name: 'summarize_meeting', description: 'Summarizes meeting notes', promptText: 'Please summarize the key points and action items from the following meeting notes:', category: 'summarization' },
+            { name: 'translate_es_en', description: 'Translates Spanish text to English', promptText: 'Translate the following Spanish text to English:', category: 'translation' },
+        ],
+        skipDuplicates: true, // Avoid errors if they already exist
+    });
+    console.log('Example system prompts seeded.');
+    */
+
+    console.log(`Seeding finished.`);
 }
 
 main()

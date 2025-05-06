@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service'; // Ajusta la ruta si es necesario
+import { PrismaService } from '../prisma/prisma.service'; // Adjust path if needed
 import { CreateEnvironmentDto } from './dto/create-environment.dto';
 import { UpdateEnvironmentDto } from './dto/update-environment.dto';
 import { Environment } from '@prisma/client';
@@ -14,71 +14,71 @@ export class EnvironmentService {
             return await this.prisma.environment.create({
                 data: {
                     ...createDto,
-                    project: { connect: { id: projectId } } // Conectar al proyecto
+                    project: { connect: { id: projectId } } // Connect to the project
                 },
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError) {
-                // Código P2002: Unique constraint failed
-                // El constraint es ahora @@unique([projectId, name])
+                // P2002 code: Unique constraint failed
+                // The constraint is now @@unique([projectId, name])
                 if (error.code === 'P2002' && error.meta?.target && Array.isArray(error.meta.target) && error.meta.target.includes('name') && error.meta.target.includes('projectId')) {
-                    throw new ConflictException(`Ya existe un entorno con el nombre '${createDto.name}' en este proyecto.`);
+                    throw new ConflictException(`An environment with the name '${createDto.name}' already exists in this project.`);
                 }
             }
-            throw error; // Re-lanzar otros errores
+            throw error; // Re-throw other errors
         }
     }
 
     async findAll(projectId: string): Promise<Environment[]> {
         return this.prisma.environment.findMany({
-            where: { projectId } // Filtrar por proyecto
+            where: { projectId } // Filter by project
         });
     }
 
     async findOne(id: string, projectId: string): Promise<Environment> {
-        // Buscamos por ID y verificamos que pertenezca al proyecto
+        // Search by ID and verify it belongs to the project
         const environment = await this.prisma.environment.findFirst({
             where: { id, projectId },
         });
         if (!environment) {
-            throw new NotFoundException(`Entorno con ID '${id}' no encontrado en el proyecto '${projectId}'.`);
+            throw new NotFoundException(`Environment with ID '${id}' not found in project '${projectId}'.`);
         }
         return environment;
     }
 
-    // findByName ahora necesita projectId debido al constraint @@unique([projectId, name])
+    // findByName now needs projectId due to the @@unique([projectId, name]) constraint
     async findByName(name: string, projectId: string): Promise<Environment> {
         const environment = await this.prisma.environment.findUnique({
             where: {
-                projectId_name: { projectId, name } // Usar el índice compuesto
+                projectId_name: { projectId, name } // Use the composite index
             },
         });
         if (!environment) {
-            throw new NotFoundException(`Entorno con nombre '${name}' no encontrado en el proyecto '${projectId}'.`);
+            throw new NotFoundException(`Environment with name '${name}' not found in project '${projectId}'.`);
         }
         return environment;
     }
 
 
     async update(id: string, updateDto: UpdateEnvironmentDto, projectId: string): Promise<Environment> {
-        // 1. Verificar que el entorno existe en este proyecto
-        await this.findOne(id, projectId); // Reutiliza la lógica y lanza NotFound si no existe
+        // 1. Verify that the environment exists in this project
+        await this.findOne(id, projectId); // Reuses logic and throws NotFound if it doesn't exist
 
         try {
-            // 2. Actualizar por ID (ya sabemos que pertenece al proyecto)
+            // 2. Update by ID (we already know it belongs to the project)
             return await this.prisma.environment.update({
-                where: { id }, // Actualizar usando el ID único global
-                data: updateDto, // No necesitamos incluir projectId aquí, no se debe cambiar
+                where: { id }, // Update using the global unique ID
+                data: updateDto, // No need to include projectId here, it shouldn't change
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError) {
-                // P2025 no debería ocurrir gracias a findOne, pero lo dejamos por seguridad
+                // P2025 shouldn't happen thanks to findOne, but kept for safety
                 if (error.code === 'P2025') {
-                    throw new NotFoundException(`Entorno con ID '${id}' no encontrado para actualizar (error inesperado).`);
+                    throw new NotFoundException(`Environment with ID '${id}' not found for update (unexpected error).`);
                 }
-                // P2002 para el constraint [projectId, name]
+                // P2002 for the [projectId, name] constraint
                 if (error.code === 'P2002' && updateDto.name && error.meta?.target && Array.isArray(error.meta.target) && error.meta.target.includes('name') && error.meta.target.includes('projectId')) {
-                    throw new ConflictException(`Ya existe un entorno con el nombre '${updateDto.name}' en este proyecto.`);
+                    throw new ConflictException(`An environment with the name '${updateDto.name}' already exists in this project.`);
                 }
             }
             throw error;
@@ -86,16 +86,16 @@ export class EnvironmentService {
     }
 
     async remove(id: string, projectId: string): Promise<Environment> {
-        // 1. Verificar que el entorno existe en este proyecto
-        const environment = await this.findOne(id, projectId); // Reutiliza la lógica y lanza NotFound si no existe
+        // 1. Verify that the environment exists in this project
+        const environment = await this.findOne(id, projectId); // Reuses logic and throws NotFound if it doesn't exist
 
-        // 2. Eliminar por ID (ya sabemos que pertenece al proyecto)
-        // No necesitamos try-catch para P2025 aquí porque findOne ya lo verificó.
-        // Si hubiera relaciones dependientes que bloquearan el delete (sin onDelete: Cascade),
-        // Prisma lanzaría un P2003 (Foreign key constraint failed) o similar.
+        // 2. Delete by ID (we already know it belongs to the project)
+        // We don't need try-catch for P2025 here because findOne already checked.
+        // If there were dependent relations blocking the delete (without onDelete: Cascade),
+        // Prisma would throw a P2003 (Foreign key constraint failed) or similar.
         return await this.prisma.environment.delete({
             where: { id },
         });
-        // Nota: Si hubiera datos asociados que deben borrarse manualmente, se haría en una transacción.
+        // Note: If associated data needed manual deletion, it would be done in a transaction.
     }
 }

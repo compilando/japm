@@ -2,13 +2,13 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { UserService } from '../../user/user.service'; // Ajusta la ruta
+import { UserService } from '../../user/user.service'; // Adjust path
 
-// Payload que esperamos en el JWT (definido en AuthService.login)
+// Payload expected in the JWT (defined in AuthService.login)
 export interface JwtPayload {
     sub: string; // Standard JWT field for user ID
     email: string;
-    // Puedes añadir roles u otra info si la incluyes en el payload al hacer login
+    // You can add roles or other info if included in the payload during login
 }
 
 @Injectable()
@@ -40,7 +40,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         this.logger.log('JwtStrategy initialized.');
     }
 
-    // Passport llama a esto después de verificar la firma del JWT y que no ha expirado
+    // Passport calls this after verifying the JWT signature and that it hasn't expired
     async validate(payload: JwtPayload): Promise<any> {
         this.logger.log(`Validating JWT payload...`);
         this.logger.debug(`Received payload: ${JSON.stringify(payload)}`);
@@ -50,9 +50,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             throw new UnauthorizedException('Invalid token payload.');
         }
 
-        // payload es el objeto decodificado del JWT
-        // Aquí puedes hacer validaciones adicionales si quieres
-        // Ejemplo: verificar que el usuario aún existe en la DB
+        // payload is the decoded JWT object
+        // Here you can perform additional validations if desired
+        // Example: verify that the user still exists in the DB
         try {
             this.logger.debug(`Attempting to find user by ID (sub): ${payload.sub}`);
             const user = await this.userService.findOneById(payload.sub);
@@ -62,12 +62,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             }
             this.logger.log(`User found for ID ${payload.sub}: ${user.email}`);
 
-            // Lo que retornes aquí será adjuntado a request.user
-            // Devuelve solo la información necesaria y no sensible
+            // Whatever you return here will be attached to request.user
+            // Return only necessary, non-sensitive information
             const result = { userId: payload.sub, email: payload.email };
             this.logger.debug(`Validation successful. Returning user data for request.user: ${JSON.stringify(result)}`);
             return result;
-            // O podrías devolver el objeto User completo (sin contraseña) si lo necesitas:
+            // Or you could return the full User object (without password) if needed:
             // const { password, ...userResult } = user;
             // return userResult;
         } catch (error) {

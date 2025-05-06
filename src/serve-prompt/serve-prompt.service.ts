@@ -1,16 +1,18 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, Prompt, PromptVersion, PromptAssetVersion, PromptTranslation, AssetTranslation, Environment } from '@prisma/client';
-// import { TemplateService } from '../template/template.service'; // Comentado temporalmente
+import { Prisma, Prompt, PromptVersion, PromptAssetVersion, PromptTranslation, AssetTranslation, Environment, Tactic, CulturalData } from '@prisma/client';
+// import { TemplateService } from '../template/template.service'; // Temporarily commented out
 import { ExecutePromptParamsDto } from './dto/execute-prompt-params.dto';
 import { ExecutePromptQueryDto } from './dto/execute-prompt-query.dto';
 import { ExecutePromptBodyDto } from './dto/execute-prompt-body.dto';
 
 @Injectable()
 export class ServePromptService {
+    private readonly logger = new Logger(ServePromptService.name);
+
     constructor(
         private prisma: PrismaService,
-        // private templateService: TemplateService // Comentado temporalmente
+        // private templateService: TemplateService // Temporarily commented out
     ) { }
 
     /**
@@ -37,14 +39,18 @@ export class ServePromptService {
         }
 
         // 2. Find the specific PromptVersion
-        const includeRelations = {
-            prompt: true,
-            translations: true,
-            assets: {
+        const includeRelations: Prisma.PromptVersionInclude = {
+            prompt: {
                 include: {
-                    assetVersion: { include: { asset: true, translations: true } }
+                    tactic: {
+                        include: {
+                            culturalData: true
+                        }
+                    }
                 }
             },
+            translations: true,
+            assets: true,
         };
 
         const versionToUse = await this.prisma.promptVersion.findUnique({
@@ -58,9 +64,86 @@ export class ServePromptService {
             throw new NotFoundException(`Version "${versionTag}" for prompt "${promptName}" (ID: ${prompt.id}) in project "${projectId}" not found.`);
         }
 
+        // --- NUEVO: Cargar detalles de AssetVersion por separado ---
+        let assetVersionsMap: Map<string, Prisma.PromptAssetVersionGetPayload<{ include: { asset: true, translations: true } }>> = new Map();
+        if (versionToUse.assets && versionToUse.assets.length > 0) {
+            // 1. Extraer IDs únicos de assetVersion
+            const assetVersionIds = [...new Set(versionToUse.assets.map(link => link.assetVersionId))];
+
+            // 2. Consultar los detalles de PromptAssetVersion
+            const assetVersionsDetails = await this.prisma.promptAssetVersion.findMany({
+                where: { id: { in: assetVersionIds } },
+                include: {
+                    asset: true, // Incluir el PromptAsset base
+                    translations: true // Incluir las AssetTranslations
+                }
+            });
+
+            // 3. Crear un mapa para búsqueda rápida por ID
+            for (const av of assetVersionsDetails) {
+                assetVersionsMap.set(av.id, av);
+            }
+        }
+        // --- FIN NUEVO ---
+
+        // --- DEBUG (Eliminado o comentado si ya no es necesario) ---
+        /*
+        if (versionToUse.assets && versionToUse.assets.length > 0) {
+            console.log("DEBUG: Structure of first asset link:", JSON.stringify(versionToUse.assets[0], null, 2));
+            console.log("DEBUG: Does link have assetVersion property?", versionToUse.assets[0].hasOwnProperty('assetVersion'));
+        } else {
+            console.log("DEBUG: versionToUse.assets is empty or undefined.");
+        }
+        */
+        // --- FIN DEBUG ---
+
         // 3. Determine language and get base prompt text
         const finalLanguageCode = languageCode;
         let basePromptText = versionToUse.promptText;
+        let culturalInstructions = '';
+
+        // --- START: CulturalData Logic ---
+        this.logger.debug(`Checking for Tactic/CulturalData for prompt: ${prompt.name} (ID: ${prompt.id})`);
+        if (versionToUse.prompt.tacticId) {
+            this.logger.log(`Prompt has tacticId: ${versionToUse.prompt.tacticId}. Fetching Tactic with CulturalData.`);
+            try {
+                // Fetch Tactic and related CulturalData separately for clarity
+                const tacticWithCulture = await this.prisma.tactic.findUnique({
+                    where: { id: versionToUse.prompt.tacticId },
+                    include: { culturalData: true }
+                });
+
+                if (tacticWithCulture) {
+                    this.logger.log(`Found Tactic ${tacticWithCulture.name} (ID: ${tacticWithCulture.id}).`);
+                    if (tacticWithCulture.culturalData) {
+                        const cd = tacticWithCulture.culturalData;
+                        this.logger.log(`Found CulturalData (ID: ${cd.id}, Style: ${cd.style}) for Tactic.`);
+                        let instructions: string[] = [];
+                        instructions.push("Adapt the response considering the following cultural context:");
+                        if (cd.style) instructions.push(`- Style: ${cd.style}`);
+                        if (cd.formalityLevel !== null && cd.formalityLevel !== undefined) instructions.push(`- Formality Level: ${cd.formalityLevel}`);
+                        if (cd.considerations) instructions.push(`- Considerations: ${cd.considerations}`);
+
+                        if (instructions.length > 1) { // Only add if there's more than the intro line
+                            culturalInstructions = instructions.join('\n') + '\n\n'; // Add extra newlines for separation
+                            this.logger.debug(`Generated cultural instructions prefix: ${culturalInstructions}`);
+                        }
+                    } else {
+                        this.logger.debug(`Tactic ${versionToUse.prompt.tacticId} found, but no associated CulturalData.`);
+                    }
+                } else {
+                    this.logger.debug(`Tactic ${versionToUse.prompt.tacticId} not found.`);
+                }
+            } catch (error) {
+                // Log error but don't fail the execution, just proceed without cultural data
+                this.logger.error(`Error fetching Tactic/CulturalData for tacticId ${versionToUse.prompt.tacticId}: ${error.message}`, error.stack);
+            }
+        } else {
+            this.logger.debug(`Prompt ${prompt.name} has no associated tacticId.`);
+        }
+        // --- END: CulturalData Logic ---
+
+        basePromptText = culturalInstructions + basePromptText;
 
         if (finalLanguageCode) {
             const promptTranslation = versionToUse.translations.find(t => t.languageCode === finalLanguageCode);
@@ -74,8 +157,16 @@ export class ServePromptService {
         // 4. Prepare asset context (basic substitution)
         const assetContext: Record<string, string> = {};
         for (const link of versionToUse.assets) {
-            const assetVersion = link.assetVersion;
-            const assetKey = assetVersion.asset.key;
+            // --- USAR MAPA ---
+            const assetVersion = assetVersionsMap.get(link.assetVersionId);
+            if (!assetVersion) {
+                console.warn(`AssetVersion details not found for ID: ${link.assetVersionId}. Skipping asset.`);
+                continue; // Saltar este asset si no se encontraron sus detalles
+            }
+            // --- FIN USAR MAPA ---
+
+            // Ahora assetVersion tiene la estructura { id, asset, translations, value, ... }
+            const assetKey = assetVersion.asset.key; // Acceder a asset anidado
             let assetValue = assetVersion.value;
 
             if (finalLanguageCode) {
@@ -104,25 +195,32 @@ export class ServePromptService {
             throw new BadRequestException(`Failed to render prompt template: ${error.message}`);
         }
 
-         // 6. Prepare metadata
-         const metadata = {
-             projectId: projectId,
-             promptName: prompt.name,
-             promptVersionId: versionToUse.id,
-             promptVersionTag: versionToUse.versionTag,
-             languageUsed: finalLanguageCode ? (versionToUse.translations.some(t => t.languageCode === finalLanguageCode) ? finalLanguageCode : 'base_language_fallback') : 'base_language',
-             assetsUsed: versionToUse.assets.map(link => {
-                 const assetTranslation = finalLanguageCode ? link.assetVersion.translations.find(t => t.languageCode === finalLanguageCode) : null;
-                 return {
-                     key: link.assetVersion.asset.key,
-                     versionId: link.assetVersion.id,
-                     versionTag: link.assetVersion.versionTag,
-                     languageUsed: finalLanguageCode ? (assetTranslation ? finalLanguageCode : 'base_asset_fallback') : 'base_asset'
-                 };
-             }),
-             variablesProvided: Object.keys(variables),
-             environmentName: environmentName
-         };
+        // 6. Prepare metadata
+        const metadata = {
+            projectId: projectId,
+            promptName: prompt.name,
+            promptVersionId: versionToUse.id,
+            promptVersionTag: versionToUse.versionTag,
+            languageUsed: finalLanguageCode ? (versionToUse.translations.some(t => t.languageCode === finalLanguageCode) ? finalLanguageCode : 'base_language_fallback') : 'base_language',
+            assetsUsed: versionToUse.assets.map(link => {
+                // --- USAR MAPA ---
+                const assetVersion = assetVersionsMap.get(link.assetVersionId);
+                if (!assetVersion) {
+                    // Retornar un objeto indicando el problema o filtrar este resultado
+                    return { key: `MISSING_ASSET_VERSION_${link.assetVersionId}`, error: true };
+                }
+                const assetTranslation = finalLanguageCode ? assetVersion.translations.find(t => t.languageCode === finalLanguageCode) : null;
+                // --- FIN USAR MAPA ---
+                return {
+                    key: assetVersion.asset.key, // Acceder a asset anidado
+                    versionId: assetVersion.id,
+                    versionTag: assetVersion.versionTag,
+                    languageUsed: finalLanguageCode ? (assetTranslation ? finalLanguageCode : 'base_asset_fallback') : 'base_asset'
+                };
+            }).filter(asset => !asset.error), // Filtrar los que tuvieron error (opcional)
+            variablesProvided: Object.keys(variables),
+            environmentName: environmentName
+        };
 
 
         return { processedPrompt, metadata };
@@ -141,3 +239,6 @@ export class ServePromptService {
 
 // Nota: Faltaría implementar la lógica para crear/actualizar prompts, versiones y traducciones.
 // Esta función solo se encarga de servir el prompt ensamblado.
+// -->
+// Note: Logic for creating/updating prompts, versions, and translations would still need implementation.
+// This function is only responsible for serving the assembled prompt.

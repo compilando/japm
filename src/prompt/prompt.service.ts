@@ -9,7 +9,6 @@ import { Prisma, Prompt, PromptVersion, PromptTranslation, Tag, Environment } fr
 // Type for findOne response
 type PromptWithRelations = Prisma.PromptGetPayload<{
     include: {
-        tactic: true;
         tags: true;
         versions: {
             include: {
@@ -34,7 +33,6 @@ type PromptWithRelations = Prisma.PromptGetPayload<{
 // Type for create response
 type PromptWithInitialVersionAndTags = Prisma.PromptGetPayload<{
     include: {
-        tactic: true;
         tags: true;
         versions: { include: { translations: true, activeInEnvironments: { select: { id: true, name: true } } } };
     }
@@ -45,7 +43,7 @@ export class PromptService {
     constructor(private prisma: PrismaService) { }
 
     async create(createDto: CreatePromptDto, projectId: string): Promise<PromptWithInitialVersionAndTags> {
-        const { name, description, promptText, initialTranslations, tacticId, tags, ...restData } = createDto;
+        const { name, description, promptText, initialTranslations, tags, ...restData } = createDto;
 
         if (!promptText || !name) {
             throw new BadRequestException('Prompt name and initial promptText are required.');
@@ -86,7 +84,6 @@ export class PromptService {
                     name: name,
                     description: description,
                     projectId: projectId,
-                    tacticId: tacticId,
                     tags: tagsToConnect ? { connect: tagsToConnect } : undefined,
                     ...restData
                 },
@@ -99,7 +96,7 @@ export class PromptService {
             }
             // P2025: Referenced Project or Tactic not found
             else if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException(`Referenced Project (ID: ${projectId}) or Tactic (ID: ${tacticId}) not found.`);
+                throw new NotFoundException(`Referenced Project (ID: ${projectId}) not found.`);
             }
             throw error;
         }
@@ -132,7 +129,6 @@ export class PromptService {
         const createdPrompt = await this.prisma.prompt.findUniqueOrThrow({
             where: { id: newPrompt.id },
             include: {
-                tactic: true,
                 tags: true,
                 versions: { where: { id: newVersion.id }, include: { translations: true, activeInEnvironments: { select: { id: true, name: true } } } }
             }
@@ -145,7 +141,6 @@ export class PromptService {
         return this.prisma.prompt.findMany({
             where: { projectId },
             include: {
-                tactic: { select: { name: true } },
                 tags: { select: { name: true } },
                 versions: { select: { id: true, versionTag: true }, orderBy: { createdAt: 'desc' } }
             },
@@ -157,7 +152,6 @@ export class PromptService {
         const prompt = await this.prisma.prompt.findUnique({
             where: { id: promptId }, // Use CUID for where clause
             include: {
-                tactic: true,
                 tags: true, // Tags are implicitly filtered by project if schema is correct
                 versions: {
                     orderBy: { createdAt: 'desc' },
@@ -190,16 +184,12 @@ export class PromptService {
         // 1. Verify the prompt exists in the project (using CUID)
         await this.findOne(promptId, projectId);
 
-        // Solo permitir actualizar description, tacticId, tagIds (NO name)
-        const { tacticId, tagIds, description } = updateDto;
+        // Solo permitir actualizar description, tagIds (NO name)
+        const { tagIds, description } = updateDto;
         const data: Prisma.PromptUpdateInput = {};
 
         if (description !== undefined) data.description = description;
 
-        // Tactic update logic
-        if (tacticId !== undefined) {
-            data.tactic = tacticId ? { connect: { name: tacticId } } : { disconnect: true };
-        }
         // Tag update logic
         if (tagIds !== undefined) {
             // Verify tags belong to the project
@@ -234,7 +224,7 @@ export class PromptService {
         } catch (error) {
             // P2025: Record to update/connect not found
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException(`Prompt "${promptId}" or related Tactic/Tag not found during update.`);
+                throw new NotFoundException(`Prompt "${promptId}" or related Tag not found during update.`);
             }
             console.error(`Error updating prompt ${promptId}:`, error);
             throw error;
@@ -319,7 +309,27 @@ export class PromptService {
     async findOneByName(name: string, projectId: string): Promise<PromptWithRelations> {
         const prompt = await this.prisma.prompt.findUnique({
             where: { projectId_name: { projectId, name } },
-            // ... includes ...
+            include: {
+                tags: true,
+                versions: {
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        translations: true,
+                        assets: {
+                            orderBy: { position: 'asc' },
+                            include: {
+                                assetVersion: {
+                                    include: {
+                                        asset: { select: { key: true, name: true } },
+                                        translations: true
+                                    }
+                                }
+                            }
+                        },
+                        activeInEnvironments: { select: { id: true, name: true } }
+                    }
+                }
+            }
         });
         if (!prompt) {
             throw new NotFoundException(`Prompt with name "${name}" not found in project "${projectId}".`);

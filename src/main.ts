@@ -18,12 +18,24 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('JAPM API')
-    .setDescription('API para la aplicación de Prompt Engineering JAPM')
+    .setDescription('API for the JAPM Prompt Engineering application')
     .setVersion('1.0')
+    // Add Bearer Authentication security definition for Swagger UI
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+      },
+      'bearer', // This name here is important! It needs to match the name in @ApiBearerAuth() decorators
+    )
     .build();
   const document = SwaggerModule.createDocument(app, config);
 
-  // Escribir el documento Swagger en un archivo JSON
+  // Write the Swagger document to a JSON file
   try {
     fs.writeFileSync('./openapi.json', JSON.stringify(document, null, 2));
     console.log('OpenAPI specification written to openapi.json');
@@ -33,7 +45,7 @@ async function bootstrap() {
 
   SwaggerModule.setup('api', app, document);
 
-  // Habilitar CORS
+  // Enable CORS
   app.enableCors();
 
   await app.listen(process.env.PORT ?? 3001);

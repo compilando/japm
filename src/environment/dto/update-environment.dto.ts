@@ -3,22 +3,22 @@ import { CreateEnvironmentDto } from './create-environment.dto';
 import { IsString, IsOptional, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-// PartialType hereda las validaciones y ApiProperty de CreateEnvironmentDto,
-// pero hace todos los campos opcionales.
+// PartialType inherits validations and ApiProperty from CreateEnvironmentDto,
+// but makes all fields optional.
 export class UpdateEnvironmentDto extends PartialType(CreateEnvironmentDto) {
 
-    // Podríamos añadir validaciones específicas para la actualización si fuera necesario.
-    // Por ejemplo, si quisiéramos que el nombre no se pudiera cambiar una vez creado,
-    // podríamos eliminarlo de este DTO o añadir una validación que lo impida.
+    // We could add specific validations for the update if necessary.
+    // For example, if we wanted the name to be unchangeable once created,
+    // we could remove it from this DTO or add validation to prevent it.
 
-    // Sobrescribimos las propiedades si necesitamos cambiar la descripción o ejemplos en Swagger
-    @ApiProperty({ description: 'Nuevo nombre único del entorno (opcional)', example: 'staging', required: false, maxLength: 255 })
+    // We override properties if we need to change the description or examples in Swagger
+    @ApiProperty({ description: 'New unique name for the environment (optional)', example: 'staging', required: false, maxLength: 255 })
     @IsOptional()
     @IsString()
     @MaxLength(255)
     name?: string;
 
-    @ApiProperty({ description: 'Nueva descripción opcional del entorno', example: 'Entorno de pruebas pre-producción', required: false })
+    @ApiProperty({ description: 'New optional description for the environment', example: 'Pre-production testing environment', required: false })
     @IsOptional()
     @IsString()
     description?: string;

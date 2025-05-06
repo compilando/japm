@@ -17,13 +17,13 @@ export class LlmExecutionService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
-  ) {}
+  ) { }
 
   async execute(dto: ExecuteLlmDto): Promise<{ result: string; modelUsed: string; providerUsed: string; }> {
     const { modelId, promptText } = dto;
     this.logger.log(`Executing LLM request for model ID: ${modelId}`);
 
-    // 1. Obtener configuración del modelo AI desde la BD
+    // 1. Get AI model configuration from DB
     this.logger.debug(`Fetching AIModel configuration for ID: ${modelId}`);
     const aiModel = await this.prisma.aIModel.findUnique({
       where: { id: modelId },
@@ -35,10 +35,10 @@ export class LlmExecutionService {
     }
     this.logger.debug(`Found AIModel: ${aiModel.name} (Provider: ${aiModel.provider}, Identifier: ${aiModel.apiIdentifier})`);
 
-    // 2. Obtener la API Key desde las variables de entorno
+    // 2. Get API Key from environment variables
     if (!aiModel.apiKeyEnvVar) {
-        this.logger.error(`apiKeyEnvVar not set for AIModel ID ${aiModel.id} (${aiModel.name}).`);
-        throw new InternalServerErrorException(`Configuration error: Missing API Key environment variable name for model ${aiModel.name}.`);
+      this.logger.error(`apiKeyEnvVar not set for AIModel ID ${aiModel.id} (${aiModel.name}).`);
+      throw new InternalServerErrorException(`Configuration error: Missing API Key environment variable name for model ${aiModel.name}.`);
     }
     this.logger.debug(`Attempting to get API Key from env var: ${aiModel.apiKeyEnvVar}`);
     const apiKey = this.configService.get<string>(aiModel.apiKeyEnvVar);
@@ -49,7 +49,7 @@ export class LlmExecutionService {
     // Avoid logging the actual key, maybe log its presence/length
     this.logger.debug(`API Key found for ${aiModel.provider} (length: ${apiKey.length}).`);
 
-    // 3. Instanciar el modelo LangChain apropiado
+    // 3. Instantiate the appropriate LangChain model
     let chatModel: BaseChatModel;
     this.logger.log(`Instantiating LangChain model for provider: ${aiModel.provider}, model: ${aiModel.apiIdentifier}`);
     try {
@@ -64,10 +64,10 @@ export class LlmExecutionService {
           break;
         case 'anthropic':
           chatModel = new ChatAnthropic({
-              apiKey: apiKey,
-              modelName: aiModel.apiIdentifier ?? undefined,
-              temperature: aiModel.temperature ?? undefined,
-              maxTokens: aiModel.maxTokens ?? undefined,
+            apiKey: apiKey,
+            modelName: aiModel.apiIdentifier ?? undefined,
+            temperature: aiModel.temperature ?? undefined,
+            maxTokens: aiModel.maxTokens ?? undefined,
           });
           break;
         default:
@@ -76,23 +76,23 @@ export class LlmExecutionService {
       }
       this.logger.debug(`Successfully instantiated ${aiModel.provider} model.`);
     } catch (error) {
-        this.logger.error(`Failed to instantiate LangChain model ${aiModel.name}: ${error.message}`, error.stack);
-        throw new InternalServerErrorException(`Could not instantiate LLM ${aiModel.name}. Check model configuration.`);
+      this.logger.error(`Failed to instantiate LangChain model ${aiModel.name}: ${error.message}`, error.stack);
+      throw new InternalServerErrorException(`Could not instantiate LLM ${aiModel.name}. Check model configuration.`);
     }
 
-    // 4. Llamar al LLM usando LangChain
+    // 4. Call the LLM using LangChain
     this.logger.log(`Invoking LLM ${aiModel.name} with prompt (length: ${promptText.length})...`);
     try {
-        const parser = new StringOutputParser();
-        const chain = chatModel.pipe(parser);
-        const llmResult = await chain.invoke(promptText);
-        this.logger.log(`LLM invocation successful for ${aiModel.name}. Output length: ${llmResult?.length ?? 0}`);
+      const parser = new StringOutputParser();
+      const chain = chatModel.pipe(parser);
+      const llmResult = await chain.invoke(promptText);
+      this.logger.log(`LLM invocation successful for ${aiModel.name}. Output length: ${llmResult?.length ?? 0}`);
 
-        return {
-            result: llmResult,
-            modelUsed: aiModel.apiIdentifier ?? aiModel.name,
-            providerUsed: aiModel.provider ?? 'Unknown',
-        };
+      return {
+        result: llmResult,
+        modelUsed: aiModel.apiIdentifier ?? aiModel.name,
+        providerUsed: aiModel.provider ?? 'Unknown',
+      };
     } catch (error) {
       const errorMessage = error.response?.data?.error?.message || error.message || 'Unknown error';
       this.logger.error(`Error calling LLM ${aiModel.name}: ${errorMessage}`, error.stack);

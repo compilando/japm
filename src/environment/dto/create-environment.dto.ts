@@ -3,8 +3,8 @@ import { IsString, IsNotEmpty, IsOptional, MaxLength } from 'class-validator';
 
 export class CreateEnvironmentDto {
     @ApiProperty({
-        description: 'Nombre único del entorno',
-        example: 'produccion',
+        description: 'Unique name of the environment',
+        example: 'production',
         maxLength: 255,
     })
     @IsString()
@@ -13,8 +13,8 @@ export class CreateEnvironmentDto {
     name: string;
 
     @ApiProperty({
-        description: 'Descripción opcional del entorno',
-        example: 'Entorno de producción principal',
+        description: 'Optional description of the environment',
+        example: 'Main production environment',
         required: false,
     })
     @IsOptional()

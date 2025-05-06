@@ -4,22 +4,22 @@ import { Observable } from 'rxjs';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
-    // Este guard activa la 'jwt' strategy (JwtStrategy)
-    // La lógica de validación del token y extracción del payload está en JwtStrategy.validate()
+    // This guard activates the 'jwt' strategy (JwtStrategy)
+    // The logic for token validation and payload extraction is in JwtStrategy.validate()
 
-    // Opcionalmente, puedes sobreescribir handleRequest para personalizar el manejo de errores
-    // o para permitir acceso incluso si el token no es válido (por ejemplo, para rutas opcionalmente autenticadas)
+    // Optionally, you can override handleRequest to customize error handling
+    // or to allow access even if the token is invalid (e.g., for optionally authenticated routes)
     /*
     handleRequest(err, user, info, context: ExecutionContext) {
-        // err: Error durante la validación (ej: token inválido, expirado)
-        // user: Payload devuelto por JwtStrategy.validate (o false si falló)
-        // info: Información adicional, como el error específico (JsonWebTokenError, TokenExpiredError)
+        // err: Error during validation (e.g., invalid token, expired)
+        // user: Payload returned by JwtStrategy.validate (or false if validation failed)
+        // info: Additional information, such as the specific error (JsonWebTokenError, TokenExpiredError)
         
         if (err || !user) {
-            // Puedes loggear info.message o err.message
+            // You can log info.message or err.message
             throw err || new UnauthorizedException(info?.message || 'Invalid or expired token');
         }
-        return user; // Si es válido, devuelve el usuario (adjuntado a req.user)
+        return user; // If valid, return the user (attached to req.user)
     }
     */
 } 

@@ -1,5 +1,5 @@
-import { CanActivate, ExecutionContext, Injectable, NotFoundException, BadRequestException, ForbiddenException, UnauthorizedException, Logger } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service'; // Ajusta la ruta si es necesario
+import { CanActivate, ExecutionContext, Injectable, NotFoundException, BadRequestException, ForbiddenException, UnauthorizedException, Logger, InternalServerErrorException } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service'; // Corrected path assuming standard structure
 // import { validate as isUuid } from 'uuid'; // O usa class-validator si prefieres
 // Asumiendo CUIDs para IDs de proyecto
 
@@ -76,7 +76,7 @@ export class ProjectGuard implements CanActivate {
             // Log unexpected errors
             this.logger.error(`Unexpected error in ProjectGuard for projectId ${projectId} and userId ${user.userId}:`, error.stack || error); // Use user.userId in log
             // Throw a generic internal server error
-            throw new Error('An internal error occurred while authorizing project access.'); // Avoid exposing details
+            throw new InternalServerErrorException('An internal error occurred while authorizing project access.'); // Use NestJS exception
         }
     }
 } 

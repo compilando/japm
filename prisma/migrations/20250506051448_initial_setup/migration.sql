@@ -38,9 +38,7 @@ CREATE TABLE "Prompt" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL DEFAULT '',
-    "tactic" TEXT,
     "project" TEXT NOT NULL,
-    CONSTRAINT "Prompt_tactic_fkey" FOREIGN KEY ("tactic") REFERENCES "Tactic" ("name") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "Prompt_project_fkey" FOREIGN KEY ("project") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -56,18 +54,6 @@ CREATE TABLE "PromptVersion" (
     "aiModelId" TEXT,
     CONSTRAINT "PromptVersion_prompt_fkey" FOREIGN KEY ("prompt") REFERENCES "Prompt" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "PromptVersion_aiModelId_fkey" FOREIGN KEY ("aiModelId") REFERENCES "AIModel" ("id") ON DELETE SET NULL ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "Tactic" (
-    "name" TEXT NOT NULL PRIMARY KEY,
-    "region" TEXT,
-    "culturalDataId" TEXT,
-    "tacticsConfig" TEXT,
-    "project" TEXT NOT NULL,
-    CONSTRAINT "Tactic_region_fkey" FOREIGN KEY ("region") REFERENCES "Region" ("languageCode") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "Tactic_culturalDataId_fkey" FOREIGN KEY ("culturalDataId") REFERENCES "CulturalData" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "Tactic_project_fkey" FOREIGN KEY ("project") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -205,6 +191,17 @@ CREATE TABLE "PromptExecutionLog" (
 );
 
 -- CreateTable
+CREATE TABLE "SystemPrompt" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "promptText" TEXT NOT NULL,
+    "category" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateTable
 CREATE TABLE "_PromptTags" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
@@ -244,9 +241,6 @@ CREATE INDEX "CulturalData_regionId_idx" ON "CulturalData"("regionId");
 CREATE INDEX "CulturalData_project_idx" ON "CulturalData"("project");
 
 -- CreateIndex
-CREATE INDEX "Prompt_tactic_idx" ON "Prompt"("tactic");
-
--- CreateIndex
 CREATE INDEX "Prompt_project_idx" ON "Prompt"("project");
 
 -- CreateIndex
@@ -260,15 +254,6 @@ CREATE INDEX "PromptVersion_aiModelId_idx" ON "PromptVersion"("aiModelId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "PromptVersion_prompt_versionTag_key" ON "PromptVersion"("prompt", "versionTag");
-
--- CreateIndex
-CREATE INDEX "Tactic_region_idx" ON "Tactic"("region");
-
--- CreateIndex
-CREATE INDEX "Tactic_culturalDataId_idx" ON "Tactic"("culturalDataId");
-
--- CreateIndex
-CREATE INDEX "Tactic_project_idx" ON "Tactic"("project");
 
 -- CreateIndex
 CREATE INDEX "PromptTranslation_version_idx" ON "PromptTranslation"("version");
@@ -350,6 +335,9 @@ CREATE INDEX "PromptExecutionLog_userId_idx" ON "PromptExecutionLog"("userId");
 
 -- CreateIndex
 CREATE INDEX "PromptExecutionLog_timestamp_idx" ON "PromptExecutionLog"("timestamp");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SystemPrompt_name_key" ON "SystemPrompt"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "_PromptTags_AB_unique" ON "_PromptTags"("A", "B");

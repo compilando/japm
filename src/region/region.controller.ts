@@ -34,13 +34,13 @@ export class RegionController {
 
     @Post()
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-    @ApiOperation({ summary: 'Crear una nueva región para un proyecto específico' })
-    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
+    @ApiOperation({ summary: 'Creates a new region for a specific project' })
+    @ApiParam({ name: 'projectId', description: 'Project ID', type: String })
     @ApiBody({ type: CreateRegionDto })
-    @ApiResponse({ status: 201, description: 'Región creada.', type: CreateRegionDto })
-    @ApiResponse({ status: 400, description: 'Datos inválidos.' })
-    @ApiResponse({ status: 404, description: 'Región padre no encontrada.' })
-    @ApiResponse({ status: 409, description: 'languageCode ya existe.' })
+    @ApiResponse({ status: 201, description: 'Region created.', type: CreateRegionDto })
+    @ApiResponse({ status: 400, description: 'Invalid data.' })
+    @ApiResponse({ status: 404, description: 'Parent region not found.' })
+    @ApiResponse({ status: 409, description: 'languageCode already exists.' })
     async create(@Req() req: RequestWithProject, @Body() createRegionDto: CreateRegionDto): Promise<Region> {
         const projectId = req.projectId;
         const newRegion = await this.regionService.create(createRegionDto, projectId);
@@ -53,9 +53,9 @@ export class RegionController {
 
     @Get()
     @UseInterceptors(CacheInterceptor)
-    @ApiOperation({ summary: 'Obtener todas las regiones para un proyecto específico' })
-    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
-    @ApiResponse({ status: 200, description: 'Lista de regiones.', type: [CreateRegionDto] })
+    @ApiOperation({ summary: 'Gets all regions for a specific project' })
+    @ApiParam({ name: 'projectId', description: 'Project ID', type: String })
+    @ApiResponse({ status: 200, description: 'List of regions.', type: [CreateRegionDto] })
     findAll(@Req() req: RequestWithProject): Promise<Region[]> {
         const projectId = req.projectId;
         // console.log(`Cache MISS: RegionController.findAll(${projectId}) executed`);
@@ -63,11 +63,11 @@ export class RegionController {
     }
 
     @Get(':languageCode')
-    @ApiOperation({ summary: 'Obtener una región específica dentro de un proyecto' })
-    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
-    @ApiParam({ name: 'languageCode', description: 'Código de idioma (ID) de la región', type: String })
-    @ApiResponse({ status: 200, description: 'Región encontrada.', type: CreateRegionDto })
-    @ApiResponse({ status: 404, description: 'Proyecto o Región no encontrada.' })
+    @ApiOperation({ summary: 'Gets a specific region within a project' })
+    @ApiParam({ name: 'projectId', description: 'Project ID', type: String })
+    @ApiParam({ name: 'languageCode', description: 'Language code (ID) of the region', type: String })
+    @ApiResponse({ status: 200, description: 'Region found.', type: CreateRegionDto })
+    @ApiResponse({ status: 404, description: 'Project or Region not found.' })
     findOne(@Req() req: RequestWithProject, @Param('languageCode') languageCode: string): Promise<Region> {
         const projectId = req.projectId;
         return this.regionService.findOne(languageCode, projectId);
@@ -75,13 +75,13 @@ export class RegionController {
 
     @Patch(':languageCode')
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, skipMissingProperties: true }))
-    @ApiOperation({ summary: 'Actualizar una región específica dentro de un proyecto' })
-    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
-    @ApiParam({ name: 'languageCode', description: 'Código de idioma (ID) de la región a actualizar', type: String })
+    @ApiOperation({ summary: 'Updates a specific region within a project' })
+    @ApiParam({ name: 'projectId', description: 'Project ID', type: String })
+    @ApiParam({ name: 'languageCode', description: 'Language code (ID) of the region to update', type: String })
     @ApiBody({ type: UpdateRegionDto })
-    @ApiResponse({ status: 200, description: 'Región actualizada.', type: CreateRegionDto })
-    @ApiResponse({ status: 404, description: 'Proyecto o Región no encontrada.' })
-    @ApiResponse({ status: 400, description: 'Datos inválidos (languageCode no se puede cambiar).' })
+    @ApiResponse({ status: 200, description: 'Region updated.', type: CreateRegionDto })
+    @ApiResponse({ status: 404, description: 'Project or Region not found.' })
+    @ApiResponse({ status: 400, description: 'Invalid data (languageCode cannot be changed).' })
     async update(
         @Req() req: RequestWithProject,
         @Param('languageCode') languageCode: string,
@@ -98,11 +98,11 @@ export class RegionController {
     }
 
     @Delete(':languageCode')
-    @ApiOperation({ summary: 'Eliminar una región específica dentro de un proyecto' })
-    @ApiParam({ name: 'projectId', description: 'ID del proyecto', type: String })
-    @ApiParam({ name: 'languageCode', description: 'Código de idioma (ID) de la región a eliminar', type: String })
-    @ApiResponse({ status: 200, description: 'Región eliminada.' })
-    @ApiResponse({ status: 404, description: 'Proyecto o Región no encontrada.' })
+    @ApiOperation({ summary: 'Deletes a specific region within a project' })
+    @ApiParam({ name: 'projectId', description: 'Project ID', type: String })
+    @ApiParam({ name: 'languageCode', description: 'Language code (ID) of the region to delete', type: String })
+    @ApiResponse({ status: 200, description: 'Region deleted.' })
+    @ApiResponse({ status: 404, description: 'Project or Region not found.' })
     async remove(@Req() req: RequestWithProject, @Param('languageCode') languageCode: string): Promise<Region> {
         const projectId = req.projectId;
         const removedRegion = await this.regionService.remove(languageCode, projectId);

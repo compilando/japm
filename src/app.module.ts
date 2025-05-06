@@ -4,7 +4,6 @@ import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 import { RegionModule } from './region/region.module';
 import { CulturalDataModule } from './cultural-data/cultural-data.module';
-import { TacticModule } from './tactic/tactic.module';
 import { PromptModule } from './prompt/prompt.module';
 import { PromptAssetModule } from './prompt-asset/prompt-asset.module';
 import { PromptAssetLinkModule } from './prompt-asset-link/prompt-asset-link.module';
@@ -26,6 +25,7 @@ import { AuthModule } from './auth/auth.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LlmExecutionModule } from './llm-execution/llm-execution.module';
+import { SystemPromptModule } from './system-prompt/system-prompt.module';
 
 @Module({
   imports: [
@@ -39,7 +39,6 @@ import { LlmExecutionModule } from './llm-execution/llm-execution.module';
     AuthModule,
     RegionModule,
     CulturalDataModule,
-    TacticModule,
     PromptModule,
     PromptAssetModule,
     PromptAssetLinkModule,
@@ -56,6 +55,7 @@ import { LlmExecutionModule } from './llm-execution/llm-execution.module';
     ExecutionLogModule,
     EnvironmentModule,
     LlmExecutionModule,
+    SystemPromptModule,
   ],
   controllers: [AppController],
   providers: [AppService],

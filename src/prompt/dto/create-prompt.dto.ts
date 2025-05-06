@@ -1,59 +1,68 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, Matches, IsArray, ValidateNested, ArrayUnique, Length } from 'class-validator';
+import {
+    IsString,
+    IsNotEmpty,
+    IsOptional,
+    Matches,
+    IsArray,
+    ValidateNested,
+    ArrayUnique,
+    Length,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
-// DTO auxiliar movido aquí o importado de un lugar común
+// Auxiliary DTO moved here or imported from a common place
 class InitialTranslationDto {
-    @ApiProperty({ description: 'Código de idioma ISO (e.g., es, en)' })
+    @ApiProperty({ description: 'ISO language code (e.g., es, en)' })
     @IsString()
     @IsNotEmpty()
-    @Length(2, 10) // Ajustar si es necesario
+    @Length(2, 10) // Adjust if necessary
     languageCode: string;
 
-    @ApiProperty({ description: 'Texto traducido del prompt' })
+    @ApiProperty({ description: 'Translated prompt text' })
     @IsString()
     @IsNotEmpty()
     promptText: string;
 }
 
 export class CreatePromptDto {
-    @ApiProperty({ description: 'Nombre único del prompt (usado como ID)', example: 'saludo_bienvenida_cliente' })
+    @ApiProperty({ description: 'Unique prompt name (used as ID)', example: 'customer_welcome_greeting' })
     @IsString()
     @IsNotEmpty()
     @Matches(/^[a-z0-9_]+$/, {
-        message: 'Prompt name must contain only lowercase letters, numbers, and underscores.'
+        message: 'Prompt name must contain only lowercase letters, numbers, and underscores.',
     })
     name: string;
 
-    @ApiPropertyOptional({ description: 'Descripción del propósito del prompt.', example: 'Prompt inicial para saludar a un cliente.' })
+    @ApiPropertyOptional({ description: 'Description of the prompt\'s purpose.', example: 'Initial prompt to greet a customer.' })
     @IsOptional()
     @IsString()
     description?: string;
 
-    @ApiPropertyOptional({ description: 'ID (nombre) de la táctica conversacional asociada.', example: 'small_talk_inicio' })
+    @ApiPropertyOptional({ description: 'ID (name) of the associated conversational tactic.', example: 'start_small_talk' })
     @IsOptional()
     @IsString()
     tacticId?: string;
 
-    @ApiPropertyOptional({ description: 'Lista de nombres de etiquetas a asociar.', example: ['bienvenida', 'general'] })
+    @ApiPropertyOptional({ description: 'List of tag names to associate.', example: ['welcome', 'general'] })
     @IsOptional()
     @IsArray()
     @IsString({ each: true })
     @ArrayUnique()
     tags?: string[];
 
-    @ApiProperty({ description: 'Texto base del prompt para la primera versión (v1.0.0)', example: 'Hola {{nombre_cliente}}, bienvenido.' })
+    @ApiProperty({ description: 'Base prompt text for the first version (v1.0.0)', example: 'Hello {{customer_name}}, welcome.' })
     @IsString()
     @IsNotEmpty()
     promptText: string;
 
-    @ApiPropertyOptional({ description: 'Traducciones iniciales opcionales para la primera versión', type: [InitialTranslationDto] })
+    @ApiPropertyOptional({ description: 'Optional initial translations for the first version', type: [InitialTranslationDto] })
     @IsOptional()
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => InitialTranslationDto)
     initialTranslations?: InitialTranslationDto[];
 
-    // activeVersionId no se establece en la creación, se maneja por separado o al crear la 1ra versión.
-    // versions se manejan a través de su propio endpoint/servicio.
+    // activeVersionId is not set on creation, handled separately or when creating the 1st version.
+    // versions are handled via their own endpoint/service.
 } 

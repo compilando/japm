@@ -2,7 +2,7 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 
-// Interfaz opcional para tipar los datos del log
+// Optional interface for typing log data
 export interface PromptExecutionLogData {
     projectId: string;
     promptVersionId: string;
@@ -34,11 +34,11 @@ export class ExecutionLogService {
                     errorMessage,
                     environmentId: environmentId,
                     userId: userId,
-                    // timestamp se establece por defecto
+                    // timestamp is set by default
                 },
             });
         } catch (error) {
-            // Manejar errores importantes (ej: FK no encontrada), pero no bloquear la ejecución principal
+            // Handle important errors (e.g., FK not found), but do not block main execution
             console.error('Failed to log prompt execution:', {
                 error: error.message,
                 projectId,
@@ -46,12 +46,12 @@ export class ExecutionLogService {
                 userId,
                 environmentId,
             });
-            // Podríamos lanzar un error interno si el loggeo es crítico,
-            // pero generalmente es mejor solo registrar el fallo del log.
+            // We could throw an internal error if logging is critical,
+            // but generally it's better to just log the logging failure.
             // throw new InternalServerErrorException('Failed to save execution log');
         }
     }
 
-    // Podrías añadir métodos para consultar logs aquí si es necesario
+    // You could add methods to query logs here if needed
     // async findLogs(...) { ... }
 } 
