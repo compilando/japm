@@ -84,18 +84,6 @@ export class ServePromptService {
                 assetVersionsMap.set(av.id, av);
             }
         }
-        // --- FIN NUEVO ---
-
-        // --- DEBUG (Eliminado o comentado si ya no es necesario) ---
-        /*
-        if (versionToUse.assets && versionToUse.assets.length > 0) {
-            console.log("DEBUG: Structure of first asset link:", JSON.stringify(versionToUse.assets[0], null, 2));
-            console.log("DEBUG: Does link have assetVersion property?", versionToUse.assets[0].hasOwnProperty('assetVersion'));
-        } else {
-            console.log("DEBUG: versionToUse.assets is empty or undefined.");
-        }
-        */
-        // --- FIN DEBUG ---
 
         // 3. Determine language and get base prompt text
         const finalLanguageCode = languageCode;

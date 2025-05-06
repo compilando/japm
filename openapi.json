@@ -4783,6 +4783,52 @@
           "System Prompts"
         ]
       }
+    },
+    "/api/execute-raw": {
+      "post": {
+        "operationId": "RawExecutionController_executeRawText",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteRawDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Execution successful, response from AI model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data or unsupported provider."
+          },
+          "404": {
+            "description": "SystemPrompt or AIModel not found."
+          },
+          "500": {
+            "description": "Internal server error (API Key config, LLM execution failed)."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Executes raw text using a specified System Prompt and AI Model ID.",
+        "tags": [
+          "Raw Execution"
+        ]
+      }
     }
   },
   "info": {
@@ -5906,6 +5952,31 @@
             "example": "summarization"
           }
         }
+      },
+      "ExecuteRawDto": {
+        "type": "object",
+        "properties": {
+          "userText": {
+            "type": "string",
+            "description": "The raw text input from the user.",
+            "example": "Explain the process of photosynthesis in simple terms."
+          },
+          "systemPromptName": {
+            "type": "string",
+            "description": "The unique name of the SystemPrompt to use.",
+            "example": "helpful_assistant_concise"
+          },
+          "aiModelId": {
+            "type": "string",
+            "description": "The unique ID (CUID) of the AIModel to use for execution.",
+            "example": "cmac24bp1000ck6x5iwgju5p1"
+          }
+        },
+        "required": [
+          "userText",
+          "systemPromptName",
+          "aiModelId"
+        ]
       }
     }
   }

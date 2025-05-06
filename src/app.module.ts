@@ -26,6 +26,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LlmExecutionModule } from './llm-execution/llm-execution.module';
 import { SystemPromptModule } from './system-prompt/system-prompt.module';
+import { RawExecutionModule } from './raw-execution/raw-execution.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { SystemPromptModule } from './system-prompt/system-prompt.module';
     EnvironmentModule,
     LlmExecutionModule,
     SystemPromptModule,
+    RawExecutionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

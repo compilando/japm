@@ -31,11 +31,26 @@ export class SystemPromptService {
     }
 
     async findAll(): Promise<SystemPrompt[]> {
+        this.logger.log('Fetching all system prompts');
         const prompts = await this.prisma.systemPrompt.findMany({
             orderBy: { name: 'asc' }, // Order alphabetically by name
         });
+        this.logger.debug(`Found ${prompts.length} raw system prompts. Data: ${JSON.stringify(prompts)}`);
         // Resolve file directives for all found prompts
-        return Promise.all(prompts.map(prompt => this._resolvePromptObject(prompt)));
+        const resolvedPrompts = await Promise.all(prompts.map(prompt => this._resolvePromptObject(prompt)));
+        this.logger.debug(`Returning ${resolvedPrompts.length} resolved system prompts.`);
+        return resolvedPrompts;
+    }
+
+    async findOne(id: string): Promise<SystemPrompt | null> {
+        const prompt = await this.prisma.systemPrompt.findUnique({
+            where: { id },
+        });
+        if (!prompt) {
+            throw new NotFoundException(`System prompt with id "${id}" not found.`);
+        }
+        // Resolve file directive before returning
+        return this._resolvePromptObject(prompt);
     }
 
     async findOneByName(name: string): Promise<SystemPrompt> {

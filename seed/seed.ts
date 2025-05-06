@@ -257,51 +257,25 @@ async function main() {
 
     console.log('Upserted CulturalData for US (ID: standard-business)');
 
-    // --- EXAMPLE: Seeding a Prompt (Optional, customize as needed) ---
-    /*
-        console.log('Seeding example prompt...');
-        const examplePrompt = await prisma.prompt.upsert({
-            where: { projectId_name: { name: 'example-greeting', projectId: defaultProject.id } },
-            update: { description: 'Simple greeting prompt' },
-            create: {
-                name: 'example-greeting',
-                description: 'Simple greeting prompt',
-                projectId: defaultProject.id,
-                // tacticId: tacticES.name, // Example: Link to a tactic if needed
-                tags: {
-                    connect: [{ projectId_name: { name: 'Core', projectId: defaultProject.id } }]
-                }
-            }
-        });
-    
-        const examplePromptVersion = await prisma.promptVersion.upsert({
-            where: { promptId_versionTag: { promptId: examplePrompt.id, versionTag: 'v1.0.0' } },
-            update: { promptText: 'Hello there! How can I assist you today?' },
-            create: {
-                promptId: examplePrompt.id,
-                versionTag: 'v1.0.0',
-                promptText: 'Hello there! How can I assist you today?',
-                status: 'draft',
-                // aiModelId: projectAiModels.find(m => m.name === 'GPT-4o')?.id // Link to an AI Model if needed (ensure ID exists)
-                // Ensure aiModelId exists or handle null case
-                aiModel: projectAiModels.find(m => m.name === 'GPT-4o') ? { connect: { id: projectAiModels.find(m => m.name === 'GPT-4o')?.id } } : undefined
-            }
-        });
-        console.log(`Seeded prompt: ${examplePrompt.name} Version: ${examplePromptVersion.versionTag}`);
-    */
-
-    // --- Seeding System Prompts (Example) ---
-    /*
-    console.log('Seeding example system prompts...');
-    await prisma.systemPrompt.createMany({
-        data: [
-            { name: 'summarize_meeting', description: 'Summarizes meeting notes', promptText: 'Please summarize the key points and action items from the following meeting notes:', category: 'summarization' },
-            { name: 'translate_es_en', description: 'Translates Spanish text to English', promptText: 'Translate the following Spanish text to English:', category: 'translation' },
-        ],
-        skipDuplicates: true, // Avoid errors if they already exist
+    // 8. Upsert Specific System Prompts (Global)
+    console.log('Upserting specific System Prompts...');
+    await prisma.systemPrompt.upsert({
+        where: { name: 'prompt-improver' },
+        update: {
+            description: 'Improves a given prompt based on best practices.',
+            promptText: "${file('resources/system-prompts/prompt-improver.md')}", // Asegúrate que esta ruta sea correcta
+            category: 'Prompt Engineering',
+        },
+        create: {
+            name: 'prompt-improver',
+            description: 'Improves a given prompt based on best practices.',
+            promptText: "${file('resources/system-prompts/prompt-improver.md')}", // Asegúrate que esta ruta sea correcta
+            category: 'Prompt Engineering',
+        },
     });
-    console.log('Example system prompts seeded.');
-    */
+    console.log('Upserted System Prompt: prompt-improver');
+
+    // --- END BASE DATA --- //
 
     console.log(`Seeding finished.`);
 }
