@@ -797,7 +797,7 @@
             "description": "Invalid data (e.g., missing initial promptText)."
           },
           "404": {
-            "description": "Project, Tactic or Tag not found."
+            "description": "Project or Tag not found."
           },
           "409": {
             "description": "Conflict, a prompt with this name already exists in the project."
@@ -2475,7 +2475,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateAiModelDto"
+                  "$ref": "#/components/schemas/AiModelResponseDto"
                 }
               }
             }
@@ -2517,7 +2517,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/CreateAiModelDto"
+                    "$ref": "#/components/schemas/AiModelResponseDto"
                   }
                 }
               }
@@ -2564,7 +2564,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateAiModelDto"
+                  "$ref": "#/components/schemas/AiModelResponseDto"
                 }
               }
             }
@@ -2621,7 +2621,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateAiModelDto"
+                  "$ref": "#/components/schemas/AiModelResponseDto"
                 }
               }
             }
@@ -2674,7 +2674,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateAiModelDto"
+                  "$ref": "#/components/schemas/AiModelResponseDto"
                 }
               }
             }
@@ -2724,7 +2724,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateTagDto"
+                  "$ref": "#/components/schemas/TagDto"
                 }
               }
             }
@@ -2770,7 +2770,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/CreateTagDto"
+                    "$ref": "#/components/schemas/TagDto"
                   }
                 }
               }
@@ -2820,7 +2820,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateTagDto"
+                  "$ref": "#/components/schemas/TagDto"
                 }
               }
             }
@@ -2877,7 +2877,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateTagDto"
+                  "$ref": "#/components/schemas/TagDto"
                 }
               }
             }
@@ -2930,7 +2930,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateTagDto"
+                  "$ref": "#/components/schemas/TagDto"
                 }
               }
             }
@@ -2982,7 +2982,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateTagDto"
+                  "$ref": "#/components/schemas/TagDto"
                 }
               }
             }
@@ -5175,11 +5175,6 @@
             "description": "Description of the prompt's purpose.",
             "example": "Initial prompt to greet a customer."
           },
-          "tacticId": {
-            "type": "string",
-            "description": "ID (name) of the associated conversational tactic.",
-            "example": "start_small_talk"
-          },
           "tags": {
             "uniqueItems": true,
             "description": "List of tag names to associate.",
@@ -5218,11 +5213,10 @@
             "description": "New description of the prompt's purpose.",
             "example": "Updated prompt for greetings."
           },
-          "tacticId": {
+          "promptText": {
             "type": "string",
-            "nullable": true,
-            "description": "ID of the tactic to associate, or null to disassociate.",
-            "example": "continue_small_talk"
+            "description": "Base prompt text for the latest version. If provided, updates the text of the most recent version of this prompt.",
+            "example": "Hello {{customer_name}}, welcome again."
           },
           "tagIds": {
             "description": "Complete list of Tag IDs to associate (replaces existing ones). Empty array to remove all.",
@@ -5633,6 +5627,80 @@
           "name"
         ]
       },
+      "AiModelResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique CUID of the AI model",
+            "example": "clxkzjw8z0000k6x5abcd1234"
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique name for the AI model within the project",
+            "example": "gpt-4o-mini"
+          },
+          "provider": {
+            "type": "string",
+            "nullable": true,
+            "description": "Provider of the AI model",
+            "example": "OpenAI"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional description for the AI model"
+          },
+          "apiIdentifier": {
+            "type": "string",
+            "nullable": true,
+            "description": "Identifier used for API calls",
+            "example": "gpt-4o-mini"
+          },
+          "apiKeyEnvVar": {
+            "type": "string",
+            "nullable": true,
+            "description": "Environment variable name for the API Key"
+          },
+          "temperature": {
+            "type": "number",
+            "nullable": true,
+            "description": "Default temperature setting",
+            "example": 0.7
+          },
+          "maxTokens": {
+            "type": "number",
+            "nullable": true,
+            "description": "Default max tokens setting",
+            "example": 4096
+          },
+          "supportsJson": {
+            "type": "boolean",
+            "description": "Whether the model reliably supports JSON output mode"
+          },
+          "contextWindow": {
+            "type": "number",
+            "nullable": true,
+            "description": "Maximum context window size in tokens"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Timestamp of creation"
+          },
+          "projectId": {
+            "type": "string",
+            "description": "ID of the project this model belongs to",
+            "example": "clwabcdefgh0001k6x5efgh5678"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "createdAt",
+          "projectId"
+        ]
+      },
       "UpdateAiModelDto": {
         "type": "object",
         "properties": {
@@ -5674,6 +5742,37 @@
         },
         "required": [
           "name"
+        ]
+      },
+      "TagDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique ID of the tag (CUID)",
+            "example": "clxrb8rnr0000k4yl9k5l3w1e"
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique tag name within the project",
+            "example": "customer_feedback"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the tag",
+            "example": "Tags related to customer feedback."
+          },
+          "projectId": {
+            "type": "string",
+            "description": "ID of the project this tag belongs to (CUID)",
+            "example": "clxrb7t8h0000k4ylbafh4n6y"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "projectId"
         ]
       },
       "UpdateTagDto": {

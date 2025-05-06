@@ -44,18 +44,6 @@ async function main() {
         create: { projectId: crProjectId, name: 'gpt-4o-mini-2024-07-18', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
         select: { id: true }
     });
-    const crClaudeOpus = await prisma.aIModel.upsert({
-        where: { projectId_name: { projectId: crProjectId, name: 'claude-3-opus-20240229' } },
-        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
-        create: { projectId: crProjectId, name: 'claude-3-opus-20240229', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
-        select: { id: true }
-    });
-    const crClaudeHaiku = await prisma.aIModel.upsert({
-        where: { projectId_name: { projectId: crProjectId, name: 'claude-3-haiku-20240307' } },
-        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
-        create: { projectId: crProjectId, name: 'claude-3-haiku-20240307', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
-        select: { id: true }
-    });
     console.log(`Upserted AI Models for project ${crProjectId}`);
 
     // Upsert Creative Tags with prefix

@@ -39,11 +39,6 @@ export class CreatePromptDto {
     @IsString()
     description?: string;
 
-    @ApiPropertyOptional({ description: 'ID (name) of the associated conversational tactic.', example: 'start_small_talk' })
-    @IsOptional()
-    @IsString()
-    tacticId?: string;
-
     @ApiPropertyOptional({ description: 'List of tag names to associate.', example: ['welcome', 'general'] })
     @IsOptional()
     @IsArray()

@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { ExecuteRawDto } from './dto/execute-raw.dto';
 import { ChatOpenAI } from "@langchain/openai";
+import { SystemPromptService } from '../system-prompt/system-prompt.service';
 // Import other LangChain models as needed, e.g., import { ChatAnthropic } from "@langchain/anthropic";
 
 @Injectable()
@@ -13,15 +14,14 @@ export class RawExecutionService {
     constructor(
         private prisma: PrismaService,
         private configService: ConfigService,
+        private systemPromptService: SystemPromptService
     ) { }
 
     async executeRaw(dto: ExecuteRawDto): Promise<{ response: string }> {
         const { userText, systemPromptName, aiModelId } = dto;
 
-        // 1. Fetch System Prompt (Global)
-        const systemPrompt = await this.prisma.systemPrompt.findUnique({
-            where: { name: systemPromptName },
-        });
+        // 1. Fetch System Prompt (Handles file directive resolution)
+        const systemPrompt = await this.systemPromptService.findOneByName(systemPromptName);
         if (!systemPrompt) {
             this.logger.warn(`SystemPrompt not found: ${systemPromptName}`);
             throw new NotFoundException(`SystemPrompt "${systemPromptName}" not found.`);
@@ -48,7 +48,7 @@ export class RawExecutionService {
 
         // 4. Construct Final Prompt
         const finalPrompt = `${systemPrompt.promptText}\n\n---\n\nUser Input:\n${userText}`;
-        this.logger.debug(`Executing with AI Model: ${aiModel.name}, System Prompt: ${systemPrompt.name}`);
+        this.logger.debug(`Executing with AI Model: ${aiModel.name}, System Prompt: ${systemPrompt.name}, Final Prompt: ${finalPrompt}`);
 
         // 5. Instantiate and Invoke LangChain Model
         try {
@@ -81,10 +81,21 @@ export class RawExecutionService {
             const response = await llm.invoke(finalPrompt);
             this.logger.log(`LLM invocation successful.`);
 
-            // Assuming response structure has a 'content' field or similar
-            const responseContent = typeof response.content === 'string' ? response.content : JSON.stringify(response);
+            // Extract the raw content from the LLM response (might be string or object)
+            // Assuming response.content is the primary way Langchain returns the text
+            const rawResponseContent = response?.content;
 
-            return { response: responseContent };
+            // Ensure we have a string to return
+            const responseText = typeof rawResponseContent === 'string'
+                ? rawResponseContent
+                : JSON.stringify(rawResponseContent ?? ''); // Stringify if not a string, or use empty string if null/undefined
+
+            if (typeof rawResponseContent !== 'string') {
+                this.logger.warn(`LLM response content was not a string for model ID ${aiModelId}. Raw content: ${responseText}`);
+            }
+
+            // Return the extracted text directly
+            return { response: responseText };
 
         } catch (error) {
             this.logger.error(`Error during LLM execution for model ID ${aiModelId}: ${error.message}`, error.stack);

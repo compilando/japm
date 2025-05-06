@@ -94,7 +94,7 @@ export class PromptService {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
                 throw new ConflictException(`Prompt with name '${name}' already exists in project '${projectId}'.`);
             }
-            // P2025: Referenced Project or Tactic not found
+            // P2025: Referenced Project not found
             else if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
                 throw new NotFoundException(`Referenced Project (ID: ${projectId}) not found.`);
             }
@@ -181,23 +181,19 @@ export class PromptService {
     }
 
     async update(promptId: string, updateDto: UpdatePromptDto, projectId: string): Promise<PromptWithRelations> {
-        // 1. Verify the prompt exists in the project (using CUID)
-        await this.findOne(promptId, projectId);
+        const prompt = await this.findOne(promptId, projectId);
 
-        // Solo permitir actualizar description, tagIds (NO name)
-        const { tagIds, description } = updateDto;
-        const data: Prisma.PromptUpdateInput = {};
+        const { tagIds, description, promptText } = updateDto;
+        const promptDataToUpdate: Prisma.PromptUpdateInput = {};
+        const operations: Prisma.PrismaPromise<any>[] = [];
 
-        if (description !== undefined) data.description = description;
+        if (description !== undefined) {
+            promptDataToUpdate.description = description;
+        }
 
-        // Tag update logic
         if (tagIds !== undefined) {
-            // Verify tags belong to the project
             const tagsInProject = await this.prisma.tag.findMany({
-                where: {
-                    id: { in: tagIds },
-                    projectId: projectId
-                },
+                where: { id: { in: tagIds }, projectId: projectId },
                 select: { id: true }
             });
             if (tagsInProject.length !== tagIds.length) {
@@ -205,26 +201,47 @@ export class PromptService {
                 const missingTagIds = tagIds.filter(id => !foundTagIds.has(id));
                 throw new NotFoundException(`Tags with IDs [${missingTagIds.join(', ')}] not found in project '${projectId}'.`);
             }
-            data.tags = { set: tagIds.map(id => ({ id: id })) };
+            promptDataToUpdate.tags = { set: tagIds.map(id => ({ id: id })) };
         }
 
-        if (Object.keys(data).length === 0) {
+        if (promptText !== undefined) {
+            const latestVersion = await this.prisma.promptVersion.findFirst({
+                where: { promptId: prompt.id },
+                orderBy: { createdAt: 'desc' },
+            });
+
+            if (latestVersion) {
+                operations.push(
+                    this.prisma.promptVersion.update({
+                        where: { id: latestVersion.id },
+                        data: { promptText: promptText },
+                    })
+                );
+            } else {
+                console.warn(`Prompt with ID "${promptId}" has no versions. Cannot update promptText.`);
+            }
+        }
+
+        if (Object.keys(promptDataToUpdate).length > 0) {
+            operations.push(
+                this.prisma.prompt.update({
+                    where: { id: promptId },
+                    data: promptDataToUpdate,
+                })
+            );
+        }
+
+        if (operations.length === 0) {
             console.warn(`Update called for prompt "${promptId}" with no data to change.`);
             return this.findOne(promptId, projectId);
         }
 
         try {
-            // Update using the CUID
-            await this.prisma.prompt.update({
-                where: { id: promptId },
-                data,
-            });
-            // Refetch to return updated data with relations
+            await this.prisma.$transaction(operations);
             return this.findOne(promptId, projectId);
         } catch (error) {
-            // P2025: Record to update/connect not found
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException(`Prompt "${promptId}" or related Tag not found during update.`);
+                throw new NotFoundException(`Prompt "${promptId}" or related entity not found during update.`);
             }
             console.error(`Error updating prompt ${promptId}:`, error);
             throw error;

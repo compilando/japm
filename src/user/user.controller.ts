@@ -4,10 +4,13 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { User } from '@prisma/client'; // Import User type from Prisma
+import { Logger } from '@nestjs/common'; // Import Logger
 
 @ApiTags('Users') // Tag for grouping in Swagger
 @Controller('api/users') // Base path for this controller
 export class UserController {
+    private readonly logger = new Logger(UserController.name); // Add Logger instance
+
     constructor(private readonly userService: UserService) { }
 
     @Post()
@@ -17,6 +20,7 @@ export class UserController {
     @ApiResponse({ status: 201, description: 'User created successfully.', type: CreateUserDto }) // Or a User DTO without password if preferred
     @ApiResponse({ status: 400, description: 'Invalid input data.' })
     create(@Body() createUserDto: CreateUserDto): Promise<User> {
+        this.logger.debug(`[create] Received POST request. Body: ${JSON.stringify(createUserDto, null, 2)}`); // Log the received DTO (Consider masking password)
         // Note: Returning the created user might expose the password hash.
         // Consider returning a specific DTO or just a success message.
         return this.userService.create(createUserDto);
@@ -47,6 +51,7 @@ export class UserController {
     @ApiResponse({ status: 404, description: 'User not found.' })
     @ApiResponse({ status: 400, description: 'Invalid input data.' })
     update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto): Promise<User> {
+        this.logger.debug(`[update] Received PATCH for userId: ${id}. Body: ${JSON.stringify(updateUserDto, null, 2)}`); // Log the received DTO (Consider masking password if present)
         return this.userService.update(id, updateUserDto);
     }
 

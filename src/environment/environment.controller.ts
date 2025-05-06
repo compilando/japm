@@ -9,6 +9,7 @@ import { Environment } from '@prisma/client';
 import { ProjectGuard } from '../common/guards/project.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request as ExpressRequest } from 'express';
+import { Logger } from '@nestjs/common';
 
 // Define interface for request with projectId
 interface RequestWithProject extends ExpressRequest {
@@ -20,6 +21,8 @@ interface RequestWithProject extends ExpressRequest {
 @UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('/api/projects/:projectId/environments')
 export class EnvironmentController {
+    private readonly logger = new Logger(EnvironmentController.name);
+
     constructor(
         private readonly service: EnvironmentService,
         @Inject(CACHE_MANAGER) private cacheManager: Cache,
@@ -42,6 +45,7 @@ export class EnvironmentController {
     @HttpCode(HttpStatus.CREATED)
     async create(@Req() req: RequestWithProject, @Body() createDto: CreateEnvironmentDto): Promise<Environment> {
         const projectId = req.projectId;
+        this.logger.debug(`[create] Received request for projectId: ${projectId}. Body: ${JSON.stringify(createDto, null, 2)}`);
         const newEnvironment = await this.service.create(createDto, projectId);
         // Invalidate cache
         const cacheKey = this.getFindAllCacheKey(projectId);
@@ -100,6 +104,7 @@ export class EnvironmentController {
         @Body() updateDto: UpdateEnvironmentDto
     ): Promise<Environment> {
         const projectId = req.projectId;
+        this.logger.debug(`[update] Received PATCH for projectId: ${projectId}, environmentId: ${environmentId}. Body: ${JSON.stringify(updateDto, null, 2)}`);
         const updatedEnvironment = await this.service.update(environmentId, updateDto, projectId);
         // Invalidate cache
         const cacheKey = this.getFindAllCacheKey(projectId);

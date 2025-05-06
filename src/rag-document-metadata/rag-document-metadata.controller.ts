@@ -8,6 +8,7 @@ import { CreateRegionDto } from '../region/dto/create-region.dto'; // Para respu
 import { ProjectGuard } from '../common/guards/project.guard'; // Import guard
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Import JwtAuthGuard
 import { Request as ExpressRequest } from 'express';
+import { Logger } from '@nestjs/common'; // Import Logger
 
 // Define interface for request with projectId
 interface RequestWithProject extends ExpressRequest {
@@ -31,6 +32,8 @@ class RagDocumentMetadataResponse extends CreateRagDocumentMetadataDto {
 @UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('/api/projects/:projectId/rag-document-metadata') // Nueva ruta base
 export class RagDocumentMetadataController {
+    private readonly logger = new Logger(RagDocumentMetadataController.name); // Add Logger instance
+
     constructor(private readonly service: RagDocumentMetadataService) { }
 
     @Post()
@@ -43,6 +46,7 @@ export class RagDocumentMetadataController {
     @ApiResponse({ status: 404, description: 'Proyecto o Región referenciada no encontrada.' })
     create(@Req() req: RequestWithProject, @Body() createDto: CreateRagDocumentMetadataDto): Promise<RagDocumentMetadata> {
         const projectId = req.projectId;
+        this.logger.debug(`[create] Received request for projectId: ${projectId}. Body: ${JSON.stringify(createDto, null, 2)}`); // Log the received DTO
         return this.service.create(createDto, projectId);
     }
 
@@ -78,6 +82,7 @@ export class RagDocumentMetadataController {
     @ApiResponse({ status: 400, description: 'Datos inválidos.' })
     update(@Req() req: RequestWithProject, @Param('metadataId') id: string, @Body() updateDto: UpdateRagDocumentMetadataDto): Promise<RagDocumentMetadata> {
         const projectId = req.projectId;
+        this.logger.debug(`[update] Received PATCH for projectId: ${projectId}, metadataId: ${id}. Body: ${JSON.stringify(updateDto, null, 2)}`); // Log the received DTO
         return this.service.update(id, updateDto, projectId);
     }
 

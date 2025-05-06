@@ -8,12 +8,15 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } 
 import { PromptAssetVersion } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ProjectGuard } from '../common/guards/project.guard';
+import { Logger } from '@nestjs/common';
 
 @ApiTags('Prompt Asset Versions (within Project/Asset)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('api/projects/:projectId/assets/:assetKey/versions')
 export class PromptAssetVersionController {
+  private readonly logger = new Logger(PromptAssetVersionController.name);
+
   constructor(private readonly service: PromptAssetVersionService) { }
 
   @Post()
@@ -33,6 +36,7 @@ export class PromptAssetVersionController {
     @Param('assetKey') assetKey: string,
     @Body() createDto: CreatePromptAssetVersionDto
   ): Promise<PromptAssetVersion> {
+    this.logger.debug(`[create] Received request for projectId: ${projectId}, assetKey: ${assetKey}. Body: ${JSON.stringify(createDto, null, 2)}`);
     return this.service.create(projectId, assetKey, createDto);
   }
 
@@ -86,6 +90,7 @@ export class PromptAssetVersionController {
     @Param('versionTag') versionTag: string,
     @Body() updateDto: UpdatePromptAssetVersionDto
   ): Promise<PromptAssetVersion> {
+    this.logger.debug(`[update] Received PATCH for projectId: ${projectId}, assetKey: ${assetKey}, versionTag: ${versionTag}. Body: ${JSON.stringify(updateDto, null, 2)}`);
     return this.service.update(projectId, assetKey, versionTag, updateDto);
   }
 

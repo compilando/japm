@@ -96,13 +96,6 @@ Content-Type: application/json
 
 ###
 # -------------------------
-# TACTICS
-# -------------------------
-# Usar nombre en formato slug
-@tacticName = formal-greeting-es # Asumiendo que este es el slug generado por el seed
-
-###
-# -------------------------
 # PROMPT MANAGEMENT (name en formato slug)
 # -------------------------
 
@@ -114,7 +107,6 @@ Content-Type: application/json
 {
   "name": "{{promptNameBienvenida}}", # Name ya es slug
   "description": "Prompt de bienvenida de prueba con tags",
-  "tacticId": "{{tacticName}}", # Usar slug de la táctica
   "promptText": "{{{{placeholderSaludo}}}}, welcome!",
   "tags": ["bienvenida", "test", "inicial"], # Tags ya son slugs
   "initialTranslations": [

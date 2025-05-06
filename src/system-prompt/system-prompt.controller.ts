@@ -11,6 +11,7 @@ import {
     ValidationPipe,
     HttpCode,
     HttpStatus,
+    Logger,
 } from '@nestjs/common';
 import { SystemPromptService } from './system-prompt.service';
 import { CreateSystemPromptDto, UpdateSystemPromptDto } from './dto';
@@ -22,6 +23,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Assuming genera
 @ApiBearerAuth() // Indicate that endpoints generally require Bearer token
 @Controller('api/system-prompts') // Base path for system prompts
 export class SystemPromptController {
+    private readonly logger = new Logger(SystemPromptController.name);
+
     constructor(private readonly service: SystemPromptService) { }
 
     // --- Create --- //
@@ -36,6 +39,7 @@ export class SystemPromptController {
     @ApiResponse({ status: 401, description: 'Unauthorized.' })
     @HttpCode(HttpStatus.CREATED)
     create(@Body() createDto: CreateSystemPromptDto) {
+        this.logger.debug(`[create] Received POST request. Body: ${JSON.stringify(createDto, null, 2)}`);
         return this.service.create(createDto);
     }
 
@@ -73,6 +77,7 @@ export class SystemPromptController {
     @ApiResponse({ status: 404, description: 'System prompt not found or conflict with new name.' })
     @ApiResponse({ status: 401, description: 'Unauthorized.' })
     update(@Param('name') name: string, @Body() updateDto: UpdateSystemPromptDto) {
+        this.logger.debug(`[update] Received PATCH for name: ${name}. Body: ${JSON.stringify(updateDto, null, 2)}`);
         return this.service.update(name, updateDto);
     }
 

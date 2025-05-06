@@ -12,7 +12,7 @@ The data model revolves around several key concepts:
 
 1.  **Prompts & Versioning:** The core instruction given to an AI. Every logical prompt (`Prompt`) can have multiple iterations (`PromptVersion`) to track changes, manage status (draft, active), and allow A/B testing or rollback.
 2.  **Assets & Modularity:** Reusable pieces of text, instructions, or data (`PromptAsset`) that can be dynamically inserted into prompts. Assets also have their own versions (`PromptAssetVersion`) and are linked to specific prompt versions (`PromptAssetLink`), enabling modular and maintainable prompt construction.
-3.  **Localization & Context:** The model provides strong support for adapting prompts and assets to different languages (`PromptTranslation`, `AssetTranslation`) and cultural contexts (`Region`, `CulturalData`, `Tactic`).
+3.  **Localization & Context:** The model provides strong support for adapting prompts and assets to different languages (`PromptTranslation`, `AssetTranslation`) and cultural contexts (`Region`, `CulturalData`).
 4.  **Organization & Deployment:** Prompts and assets are organized within `Project`s, managed by `User`s, and deployed to different `Environment`s (e.g., development, staging, production). `Tag`s allow for further categorization.
 5.  **Execution & Monitoring:** The `PromptExecutionLog` captures vital information about each time a prompt version is run, facilitating debugging, performance analysis, and monitoring.
 6.  **AI Model Awareness:** The specific `AIModel` (like GPT-4o, Claude 3) can be tracked, allowing for model-specific configurations or performance comparisons.
@@ -25,7 +25,7 @@ Here's a description of the main entities (models) in the `schema.prisma` file:
 ### Organization & Users
 
 * **`User`**: Represents users of the system. Owns `Project`s and can be associated with `PromptExecutionLog`s. Includes basic authentication fields.
-* **`Project`**: A top-level container for grouping related prompts, assets, tactics, and AI models. Owned by a `User`. Helps organize work for different teams or applications.
+* **`Project`**: A top-level container for grouping related prompts, assets, 4s, and AI models. Owned by a `User`. Helps organize work for different teams or applications.
 
 ### Deployment & AI Models
 
@@ -34,7 +34,7 @@ Here's a description of the main entities (models) in the `schema.prisma` file:
 
 ### Prompts & Versioning
 
-* **`Prompt`**: The logical representation of a prompt's purpose (e.g., "Translate English to Spanish", "Extract Invoice Data"). It groups different versions and links to `Project`, `Tactic`, and `Tags`. Identified by a unique `name` (often a slug).
+* **`Prompt`**: The logical representation of a prompt's purpose (e.g., "Translate English to Spanish", "Extract Invoice Data"). It groups different versions and links to `Project`  and `Tags`. Identified by a unique `name` (often a slug).
 * **`PromptVersion`**: A specific iteration of a `Prompt`. This is where the actual `promptText` resides. It includes a `versionTag` (e.g., "v1.0.0"), `status` ("draft", "active", "archived"), `changeMessage`, creation timestamp, and links to:
     * `PromptTranslation`s for different languages.
     * `PromptAssetLink`s defining which assets are used.
@@ -54,9 +54,8 @@ Here's a description of the main entities (models) in the `schema.prisma` file:
 
 ### Localization & Strategy
 
-* **`Region`**: Represents a geographical or linguistic region (e.g., `es-ES`, `en-US`). Identified by `languageCode`. Can have parent regions and stores `timeZone`, default formality, etc. Links to `CulturalData` and `Tactic`s.
-* **`CulturalData`**: Stores specific cultural nuances for a `Region`, such as `formalityLevel`, communication `style`, and specific `considerations`. Links to `Tactic`s.
-* **`Tactic`**: Represents a strategic approach, often tied to a `Region` and `CulturalData` for localized communication strategies. Can also potentially represent more general prompting techniques (though the current schema emphasizes the localization aspect). Links to `Prompt`s.
+* **`Region`**: Represents a geographical or linguistic region (e.g., `es-ES`, `en-US`). Identified by `languageCode`. Can have parent regions and stores `timeZone`, default formality, etc. Links to `CulturalData`.
+* **`CulturalData`**: Stores specific cultural nuances for a `Region`, such as `formalityLevel`, communication `style`, and specific `considerations`. 
 
 ### Metadata & Logging
 
@@ -68,7 +67,7 @@ Here's a description of the main entities (models) in the `schema.prisma` file:
 
 Several seed scripts were generated to illustrate how this model supports different enterprise use cases:
 
-1.  **Chatbot Agent Management (`seed.ts` - original):** Demonstrates heavy use of `Region`, `CulturalData`, `Tactic`, and `Translations` for creating localized and culturally aware chatbot responses. Assets are used for reusable greetings.
+1.  **Chatbot Agent Management (`seed.ts` - original):** Demonstrates heavy use of `Region`, `CulturalData`  and `Translations` for creating localized and culturally aware chatbot responses. Assets are used for reusable greetings.
 2.  **Document Data Extraction (`seed.invoice-extraction.ts`):** Shows how `PromptAsset`s can define individual fields to be extracted (like invoice number, date, total). The main `PromptVersion` provides general instructions and refers to linked assets. `AIModel` selection for JSON support is relevant.
 3.  **Marketing Content Generation (`seed.marketing.ts`):** Uses `PromptVersion`s for A/B testing copy, `PromptAsset`s for brand voice, CTAs, and target audience details. `Tags` help organize campaigns.
 4.  **Code Generation & Assistance (`seed.codegen.ts`):** Leverages `PromptAsset`s for code snippets, templates, and standards. `PromptVersion`s manage variations for different languages or tasks (generation vs. explanation). `Tags` categorize by language/task.
@@ -90,7 +89,7 @@ This matrix shows the *relative* importance of key entities/concepts for each ex
 | `Project`/`User`/`Environment`   |      ++       |       ++       |        ++         |       ++        |       ++        |        ++        |         ++          |
 | **`Prompt`/`PromptVersion`** |     `+++`     |     `+++`      |       `+++`       |      `+++`      |      `+++`      |      `+++`       |        `+++`        |
 | **`Asset`/`AssetVer`/`Link`** |      ++       |     `+++`      |       `+++`       |      `+++`      |       ++        |      `+++`       |        `+++`        |
-| **`Region`/`CulturalData`/`Tactic`** |     `+++`     |       -        |        ++         |        -        |        -        |        -         |         ++          |
+| **`Region`/`CulturalData`** |     `+++`     |       -        |        ++         |        -        |        -        |        -         |         ++          |
 | `Translations` (Prompt/Asset)  |     `+++`     |       -        |        ++         |        -        |        -        |        -         |         ++          |
 | `Tag`                            |      +        |       +        |        ++         |       ++        |       ++        |        ++        |         ++          |
 | `AIModel`                        |      +        |       ++       |        +          |       ++        |       +         |        +         |         +           |
@@ -100,7 +99,7 @@ This matrix shows the *relative* importance of key entities/concepts for each ex
 **Key Observations from Matrix:**
 
 * `Prompt`/`PromptVersion` and `Asset`/`AssetVersion`/`Link` are fundamental to almost all use cases, enabling the core functionality of defining instructions and reusing components.
-* Localization features (`Region`, `CulturalData`, `Tactic`, `Translations`) are crucial for user-facing applications needing adaptation (Chatbot, Marketing, Education) but less so for internal or technical tasks (Extraction, CodeGen, Creative Writing typically).
+* Localization features (`Region`, `CulturalData`  `Translations`) are crucial for user-facing applications needing adaptation (Chatbot, Marketing, Education) but less so for internal or technical tasks (Extraction, CodeGen, Creative Writing typically).
 * `RagDocumentMetadata` is specifically critical for RAG use cases.
 * `PromptExecutionLog` is highly important for any deployed application requiring monitoring and debugging, especially RAG and Extraction where success/failure is key.
 * `AIModel` is important when specific model capabilities (JSON, context size) are required (Extraction, CodeGen, RAG).

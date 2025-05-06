@@ -35,11 +35,12 @@ export class PromptController {
     @ApiBody({ type: CreatePromptDto })
     @ApiResponse({ status: 201, description: 'Prompt created.', type: CreatePromptDto }) // Adjust response type if needed
     @ApiResponse({ status: 400, description: 'Invalid data (e.g., missing initial promptText).' })
-    @ApiResponse({ status: 404, description: 'Project, Tactic or Tag not found.' })
+    @ApiResponse({ status: 404, description: 'Project or Tag not found.' })
     @ApiResponse({ status: 409, description: 'Conflict, a prompt with this name already exists in the project.' })
     @HttpCode(HttpStatus.CREATED)
     create(@Req() req: RequestWithProject, @Body() createDto: CreatePromptDto): Promise<Prompt> { // Return type could be more specific
         const projectId = req.projectId;
+        this.logger.debug(`[create] Received request for projectId: ${projectId}. Body: ${JSON.stringify(createDto, null, 2)}`); // Log the received DTO
         return this.service.create(createDto, projectId);
     }
 
@@ -83,6 +84,7 @@ export class PromptController {
             `[update] Received PATCH for projectId: ${req.projectId}, promptName: ${promptName}`,
         );
         const projectId = req.projectId;
+        this.logger.debug(`[update] Body: ${JSON.stringify(updateDto, null, 2)}`); // Log the received DTO
         const promptToUpdate = await this.service.findOneByName(promptName, projectId);
         return this.service.update(promptToUpdate.id, updateDto, projectId);
     }
@@ -119,6 +121,7 @@ export class PromptController {
         @Body() createVersionDto: CreatePromptVersionDto
     ): Promise<PromptVersion> {
         const projectId = req.projectId;
+        this.logger.debug(`[createVersion] Received request for projectId: ${projectId}, promptId: ${promptId}. Body: ${JSON.stringify(createVersionDto, null, 2)}`); // Log the received DTO
         return this.service.createVersion(promptId, createVersionDto, projectId);
     }
 
@@ -140,6 +143,7 @@ export class PromptController {
         @Body() translationDto: CreateOrUpdatePromptTranslationDto
     ): Promise<PromptTranslation> {
         const projectId = req.projectId;
+        this.logger.debug(`[addOrUpdateTranslation] Received request for projectId: ${projectId}, versionId: ${versionId}. Body: ${JSON.stringify(translationDto, null, 2)}`); // Log the received DTO
         return this.service.addOrUpdateTranslation(versionId, translationDto, projectId);
     }
 }

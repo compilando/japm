@@ -56,18 +56,6 @@ async function main() {
         create: { projectId: cgProjectId, name: 'gpt-4o-mini-2024-07-18', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
         select: { id: true }
     });
-    const cgClaudeOpus = await prisma.aIModel.upsert({
-        where: { projectId_name: { projectId: cgProjectId, name: 'claude-3-opus-20240229' } },
-        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
-        create: { projectId: cgProjectId, name: 'claude-3-opus-20240229', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
-        select: { id: true }
-    });
-    const cgClaudeHaiku = await prisma.aIModel.upsert({
-        where: { projectId_name: { projectId: cgProjectId, name: 'claude-3-haiku-20240307' } },
-        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
-        create: { projectId: cgProjectId, name: 'claude-3-haiku-20240307', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
-        select: { id: true }
-    });
     console.log(`Upserted AI Models for project ${cgProjectId}`);
 
     // 2. Upsert common asset and its version

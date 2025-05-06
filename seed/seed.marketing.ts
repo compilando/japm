@@ -45,18 +45,6 @@ async function main() {
         create: { projectId: mktProjectId, name: 'gpt-4o-mini-2024-07-18', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
         select: { id: true }
     });
-    const mktClaudeOpus = await prisma.aIModel.upsert({
-        where: { projectId_name: { projectId: mktProjectId, name: 'claude-3-opus-20240229' } },
-        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
-        create: { projectId: mktProjectId, name: 'claude-3-opus-20240229', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.3 },
-        select: { id: true }
-    });
-    const mktClaudeHaiku = await prisma.aIModel.upsert({
-        where: { projectId_name: { projectId: mktProjectId, name: 'claude-3-haiku-20240307' } },
-        update: { provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
-        create: { projectId: mktProjectId, name: 'claude-3-haiku-20240307', provider: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY', temperature: 0.8 },
-        select: { id: true }
-    });
     console.log(`Upserted AI Models for project ${mktProjectId}`);
 
     // Upsert Marketing Tags with prefix

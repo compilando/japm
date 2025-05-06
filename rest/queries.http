@@ -6,14 +6,12 @@
 # --- Identificadores Únicos Conocidos del Seed (en formato slug) --- 
 @assetKeySaludoSeed = saludo-inicial
 @promptNameBienvenidaSeed = bienvenida-simple
-@tacticNameSeed = formal-greeting-es
 @versionTagV1 = v1.0.0
 
 # --- IDs Generados por el Seed (OBTENER MANUALMENTE de la BD o Prisma Studio) ---
 # Eliminadas variables de IDs antiguos que ya no son identificadores únicos
 # @assetSaludoIdSeed = PON_ID_AQUI_ASSET_SALUDO_DEL_SEED
 # @promptBienvenidaIdSeed = PON_ID_AQUI_PROMPT_BIENVENIDA_DEL_SEED
-# @tacticIdSeed = PON_ID_AQUI_TACTICA_DEL_SEED # (ID de 'Formal Greeting ES')
 
 ###
 # -------------------------
@@ -74,13 +72,3 @@ GET {{baseUrl}}/serve-prompt?promptId={{promptNameBienvenidaSeed}}&versionTag={{
 # -------------------------
 
 ### 6. Servir usando Táctica
-
-# 6a. Servir por Táctica en ES
-# @name servePromptByTacticSeed_ES
-GET {{baseUrl}}/serve-prompt?tacticId={{tacticNameSeed}}&languageCode=es-ES
-# Esperado: "Hola, ¿en qué puedo ayudarte hoy?"
-
-# 6b. Servir por Táctica en EN (Base)
-# @name servePromptByTacticSeed_EN
-GET {{baseUrl}}/serve-prompt?tacticId={{tacticNameSeed}}
-# Esperado: "{{saludo-inicial}}, how can I help you today?" 

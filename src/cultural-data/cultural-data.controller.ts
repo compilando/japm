@@ -8,6 +8,7 @@ import { CreateRegionDto } from '../region/dto/create-region.dto';
 import { ProjectGuard } from '../common/guards/project.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request as ExpressRequest } from 'express';
+import { Logger } from '@nestjs/common';
 
 // Define interface for request with projectId
 interface RequestWithProject extends ExpressRequest {
@@ -29,6 +30,8 @@ class CulturalDataResponse extends CreateCulturalDataDto {
 @UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('/api/projects/:projectId/cultural-data')
 export class CulturalDataController {
+    private readonly logger = new Logger(CulturalDataController.name);
+
     constructor(private readonly culturalDataService: CulturalDataService) { }
 
     @Post()
@@ -41,6 +44,7 @@ export class CulturalDataController {
     @ApiResponse({ status: 404, description: 'Project or referenced Region not found.' })
     create(@Req() req: RequestWithProject, @Body() createDto: CreateCulturalDataDto): Promise<CulturalData> {
         const projectId = req.projectId;
+        this.logger.debug(`[create] Received request for projectId: ${projectId}. Body: ${JSON.stringify(createDto, null, 2)}`);
         return this.culturalDataService.create(createDto, projectId);
     }
 
@@ -76,6 +80,7 @@ export class CulturalDataController {
     @ApiResponse({ status: 400, description: 'Invalid data.' })
     update(@Req() req: RequestWithProject, @Param('culturalDataId') id: string, @Body() updateDto: UpdateCulturalDataDto): Promise<CulturalData> {
         const projectId = req.projectId;
+        this.logger.debug(`[update] Received PATCH for projectId: ${projectId}, culturalDataId: ${id}. Body: ${JSON.stringify(updateDto, null, 2)}`);
         return this.culturalDataService.update(id, updateDto, projectId);
     }
 

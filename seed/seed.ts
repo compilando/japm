@@ -19,26 +19,26 @@ async function main() {
     console.log(`Start base seeding (User, AI Models, Environments, Regions)...`);
 
     // --- Optional Cleanup (Commented out after DB reset) ---
-    /*
-        console.log('Deleting existing data...');
-        await prisma.promptExecutionLog.deleteMany({});
-        await prisma.promptAssetLink.deleteMany({});
-        await prisma.assetTranslation.deleteMany({});
-        await prisma.promptTranslation.deleteMany({});
-        await prisma.promptVersion.deleteMany({});
-        await prisma.promptAssetVersion.deleteMany({});
-        await prisma.tag.deleteMany({});
-        await prisma.prompt.deleteMany({});
-        await prisma.culturalData.deleteMany({});
-        await prisma.ragDocumentMetadata.deleteMany({});
-        await prisma.region.deleteMany({});
-        await prisma.environment.deleteMany({});
-        await prisma.promptAsset.deleteMany({});
-        await prisma.aIModel.deleteMany({});
-        await prisma.project.deleteMany({});
-        await prisma.user.deleteMany({});
-        console.log('Existing data deleted.');
-    */
+
+    console.log('Deleting existing data...');
+    await prisma.promptExecutionLog.deleteMany({});
+    await prisma.promptAssetLink.deleteMany({});
+    await prisma.assetTranslation.deleteMany({});
+    await prisma.promptTranslation.deleteMany({});
+    await prisma.promptVersion.deleteMany({});
+    await prisma.promptAssetVersion.deleteMany({});
+    await prisma.tag.deleteMany({});
+    await prisma.prompt.deleteMany({});
+    await prisma.culturalData.deleteMany({});
+    await prisma.ragDocumentMetadata.deleteMany({});
+    await prisma.region.deleteMany({});
+    await prisma.environment.deleteMany({});
+    await prisma.promptAsset.deleteMany({});
+    await prisma.aIModel.deleteMany({});
+    await prisma.project.deleteMany({});
+    await prisma.user.deleteMany({});
+    console.log('Existing data deleted.');
+
 
     // --- BASE DATA --- //
 
@@ -115,31 +115,7 @@ async function main() {
             supportsJson: true,
             contextWindow: 128000, // Check actual value if needed
             maxTokens: 4096 // Check actual value if needed
-        },
-        {
-            id: 'claude-3-opus',
-            name: 'Claude 3 Opus',
-            provider: 'Anthropic',
-            apiIdentifier: 'claude-3-opus-20240229',
-            description: 'Most powerful reasoning model (Claude)',
-            temperature: 0.7,
-            apiKeyEnvVar: 'ANTHROPIC_API_KEY', // Example env var name
-            supportsJson: true,
-            contextWindow: 200000,
-            maxTokens: 4096
-        },
-        {
-            id: 'claude-3-haiku',
-            name: 'Claude 3 Haiku',
-            provider: 'Anthropic',
-            apiIdentifier: 'claude-3-haiku-20240307',
-            description: 'Fastest, most cost-effective model (Claude)',
-            temperature: 0.7,
-            apiKeyEnvVar: 'ANTHROPIC_API_KEY',
-            supportsJson: true,
-            contextWindow: 200000,
-            maxTokens: 4096
-        },
+        }
     ];
 
     for (const modelData of projectAiModels) {

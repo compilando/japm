@@ -7,6 +7,7 @@ import { PromptAsset, PromptAssetVersion } from '@prisma/client';
 import { ProjectGuard } from '../common/guards/project.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request as ExpressRequest } from 'express';
+import { Logger } from '@nestjs/common';
 
 interface RequestWithProject extends ExpressRequest {
     projectId: string;
@@ -17,6 +18,8 @@ interface RequestWithProject extends ExpressRequest {
 @UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('/api/projects/:projectId/prompt-assets')
 export class PromptAssetController {
+    private readonly logger = new Logger(PromptAssetController.name);
+
     constructor(private readonly service: PromptAssetService) { }
 
     @Post()
@@ -31,6 +34,7 @@ export class PromptAssetController {
     @HttpCode(HttpStatus.CREATED)
     create(@Req() req: RequestWithProject, @Body() createDto: CreatePromptAssetDto) {
         const projectId = req.projectId;
+        this.logger.debug(`[create] Received request for projectId: ${projectId}. Body: ${JSON.stringify(createDto, null, 2)}`);
         return this.service.create(createDto, projectId);
     }
 
@@ -70,6 +74,7 @@ export class PromptAssetController {
         @Body() updateDto: UpdatePromptAssetDto
     ) {
         const projectId = req.projectId;
+        this.logger.debug(`[update] Received PATCH for projectId: ${projectId}, assetKey: ${key}. Body: ${JSON.stringify(updateDto, null, 2)}`);
         return this.service.update(key, updateDto, projectId);
     }
 

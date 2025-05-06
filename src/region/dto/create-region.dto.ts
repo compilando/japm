@@ -32,7 +32,7 @@ export class CreateRegionDto {
     @IsOptional()
     notes?: string;
 
-    // Las relaciones como culturalData, tactics, etc.,
+    // Las relaciones como culturalData, etc.,
     // usualmente no se incluyen directamente en el DTO de creación,
     // se manejan por separado o a través de IDs anidados si es necesario.
 } 

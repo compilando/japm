@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Body, Patch, Param, Delete, Query, UsePipes, ValidationPipe, NotFoundException, UseGuards, Request
+  Controller, Get, Post, Body, Patch, Param, Delete, Query, UsePipes, ValidationPipe, NotFoundException, UseGuards, Request, Logger
 } from '@nestjs/common';
 import { AssetTranslationService } from './asset-translation.service';
 import { CreateAssetTranslationDto } from './dto/create-asset-translation.dto';
@@ -14,6 +14,8 @@ import { ProjectGuard } from '../common/guards/project.guard';
 @UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('api/projects/:projectId/assets/:assetKey/versions/:versionTag/translations')
 export class AssetTranslationController {
+  private readonly logger = new Logger(AssetTranslationController.name);
+
   constructor(private readonly service: AssetTranslationService) { }
 
   @Post()
@@ -35,6 +37,7 @@ export class AssetTranslationController {
     @Param('versionTag') versionTag: string,
     @Body() createDto: CreateAssetTranslationDto
   ): Promise<AssetTranslation> {
+    this.logger.debug(`[create] Received request for projectId: ${projectId}, assetKey: ${assetKey}, versionTag: ${versionTag}. Body: ${JSON.stringify(createDto, null, 2)}`);
     return this.service.create(projectId, assetKey, versionTag, createDto);
   }
 
@@ -94,6 +97,7 @@ export class AssetTranslationController {
     @Param('languageCode') languageCode: string,
     @Body() updateDto: UpdateAssetTranslationDto
   ): Promise<AssetTranslation> {
+    this.logger.debug(`[update] Received PATCH for projectId: ${projectId}, assetKey: ${assetKey}, versionTag: ${versionTag}, languageCode: ${languageCode}. Body: ${JSON.stringify(updateDto, null, 2)}`);
     return this.service.update(projectId, assetKey, versionTag, languageCode, updateDto);
   }
 

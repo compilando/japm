@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsArray } from 'class-validator';
+import { IsOptional, IsString, IsArray, IsNotEmpty } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 // No usar PartialType/OmitType para tener control explícito sobre los tipos actualizables
@@ -8,10 +8,11 @@ export class UpdatePromptDto {
     @IsString()
     description?: string;
 
-    @ApiPropertyOptional({ description: 'ID of the tactic to associate, or null to disassociate.', example: 'continue_small_talk', nullable: true })
+    @ApiPropertyOptional({ description: 'Base prompt text for the latest version. If provided, updates the text of the most recent version of this prompt.', example: 'Hello {{customer_name}}, welcome again.' })
     @IsOptional()
     @IsString()
-    tacticId?: string | null;
+    @IsNotEmpty()
+    promptText?: string;
 
     @ApiPropertyOptional({ description: 'Complete list of Tag IDs to associate (replaces existing ones). Empty array to remove all.', example: ['cma...uuid1', 'cma...uuid2'], type: [String] })
     @IsOptional()

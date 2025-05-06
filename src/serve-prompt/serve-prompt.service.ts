@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, Prompt, PromptVersion, PromptAssetVersion, PromptTranslation, AssetTranslation, Environment, Tactic, CulturalData } from '@prisma/client';
+import { Prisma, Prompt, PromptVersion, PromptAssetVersion, PromptTranslation, AssetTranslation, Environment, CulturalData } from '@prisma/client';
 // import { TemplateService } from '../template/template.service'; // Temporarily commented out
 import { ExecutePromptParamsDto } from './dto/execute-prompt-params.dto';
 import { ExecutePromptQueryDto } from './dto/execute-prompt-query.dto';
@@ -40,15 +40,7 @@ export class ServePromptService {
 
         // 2. Find the specific PromptVersion
         const includeRelations: Prisma.PromptVersionInclude = {
-            prompt: {
-                include: {
-                    tactic: {
-                        include: {
-                            culturalData: true
-                        }
-                    }
-                }
-            },
+            prompt: true,
             translations: true,
             assets: true,
         };
@@ -88,50 +80,6 @@ export class ServePromptService {
         // 3. Determine language and get base prompt text
         const finalLanguageCode = languageCode;
         let basePromptText = versionToUse.promptText;
-        let culturalInstructions = '';
-
-        // --- START: CulturalData Logic ---
-        this.logger.debug(`Checking for Tactic/CulturalData for prompt: ${prompt.name} (ID: ${prompt.id})`);
-        if (versionToUse.prompt.tacticId) {
-            this.logger.log(`Prompt has tacticId: ${versionToUse.prompt.tacticId}. Fetching Tactic with CulturalData.`);
-            try {
-                // Fetch Tactic and related CulturalData separately for clarity
-                const tacticWithCulture = await this.prisma.tactic.findUnique({
-                    where: { id: versionToUse.prompt.tacticId },
-                    include: { culturalData: true }
-                });
-
-                if (tacticWithCulture) {
-                    this.logger.log(`Found Tactic ${tacticWithCulture.name} (ID: ${tacticWithCulture.id}).`);
-                    if (tacticWithCulture.culturalData) {
-                        const cd = tacticWithCulture.culturalData;
-                        this.logger.log(`Found CulturalData (ID: ${cd.id}, Style: ${cd.style}) for Tactic.`);
-                        let instructions: string[] = [];
-                        instructions.push("Adapt the response considering the following cultural context:");
-                        if (cd.style) instructions.push(`- Style: ${cd.style}`);
-                        if (cd.formalityLevel !== null && cd.formalityLevel !== undefined) instructions.push(`- Formality Level: ${cd.formalityLevel}`);
-                        if (cd.considerations) instructions.push(`- Considerations: ${cd.considerations}`);
-
-                        if (instructions.length > 1) { // Only add if there's more than the intro line
-                            culturalInstructions = instructions.join('\n') + '\n\n'; // Add extra newlines for separation
-                            this.logger.debug(`Generated cultural instructions prefix: ${culturalInstructions}`);
-                        }
-                    } else {
-                        this.logger.debug(`Tactic ${versionToUse.prompt.tacticId} found, but no associated CulturalData.`);
-                    }
-                } else {
-                    this.logger.debug(`Tactic ${versionToUse.prompt.tacticId} not found.`);
-                }
-            } catch (error) {
-                // Log error but don't fail the execution, just proceed without cultural data
-                this.logger.error(`Error fetching Tactic/CulturalData for tacticId ${versionToUse.prompt.tacticId}: ${error.message}`, error.stack);
-            }
-        } else {
-            this.logger.debug(`Prompt ${prompt.name} has no associated tacticId.`);
-        }
-        // --- END: CulturalData Logic ---
-
-        basePromptText = culturalInstructions + basePromptText;
 
         if (finalLanguageCode) {
             const promptTranslation = versionToUse.translations.find(t => t.languageCode === finalLanguageCode);

@@ -7,11 +7,6 @@ export class ServePromptQueryDto {
     @IsString()
     promptId?: string;
 
-    @ApiPropertyOptional({ description: 'ID of the tactic to filter prompts (required if promptId is not given).' })
-    @IsString()
-    @IsOptional()
-    tacticId?: string;
-
     @ApiPropertyOptional({
         description: 'Language code (e.g., es-ES, en-US) to get the translation. If not provided, the base version text is used.',
         example: 'es-ES'
@@ -36,4 +31,9 @@ export class ServePromptQueryDto {
     @Transform(({ value }) => value === 'true' || value === true || value === 1 || value === '1')
     @IsOptional()
     useLatestActive?: boolean = true;
+
+    @ApiPropertyOptional({ description: 'Name of the prompt (required if promptId is not given).' })
+    @IsOptional()
+    @IsString()
+    promptName?: string;
 } 

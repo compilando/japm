@@ -9,6 +9,7 @@ import { Region } from '@prisma/client';
 import { ProjectGuard } from '../common/guards/project.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request as ExpressRequest } from 'express';
+import { Logger } from '@nestjs/common';
 
 // Extend Express Request interface to include projectId attached by the guard
 interface RequestWithProject extends ExpressRequest {
@@ -21,6 +22,8 @@ interface RequestWithProject extends ExpressRequest {
 @UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('/api/projects/:projectId/regions')
 export class RegionController {
+    private readonly logger = new Logger(RegionController.name);
+
     constructor(
         private readonly regionService: RegionService,
         @Inject(CACHE_MANAGER) private cacheManager: Cache, // Inject CacheManager
@@ -43,6 +46,7 @@ export class RegionController {
     @ApiResponse({ status: 409, description: 'languageCode already exists.' })
     async create(@Req() req: RequestWithProject, @Body() createRegionDto: CreateRegionDto): Promise<Region> {
         const projectId = req.projectId;
+        this.logger.debug(`[create] Received request for projectId: ${projectId}. Body: ${JSON.stringify(createRegionDto, null, 2)}`);
         const newRegion = await this.regionService.create(createRegionDto, projectId);
         // Invalidate cache after creating
         const cacheKey = this.getFindAllCacheKey(projectId);
@@ -88,6 +92,7 @@ export class RegionController {
         @Body() updateRegionDto: UpdateRegionDto
     ): Promise<Region> {
         const projectId = req.projectId;
+        this.logger.debug(`[update] Received PATCH for projectId: ${projectId}, languageCode: ${languageCode}. Body: ${JSON.stringify(updateRegionDto, null, 2)}`);
         const updatedRegion = await this.regionService.update(languageCode, updateRegionDto, projectId);
         // Invalidate cache after updating
         const cacheKey = this.getFindAllCacheKey(projectId);
