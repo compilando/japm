@@ -38,8 +38,8 @@ model Region {
   from_Region_parentRegion Region[]              @relation("Region_parentRegion")
   from_RagDocumentMetadata RagDocumentMetadata[] @relation("RagDocumentMetadata_region")
 
-  project                  Project               @relation("ProjectRegions", fields: [projectId], references: [id], onDelete: Cascade)
-  projectId                String                @map("project")
+  project   Project @relation("ProjectRegions", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String  @map("project")
 
   @@unique([projectId, languageCode])
   @@index([parentRegionId])
@@ -48,19 +48,19 @@ model Region {
 }
 
 model CulturalData {
-  id                 String               @id @default(cuid())
-  key                String               // ANTERIORMENTE 'id', ahora parte de la clave única compuesta
-  regionId           String
-  region             Region               @relation("CulturalData_region", fields: [regionId], references: [id])
-  formalityLevel     Int?
-  style              String               @default("")
-  considerations     String               @default("")
-  notes              String               @default("")
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  id             String   @id @default(cuid())
+  key            String // ANTERIORMENTE 'id', ahora parte de la clave única compuesta
+  regionId       String
+  region         Region   @relation("CulturalData_region", fields: [regionId], references: [id])
+  formalityLevel Int?
+  style          String   @default("")
+  considerations String   @default("")
+  notes          String   @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  project            Project              @relation("ProjectCulturalData", fields: [projectId], references: [id], onDelete: Cascade)
-  projectId          String               @map("project")
+  project   Project @relation("ProjectCulturalData", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String  @map("project")
 
   @@unique([projectId, key]) // NUEVO: la 'key' (anterior id) es única por proyecto
   @@index([regionId])
@@ -69,36 +69,36 @@ model CulturalData {
 }
 
 model Prompt {
-  id              String            @id // Este es el slug
-  name            String
-  description     String            @default("")
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  versions        PromptVersion[]   @relation("PromptVersion_prompt")
-  tags            Tag[]             @relation("PromptTags")
-  project         Project           @relation("ProjectPrompts", fields: [projectId], references: [id], onDelete: Cascade)
-  projectId       String            @map("project")
+  id          String          @id // Este es el slug
+  name        String
+  description String          @default("")
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  versions    PromptVersion[] @relation("PromptVersion_prompt")
+  tags        Tag[]           @relation("PromptTags")
+  project     Project         @relation("ProjectPrompts", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String          @map("project")
+  // Ya no necesitamos un campo 'slug' separado ni un índice para él.
 
   @@unique([id, projectId], name: "prompt_id_project_unique") // Slug (id) único por proyecto
   @@index([projectId])
-  // Ya no necesitamos un campo 'slug' separado ni un índice para él.
 }
 
 model PromptVersion {
-  id                  String             @id @default(cuid())
-  prompt              Prompt             @relation("PromptVersion_prompt", fields: [promptId], references: [id])
-  promptId            String             @map("prompt")
-  promptText          String             @default("")
-  versionTag          String             @default("v1.0.0")
-  changeMessage       String?
-  status              String             @default("draft")
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  translations        PromptTranslation[] @relation("PromptTranslation_version")
-  activeInEnvironments Environment[]      @relation("ActivePromptsInEnvironment")
-  executionLogs       PromptExecutionLog[]
-  aiModel             AIModel?           @relation(fields: [aiModelId], references: [id])
-  aiModelId           String?
+  id                   String               @id @default(cuid())
+  prompt               Prompt               @relation("PromptVersion_prompt", fields: [promptId], references: [id])
+  promptId             String               @map("prompt")
+  promptText           String               @default("")
+  versionTag           String               @default("v1.0.0")
+  changeMessage        String?
+  status               String               @default("draft")
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  translations         PromptTranslation[]  @relation("PromptTranslation_version")
+  activeInEnvironments Environment[]        @relation("ActivePromptsInEnvironment")
+  executionLogs        PromptExecutionLog[]
+  aiModel              AIModel?             @relation(fields: [aiModelId], references: [id])
+  aiModelId            String?
 
   @@unique([promptId, versionTag])
   @@index([promptId])
@@ -122,28 +122,29 @@ model PromptTranslation {
 model PromptAsset {
   id        String   @id @default(cuid())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project  @relation("ProjectAssets", fields: [projectId], references: [id], onDelete: Cascade)
   key       String // User-defined key for the asset, e.g., "company-bio", "product-list"
+  enabled   Boolean  @default(true) // Campo para activar/desactivar el asset
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  versions PromptAssetVersion[]
+  versions PromptAssetVersion[] @relation("AssetVersions")
 
   @@unique([projectId, key], name: "project_asset_key_unique")
   @@index([projectId])
 }
 
 model PromptAssetVersion {
-  id                  String             @id @default(cuid())
-  asset               PromptAsset        @relation("PromptAssetVersion_asset", fields: [assetId], references: [id])
-  assetId             String             @map("asset")
-  value               String             @default("")
-  versionTag          String             @default("v1.0.0")
-  changeMessage       String?
-  status              String             @default("draft")
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  translations        AssetTranslation[] @relation("AssetTranslation_version")
+  id                   String             @id @default(cuid())
+  asset                PromptAsset        @relation("AssetVersions", fields: [assetId], references: [id], onDelete: Cascade)
+  assetId              String             @map("asset")
+  value                String             @default("")
+  versionTag           String             @default("v1.0.0")
+  changeMessage        String?
+  status               String             @default("draft")
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  translations         AssetTranslation[] @relation("AssetTranslation_version")
   activeInEnvironments Environment[]      @relation("ActiveAssetsInEnvironment")
 
   @@unique([assetId, versionTag])
@@ -165,19 +166,19 @@ model AssetTranslation {
 }
 
 model RagDocumentMetadata {
-  id                   String    @id @default(cuid())
-  documentName         String
-  category             String?   @default("")
-  complianceReviewed   Boolean?  @default(false)
-  piiRiskLevel         String?   @default("")
-  lastReviewedBy       String?   @default("")
-  regionId             String?   // CUID de Region
-  region               Region?   @relation("RagDocumentMetadata_region", fields: [regionId], references: [id])
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  id                 String   @id @default(cuid())
+  documentName       String
+  category           String?  @default("")
+  complianceReviewed Boolean? @default(false)
+  piiRiskLevel       String?  @default("")
+  lastReviewedBy     String?  @default("")
+  regionId           String? // CUID de Region
+  region             Region?  @relation("RagDocumentMetadata_region", fields: [regionId], references: [id])
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  project              Project   @relation("ProjectRagDocs", fields: [projectId], references: [id], onDelete: Cascade)
-  projectId            String    @map("project")
+  project   Project @relation("ProjectRagDocs", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String  @map("project")
 
   @@unique([projectId, documentName]) // NUEVO: documentName es único por proyecto
   @@index([projectId])
@@ -185,59 +186,59 @@ model RagDocumentMetadata {
 }
 
 model Tag {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
   description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   prompts     Prompt[] @relation("PromptTags")
 
-  project     Project  @relation("ProjectTags", fields: [projectId], references: [id], onDelete: Cascade)
-  projectId   String   @map("project")
+  project   Project @relation("ProjectTags", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String  @map("project")
 
   @@unique([projectId, name])
   @@index([projectId])
 }
 
 model Project {
-  id                  String               @id
-  name                String
-  description         String?
-  ownerUserId         String?              @map("ownerUser")
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  id          String   @id
+  name        String
+  description String?
+  ownerUserId String?  @map("ownerUser")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  owner               User?                @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
-  prompts             Prompt[]             @relation("ProjectPrompts")
-  assets              PromptAsset[]        @relation("ProjectAssets")
-  regions             Region[]             @relation("ProjectRegions")
-  culturalData        CulturalData[]       @relation("ProjectCulturalData")
+  owner               User?                 @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  prompts             Prompt[]              @relation("ProjectPrompts")
+  assets              PromptAsset[]         @relation("ProjectAssets")
+  regions             Region[]              @relation("ProjectRegions")
+  culturalData        CulturalData[]        @relation("ProjectCulturalData")
   ragDocs             RagDocumentMetadata[] @relation("ProjectRagDocs")
-  tags                Tag[]                @relation("ProjectTags")
-  environments        Environment[]        @relation("ProjectEnvironments")
-  promptExecutionLogs PromptExecutionLog[] @relation("ProjectLogs")
-  aiModels            AIModel[]            @relation("ProjectModels")
+  tags                Tag[]                 @relation("ProjectTags")
+  environments        Environment[]         @relation("ProjectEnvironments")
+  promptExecutionLogs PromptExecutionLog[]  @relation("ProjectLogs")
+  aiModels            AIModel[]             @relation("ProjectModels")
 
   @@index([ownerUserId])
 }
 
 model AIModel {
-  id            String    @id @default(cuid())
-  name          String    // Removed global @unique
-  provider      String?   // Ej: OpenAI, Anthropic, Google
+  id            String   @id @default(cuid())
+  name          String // Removed global @unique
+  provider      String? // Ej: OpenAI, Anthropic, Google
   description   String?
-  apiIdentifier String?   // Identificador para llamadas API (e.g., "gpt-4o-2024-05-13")
-  apiKeyEnvVar  String?   // Nombre de la variable de entorno para la API Key (e.g., "OPENAI_API_KEY") - Made optional
-  temperature   Float?    // Added temperature field
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  apiIdentifier String? // Identificador para llamadas API (e.g., "gpt-4o-2024-05-13")
+  apiKeyEnvVar  String? // Nombre de la variable de entorno para la API Key (e.g., "OPENAI_API_KEY") - Made optional
+  temperature   Float? // Added temperature field
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   maxTokens     Int?
-  supportsJson  Boolean @default(false)
-  contextWindow Int?   // Tamaño máximo de contexto
+  supportsJson  Boolean  @default(false)
+  contextWindow Int? // Tamaño máximo de contexto
 
   // Re-add relation to Project
-  project       Project   @relation("ProjectModels", fields: [projectId], references: [id], onDelete: Cascade)
-  projectId     String    // Re-add projectId field
+  project   Project @relation("ProjectModels", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String // Re-add projectId field
 
   // Keep back-relation to PromptVersion
   promptVersions PromptVersion[]
@@ -248,17 +249,17 @@ model AIModel {
 }
 
 model Environment {
-  id                  String             @id @default(cuid())
-  name                String
-  description         String?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  activePromptVersions PromptVersion[]    @relation("ActivePromptsInEnvironment")
-  activeAssetVersions PromptAssetVersion[] @relation("ActiveAssetsInEnvironment")
-  promptExecutionLogs PromptExecutionLog[] // Relación inversa añadida
+  id                   String               @id @default(cuid())
+  name                 String
+  description          String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  activePromptVersions PromptVersion[]      @relation("ActivePromptsInEnvironment")
+  activeAssetVersions  PromptAssetVersion[] @relation("ActiveAssetsInEnvironment")
+  promptExecutionLogs  PromptExecutionLog[] // Relación inversa añadida
 
-  project             Project            @relation("ProjectEnvironments", fields: [projectId], references: [id], onDelete: Cascade)
-  projectId           String             @map("project")
+  project   Project @relation("ProjectEnvironments", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String  @map("project")
 
   @@unique([projectId, name])
   @@index([projectId])
@@ -267,32 +268,32 @@ model Environment {
 // --- LOGGING --- //
 
 model PromptExecutionLog {
-  id            String        @id @default(cuid())
-  timestamp     DateTime      @default(now())
+  id        String   @id @default(cuid())
+  timestamp DateTime @default(now())
 
   // --- Contexto del Prompt ---
-  promptVersion PromptVersion @relation(fields: [promptVersionId], references: [id])
-  promptVersionId String      // FK explícita para PromptVersion
+  promptVersion   PromptVersion @relation(fields: [promptVersionId], references: [id])
+  promptVersionId String // FK explícita para PromptVersion
 
   // --- Contexto de Ejecución ---
-  environment   Environment?  @relation(fields: [environmentId], references: [id]) // Entorno de ejecución
+  environment   Environment? @relation(fields: [environmentId], references: [id]) // Entorno de ejecución
   environmentId String?
-  user          User?         @relation(fields: [userId], references: [id])       // Usuario que ejecutó (si aplica)
+  user          User?        @relation(fields: [userId], references: [id]) // Usuario que ejecutó (si aplica)
   userId        String?
   // Podríamos añadir sessionId, requestId, etc. si son relevantes
 
   // --- Datos de Entrada/Salida ---
-  input         String        // Input completo proporcionado (Considerar tipo Json si es complejo)
-  output        String        // Output completo generado (Considerar tipo Json si es complejo)
+  input  String // Input completo proporcionado (Considerar tipo Json si es complejo)
+  output String // Output completo generado (Considerar tipo Json si es complejo)
 
   // --- Resultado y Métricas ---
-  success       Boolean       // ¿Fue exitosa la ejecución?
-  durationMs    Int?          // Duración de la ejecución en milisegundos
-  errorMessage  String?       // Mensaje de error si success = false
+  success      Boolean // ¿Fue exitosa la ejecución?
+  durationMs   Int? // Duración de la ejecución en milisegundos
+  errorMessage String? // Mensaje de error si success = false
   // Podríamos añadir métricas como tokenCount, cost, etc.
 
-  project       Project        @relation("ProjectLogs", fields: [projectId], references: [id], onDelete: Cascade)
-  projectId     String         @map("project")
+  project   Project @relation("ProjectLogs", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String  @map("project")
 
   @@index([promptVersionId])
   @@index([environmentId])
@@ -303,13 +304,13 @@ model PromptExecutionLog {
 // --- Add New Model Below ---
 
 model SystemPrompt {
-  id           String    @id @default(cuid())
-  name         String    @unique // Nombre único para identificarlo (e.g., 'summarize_text', 'translate_es_en')
-  description  String?   // Descripción opcional
-  promptText   String    // El texto base del prompt del sistema
-  category     String?   // Categoría opcional para agruparlos (e.g., 'summarization', 'translation')
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id          String   @id @default(cuid())
+  name        String   @unique // Nombre único para identificarlo (e.g., 'summarize_text', 'translate_es_en')
+  description String? // Descripción opcional
+  promptText  String // El texto base del prompt del sistema
+  category    String? // Categoría opcional para agruparlos (e.g., 'summarization', 'translation')
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Nota: Sin relación directa con Project, User, etc.
 }

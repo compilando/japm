@@ -12,7 +12,7 @@ import { ProjectGuard } from '../common/guards/project.guard';
 @ApiTags('Asset Translations (within Project/Asset/Version)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
-@Controller('api/projects/:projectId/assets/:assetKey/versions/:versionTag/translations')
+@Controller('api/projects/:projectId/prompt-assets/:assetKey/versions/:versionTag/translations')
 export class AssetTranslationController {
   private readonly logger = new Logger(AssetTranslationController.name);
 

@@ -42,8 +42,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // Passport calls this after verifying the JWT signature and that it hasn't expired
     async validate(payload: JwtPayload): Promise<any> {
-        this.logger.log(`Validating JWT payload...`);
-        this.logger.debug(`Received payload: ${JSON.stringify(payload)}`);
+        // this.logger.log(`Validating JWT payload...`);
+        // this.logger.debug(`Received payload: ${JSON.stringify(payload)}`);
 
         if (!payload || !payload.sub) {
             this.logger.warn('JWT validation failed: Payload or payload.sub is missing.');
@@ -65,7 +65,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             // Whatever you return here will be attached to request.user
             // Return only necessary, non-sensitive information
             const result = { userId: payload.sub, email: payload.email };
-            this.logger.debug(`Validation successful. Returning user data for request.user: ${JSON.stringify(result)}`);
+            //this.logger.debug(`Validation successful. Returning user data for request.user: ${JSON.stringify(result)}`);
             return result;
             // Or you could return the full User object (without password) if needed:
             // const { password, ...userResult } = user;

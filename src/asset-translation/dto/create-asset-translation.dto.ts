@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsLocale, Length } from 'class-validator';
+import { IsString, IsNotEmpty, Matches, Length } from 'class-validator';
 
 export class CreateAssetTranslationDto {
     @ApiProperty({ description: 'ID de la versión del asset a la que pertenece esta traducción', example: 'cl...........cuid' })
@@ -10,12 +10,14 @@ export class CreateAssetTranslationDto {
     @ApiProperty({ description: 'Código de idioma para esta traducción (formato xx-XX)', example: 'es-ES' })
     @IsString()
     @IsNotEmpty()
-    @IsLocale()
     @Length(5, 5)
+    @Matches(/^[a-z]{2}-[A-Z]{2}$/, {
+        message: 'El código de idioma debe seguir el formato xx-XX (ej: es-ES, en-US)'
+    })
     languageCode: string;
 
     @ApiProperty({ description: 'Valor del asset traducido a este idioma' })
     @IsString()
-    // ¿Permitir valor vacío? Si no, añadir @IsNotEmpty()
+    @IsNotEmpty()
     value: string;
 }

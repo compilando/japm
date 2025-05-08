@@ -11,20 +11,30 @@ export class AssetTranslationService {
 
   // Helper to verify access to the parent asset version
   private async verifyVersionAccess(projectId: string, assetKey: string, versionTag: string): Promise<PromptAssetVersion> {
+    // Primero encontrar el asset por su key y projectId
+    const asset = await this.prisma.promptAsset.findUnique({
+      where: {
+        project_asset_key_unique: { projectId, key: assetKey }
+      }
+    });
+
+    if (!asset) {
+      throw new NotFoundException(`PromptAsset with key "${assetKey}" not found in project "${projectId}".`);
+    }
+
+    // Luego encontrar la versión usando el ID del asset
     const version = await this.prisma.promptAssetVersion.findUnique({
       where: {
-        assetId_versionTag: { assetId: assetKey, versionTag: versionTag }
+        assetId_versionTag: { assetId: asset.id, versionTag: versionTag }
       },
-      include: { asset: true }, // Include asset to check projectId
+      include: { asset: true }
     });
 
     if (!version) {
       throw new NotFoundException(`PromptAssetVersion with tag "${versionTag}" not found for asset "${assetKey}".`);
     }
-    if (version.asset.projectId !== projectId) {
-      throw new ForbiddenException(`Access denied to AssetVersion "${versionTag}" for project "${projectId}".`);
-    }
-    return version; // Return the found version
+
+    return version;
   }
 
   async create(projectId: string, assetKey: string, versionTag: string, createDto: CreateAssetTranslationDto): Promise<AssetTranslation> {

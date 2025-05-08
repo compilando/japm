@@ -87,8 +87,7 @@ Content-Type: application/json
 {
   "key": "{{assetKeyDespedida}}", # Key ya es slug
   "name": "Despedida Test",
-  "type": "Farewell",
-  "value": "Goodbye (base v1)"
+  "initialValue": "Goodbye (base v1)"
 }
 
 # @assetDespedidaId = {{createAssetDespedida.response.body.$.id}}

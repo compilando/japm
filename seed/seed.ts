@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { createSpanishRegionAndCulturalData } from './helpers';
 
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
@@ -62,6 +63,9 @@ async function main() {
         create: { id: 'default-project', name: 'Default Project', description: 'Project for base/shared entities.', owner: { connect: { id: testUser.id } } },
     });
     console.log(`Upserted default project: ${defaultProject.name}`);
+
+    // Crear región es-ES y datos culturales para el proyecto por defecto
+    await createSpanishRegionAndCulturalData(defaultProject.id);
 
     // 3. Create Generic Tags for Default Project
     console.log('Upserting Generic Tags...');
@@ -174,54 +178,7 @@ async function main() {
         console.log(`Upserted Environment: ${envData.name}`);
     }
 
-    // 6. Create ES Region and CulturalData (Associated with Default Project)
-    console.log('Upserting Region ES...');
-    const regionES = await prisma.region.upsert({
-        where: {
-            projectId_languageCode: { // Prisma utiliza este patrón para campos @@unique compuestos
-                projectId: defaultProject.id,
-                languageCode: 'es-ES'
-            }
-        },
-        update: {
-            name: 'Spain',
-            timeZone: 'Europe/Madrid'
-            // projectId no se actualiza aquí porque es parte del where
-        },
-        create: {
-            languageCode: 'es-ES',
-            name: 'Spain',
-            timeZone: 'Europe/Madrid',
-            project: { connect: { id: defaultProject.id } } // Conectar al proyecto
-        }
-    });
-    // El objeto regionES devuelto por upsert contendrá el campo 'id' (CUID)
-    console.log(`Upserted Region: ${regionES.name} (ID: ${regionES.id})`);
-
-    console.log('Upserting CulturalData ES...');
-    await prisma.culturalData.upsert({
-        where: {
-            projectId_key: { // Prisma utiliza este patrón para campos @@unique compuestos
-                projectId: defaultProject.id,
-                key: 'direct-and-formal' // Este es el campo que antes era 'id' en CulturalData
-            }
-        },
-        update: {
-            formalityLevel: 8,
-            style: 'Direct, formal language common in Spanish business.',
-            region: { connect: { id: regionES.id } } // Conectar a la Region usando su nuevo 'id' CUID
-        },
-        create: {
-            key: 'direct-and-formal',
-            formalityLevel: 8,
-            style: 'Direct, formal language common in Spanish business.',
-            project: { connect: { id: defaultProject.id } },
-            region: { connect: { id: regionES.id } } // Conectar a la Region usando su nuevo 'id' CUID
-        }
-    });
-    console.log(`Upserted CulturalData for ES (Key: direct-and-formal)`);
-
-    // 7. Create US Region and CulturalData (Associated with Default Project)
+    // 6. Create US Region and CulturalData (Associated with Default Project)
     console.log('Upserting Region US...');
     const regionUS = await prisma.region.upsert({
         where: {
@@ -285,6 +242,83 @@ async function main() {
         },
     });
     console.log('Upserted System Prompt: prompt-improver');
+
+    // --- Default Project Assets ---
+    console.log('Upserting Default Project Assets...');
+    const defaultAssets = [
+        {
+            key: 'company-mission-statement',
+            name: 'Company Mission Statement',
+            // type: 'Core Value',
+            // description: 'The official mission statement of the company.',
+            versionValue: 'Our mission is to empower individuals and businesses through innovative technology and exceptional service, fostering a future where potential is limitless.'
+        },
+        {
+            key: 'standard-disclaimer',
+            name: 'Standard Legal Disclaimer',
+            // type: 'Legal Text',
+            // description: 'Standard legal disclaimer for all external communications.',
+            versionValue: 'This communication is for informational purposes only and does not constitute legal, financial, or professional advice. Consult with a qualified professional before making any decisions.'
+        },
+        {
+            key: 'product-feature-list-alpha',
+            name: 'Product Alpha - Feature List',
+            // type: 'Product Info',
+            // description: 'Key features of Product Alpha.',
+            versionValue: '1. AI-Powered Analytics. 2. Real-time Collaboration. 3. Customizable Dashboards. 4. Secure Data Encryption. 5. Automated Reporting.'
+        }
+    ];
+
+    for (const assetData of defaultAssets) {
+        const asset = await prisma.promptAsset.upsert({
+            where: {
+                project_asset_key_unique: { // Corregido según el nombre del constraint
+                    projectId: defaultProject.id,
+                    key: assetData.key,
+                }
+            },
+            update: {
+                // 'name' eliminado, PromptAsset no tiene este campo
+            },
+            create: {
+                key: assetData.key,
+                // 'name' eliminado, PromptAsset no tiene este campo
+                projectId: defaultProject.id,
+            },
+            select: {
+                id: true,
+                key: true,
+                // 'name' eliminado
+                projectId: true,
+                createdAt: true,
+                updatedAt: true
+            }
+        });
+        console.log(`Upserted Asset: ${assetData.name} (Key: ${asset.key})`);
+
+        // Crear o actualizar la PromptAssetVersion asociada
+        await prisma.promptAssetVersion.upsert({
+            where: {
+                assetId_versionTag: { // Asumiendo este nombre para el constraint @@unique([assetId, versionTag])
+                    assetId: asset.id,
+                    versionTag: 'v1.0.0'
+                }
+            },
+            update: {
+                value: assetData.versionValue,
+                changeMessage: assetData.name, // Usar el 'name' del asset como 'changeMessage' de la versión
+                status: 'active'
+            },
+            create: {
+                assetId: asset.id,
+                value: assetData.versionValue,
+                versionTag: 'v1.0.0',
+                changeMessage: assetData.name, // Usar el 'name' del asset como 'changeMessage' de la versión
+                status: 'active'
+            }
+        });
+        console.log(`Upserted AssetVersion for ${assetData.name} (Key: ${asset.key}, Version: v1.0.0)`);
+    }
 
     // --- END BASE DATA --- //
 

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { createSpanishRegionAndCulturalData } from './helpers';
 
 // Definición de la función slugify (copiada de otros seeds)
 function slugify(text: string): string {
@@ -45,6 +46,9 @@ async function main() {
         },
     });
     console.log(`Upserted Project: ${ragProject.name}`);
+
+    // Crear región es-ES y datos culturales para el proyecto RAG
+    await createSpanishRegionAndCulturalData(ragProject.id);
 
     // Create specific AI models for this project
     const ragProjectId = ragProject.id;
@@ -105,15 +109,20 @@ async function main() {
     console.log('Upserted RAG Document Metadata entries.');
 
     // --- Upsert RAG Assets ---
+    const systemInstructionAssetName = 'RAG System Instruction';
     const assetSystemInstruction = await prisma.promptAsset.upsert({
         where: {
-            projectId_key: {
+            project_asset_key_unique: { // Corregido
                 projectId: ragProjectId,
                 key: 'rag-system-instruction'
             }
         },
-        update: { name: 'RAG System Instruction', type: 'Instruction' },
-        create: { key: 'rag-system-instruction', name: 'RAG System Instruction', type: 'Instruction', projectId: ragProjectId }
+        update: { /* name y type eliminados */ },
+        create: {
+            key: 'rag-system-instruction',
+            // name y type eliminados
+            projectId: ragProjectId
+        }
     });
     const assetSystemInstructionV1 = await prisma.promptAssetVersion.upsert({
         where: {
@@ -122,25 +131,35 @@ async function main() {
                 versionTag: 'v1.0.0'
             }
         },
-        update: { value: 'You are an AI assistant helping employees answer questions based ONLY on the provided internal documents. Answer concisely and accurately using the information given in the context. Cite the source document name(s) for your answer. If the answer cannot be found in the provided context, state that clearly. Do not make assumptions or use external knowledge.', status: 'active' },
+        update: {
+            value: 'You are an AI assistant helping employees answer questions based ONLY on the provided internal documents. Answer concisely and accurately using the information given in the context. Cite the source document name(s) for your answer. If the answer cannot be found in the provided context, state that clearly. Do not make assumptions or use external knowledge.',
+            status: 'active',
+            changeMessage: systemInstructionAssetName // Añadido
+        },
         create: {
             assetId: assetSystemInstruction.id,
             value: 'You are an AI assistant helping employees answer questions based ONLY on the provided internal documents. Answer concisely and accurately using the information given in the context. Cite the source document name(s) for your answer. If the answer cannot be found in the provided context, state that clearly. Do not make assumptions or use external knowledge.',
             versionTag: 'v1.0.0',
-            status: 'active'
+            status: 'active',
+            changeMessage: systemInstructionAssetName // Añadido
         },
         select: { id: true }
     });
 
+    const citationFormatAssetName = 'RAG Citation Format';
     const assetCitationFormat = await prisma.promptAsset.upsert({
         where: {
-            projectId_key: {
+            project_asset_key_unique: { // Corregido
                 projectId: ragProjectId,
                 key: 'rag-citation-format'
             }
         },
-        update: { name: 'RAG Citation Format', type: 'Instruction' },
-        create: { key: 'rag-citation-format', name: 'RAG Citation Format', type: 'Instruction', projectId: ragProjectId }
+        update: { /* name eliminado */ },
+        create: {
+            key: 'rag-citation-format',
+            // name eliminado
+            projectId: ragProjectId
+        }
     });
     const assetCitationFormatV1 = await prisma.promptAssetVersion.upsert({
         where: {
@@ -149,25 +168,35 @@ async function main() {
                 versionTag: 'v1.0.0'
             }
         },
-        update: { value: 'Cite sources like this: (Source: [Document Name])', status: 'active' },
+        update: {
+            value: 'Cite sources like this: (Source: [Document Name])',
+            status: 'active',
+            changeMessage: citationFormatAssetName // Añadido
+        },
         create: {
             assetId: assetCitationFormat.id,
             value: 'Cite sources like this: (Source: [Document Name])',
             versionTag: 'v1.0.0',
-            status: 'active'
+            status: 'active',
+            changeMessage: citationFormatAssetName // Añadido
         },
         select: { id: true }
     });
 
+    const notFoundResponseAssetName = 'RAG Not Found Response';
     const assetNotFoundResponse = await prisma.promptAsset.upsert({
         where: {
-            projectId_key: {
+            project_asset_key_unique: { // Corregido
                 projectId: ragProjectId,
                 key: 'rag-not-found-response'
             }
         },
-        update: { name: 'RAG Not Found Response', type: 'Instruction' },
-        create: { key: 'rag-not-found-response', name: 'RAG Not Found Response', type: 'Instruction', projectId: ragProjectId }
+        update: { /* name y type eliminados */ },
+        create: {
+            key: 'rag-not-found-response',
+            // name y type eliminados
+            projectId: ragProjectId
+        }
     });
     const assetNotFoundResponseV1 = await prisma.promptAssetVersion.upsert({
         where: {
@@ -176,12 +205,17 @@ async function main() {
                 versionTag: 'v1.0.0'
             }
         },
-        update: { value: 'I could not find information about that in the provided documents.', status: 'active' },
+        update: {
+            value: 'I could not find information about that in the provided documents.',
+            status: 'active',
+            changeMessage: notFoundResponseAssetName // Añadido
+        },
         create: {
             assetId: assetNotFoundResponse.id,
             value: 'I could not find information about that in the provided documents.',
             versionTag: 'v1.0.0',
-            status: 'active'
+            status: 'active',
+            changeMessage: notFoundResponseAssetName // Añadido
         },
         select: { id: true }
     });

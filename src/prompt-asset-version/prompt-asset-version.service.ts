@@ -12,7 +12,9 @@ export class PromptAssetVersionService {
   // Devuelve el PromptAsset con su ID CUID.
   private async getParentAsset(projectId: string, assetKey: string): Promise<PromptAsset> {
     const asset = await this.prisma.promptAsset.findUnique({
-      where: { projectId_key: { projectId, key: assetKey } }, // Usar constraint único
+      where: {
+        project_asset_key_unique: { projectId, key: assetKey } // Corregido
+      },
     });
     if (!asset) {
       throw new NotFoundException(`PromptAsset with key "${assetKey}" not found in project "${projectId}".`);

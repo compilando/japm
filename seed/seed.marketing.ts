@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { createSpanishRegionAndCulturalData } from './helpers';
 
 // Definición de la función slugify (copiada de otros seeds)
 function slugify(text: string): string {
@@ -31,32 +32,34 @@ async function main() {
 
     // Upsert Marketing Project
     const marketingProject = await prisma.project.upsert({
-        where: { id: 'marketing-content-gen' },
-        update: { name: 'Marketing Content Generation', description: 'Prompts for generating various marketing materials.', ownerUserId: testUser.id }, // Update ownerUserId
+        where: { id: 'marketing-content-project' },
+        update: { name: 'Marketing Content Generation', description: 'AI-powered marketing content generation and optimization.', ownerUserId: testUser.id },
         create: {
-            id: 'marketing-content-gen',
+            id: 'marketing-content-project',
             name: 'Marketing Content Generation',
-            description: 'Prompts for generating various marketing materials.',
-            owner: { connect: { id: testUser.id } }, // Connect owner on create
+            description: 'AI-powered marketing content generation and optimization.',
+            owner: { connect: { id: testUser.id } }
         },
     });
     console.log(`Upserted Project: ${marketingProject.name}`);
-    const mktProjectId = marketingProject.id;
+
+    // Crear región es-ES y datos culturales para el proyecto Marketing
+    await createSpanishRegionAndCulturalData(marketingProject.id);
 
     // Create specific AI models for this project
     const mktGpt4o = await prisma.aIModel.upsert({
-        where: { projectId_name: { projectId: mktProjectId, name: 'gpt-4o-2024-05-13' } },
+        where: { projectId_name: { projectId: marketingProject.id, name: 'gpt-4o-2024-05-13' } },
         update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
-        create: { projectId: mktProjectId, name: 'gpt-4o-2024-05-13', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
+        create: { projectId: marketingProject.id, name: 'gpt-4o-2024-05-13', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
         select: { id: true }
     });
     const mktGpt4oMini = await prisma.aIModel.upsert({
-        where: { projectId_name: { projectId: mktProjectId, name: 'gpt-4o-mini-2024-07-18' } },
+        where: { projectId_name: { projectId: marketingProject.id, name: 'gpt-4o-mini-2024-07-18' } },
         update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
-        create: { projectId: mktProjectId, name: 'gpt-4o-mini-2024-07-18', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
+        create: { projectId: marketingProject.id, name: 'gpt-4o-mini-2024-07-18', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
         select: { id: true }
     });
-    console.log(`Upserted AI Models for project ${mktProjectId}`);
+    console.log(`Upserted AI Models for project ${marketingProject.id}`);
 
     // Upsert Marketing Tags with prefix
     const mktPrefix = 'mkt_';
@@ -66,13 +69,13 @@ async function main() {
     for (const baseTagName of mktBaseTags) {
         const tagName = `${mktPrefix}${baseTagName}`;
         const tag = await prisma.tag.upsert({
-            where: { projectId_name: { projectId: mktProjectId, name: tagName } },
+            where: { projectId_name: { projectId: marketingProject.id, name: tagName } },
             update: {}, // No specific fields to update
-            create: { name: tagName, projectId: mktProjectId },
+            create: { name: tagName, projectId: marketingProject.id },
             select: { id: true } // Select ID
         });
         mktTagMap.set(tagName, tag.id); // Store ID in map
-        console.log(`Upserted Tag: ${tagName} for project ${mktProjectId}`);
+        console.log(`Upserted Tag: ${tagName} for project ${marketingProject.id}`);
     }
     // Helper function to get tag IDs
     const getMktTagIds = (baseNames: string[]): { id: string }[] => {
@@ -83,15 +86,19 @@ async function main() {
     };
 
     // --- Upsert Marketing Assets --- 
+    const audienceAssetName = 'Target Audience Persona';
     const assetAudience = await prisma.promptAsset.upsert({
         where: {
-            projectId_key: {
-                projectId: mktProjectId,
+            project_asset_key_unique: {
+                projectId: marketingProject.id,
                 key: 'target-audience-persona'
             }
         },
-        update: { name: 'Target Audience Persona', type: 'Text Template' },
-        create: { key: 'target-audience-persona', name: 'Target Audience Persona', type: 'Text Template', projectId: mktProjectId }
+        update: {},
+        create: {
+            key: 'target-audience-persona',
+            projectId: marketingProject.id
+        }
     });
     const assetAudienceV1 = await prisma.promptAssetVersion.upsert({
         where: {
@@ -100,25 +107,34 @@ async function main() {
                 versionTag: 'v1.0.0'
             }
         },
-        update: { value: 'Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]\n- Pain Points: [Challenges, Needs]', status: 'active' },
+        update: {
+            value: 'Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]\n- Pain Points: [Challenges, Needs]',
+            status: 'active',
+            changeMessage: audienceAssetName
+        },
         create: {
             assetId: assetAudience.id,
             value: 'Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]\n- Pain Points: [Challenges, Needs]',
             versionTag: 'v1.0.0',
-            status: 'active'
+            status: 'active',
+            changeMessage: audienceAssetName
         },
         select: { id: true }
     });
 
+    const ctaAssetName = 'Call to Action Phrases';
     const assetCTA = await prisma.promptAsset.upsert({
         where: {
-            projectId_key: {
-                projectId: mktProjectId,
+            project_asset_key_unique: {
+                projectId: marketingProject.id,
                 key: 'call-to-action-phrases'
             }
         },
-        update: { name: 'Call to Action Phrases', type: 'List' },
-        create: { key: 'call-to-action-phrases', name: 'Call to Action Phrases', type: 'List', projectId: mktProjectId }
+        update: {},
+        create: {
+            key: 'call-to-action-phrases',
+            projectId: marketingProject.id
+        }
     });
     const assetCTAV1 = await prisma.promptAssetVersion.upsert({
         where: {
@@ -127,12 +143,17 @@ async function main() {
                 versionTag: 'v1.0.0'
             }
         },
-        update: { value: 'Learn More\nShop Now\nSign Up Today\nDownload Free Guide', status: 'active' },
+        update: {
+            value: 'Learn More\nShop Now\nSign Up Today\nDownload Free Guide',
+            status: 'active',
+            changeMessage: ctaAssetName
+        },
         create: {
             assetId: assetCTA.id,
             value: 'Learn More\nShop Now\nSign Up Today\nDownload Free Guide',
             versionTag: 'v1.0.0',
-            status: 'active'
+            status: 'active',
+            changeMessage: ctaAssetName
         },
         select: { id: true }
     });
@@ -145,7 +166,7 @@ async function main() {
         where: {
             prompt_id_project_unique: {
                 id: promptBlogPostIdeaSlug,
-                projectId: mktProjectId
+                projectId: marketingProject.id
             }
         },
         update: {
@@ -157,7 +178,7 @@ async function main() {
             id: promptBlogPostIdeaSlug,
             name: promptBlogPostIdeaName,
             description: 'Generate blog post ideas for a target audience.',
-            projectId: mktProjectId,
+            projectId: marketingProject.id,
             tags: { connect: getMktTagIds(['marketing', 'blog-post']) }
         },
         select: { id: true, name: true }

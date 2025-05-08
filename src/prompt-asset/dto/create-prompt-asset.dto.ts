@@ -26,16 +26,6 @@ export class CreatePromptAssetDto {
     @IsNotEmpty()
     name: string;
 
-    @ApiPropertyOptional({ description: 'Tipo de asset (e.g., texto, json, lista)', example: 'texto' })
-    @IsOptional()
-    @IsString()
-    type?: string;
-
-    @ApiPropertyOptional({ description: 'Descripción más detallada del propósito del asset' })
-    @IsOptional()
-    @IsString()
-    description?: string;
-
     @ApiPropertyOptional({ description: 'Categoría para organizar assets (e.g., Saludos, Despedidas)', example: 'Saludos' })
     @IsOptional()
     @IsString()

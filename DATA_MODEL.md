@@ -44,7 +44,7 @@ Here's a description of the main entities (models) in the `schema.prisma` file:
 
 ### Assets & Modularity
 
-* **`PromptAsset`**: A reusable component (e.g., a brand voice guideline, a list of fields to extract, a standard greeting, a code snippet, a character profile). Identified by a unique `key` (slug). Contains metadata like `name`, `description`, `type`, `category`, and links to its `Project`. The `description` is often key for instructing the AI on how to use the asset, especially in extraction tasks.
+* **`PromptAsset`**: A reusable component (e.g., a brand voice guideline, a list of fields to extract, a standard greeting, a code snippet, a character profile). Identified by a unique `key` (slug). Contains metadata like `name`, `category`, and links to its `Project`.
 * **`PromptAssetVersion`**: A specific iteration of a `PromptAsset`. Contains the actual `value` of the asset for that version, along with `versionTag`, `status`, `changeMessage`, and links to:
     * `AssetTranslation`s for different languages.
     * `PromptAssetLink`s showing where it's used.

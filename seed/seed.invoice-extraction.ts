@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { createSpanishRegionAndCulturalData } from './helpers';
 
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
@@ -49,16 +50,20 @@ async function main() {
     // --- Create Project Specific Data ---
     // 1. Upsert Invoice Extraction Project
     const invoiceProject = await prisma.project.upsert({
-        where: { id: 'invoice-data-extraction' },
-        update: { name: 'Invoice Data Extraction AI', description: 'Prompts to extract structured data from invoice documents.', ownerUserId: testUser.id },
+        where: { id: 'invoice-extraction-project' },
+        update: { name: 'Invoice Data Extraction', description: 'AI-powered invoice data extraction and processing.', ownerUserId: testUser.id },
         create: {
-            id: 'invoice-data-extraction',
-            name: 'Invoice Data Extraction AI',
-            description: 'Prompts to extract structured data from invoice documents.',
-            owner: { connect: { id: testUser.id } },
+            id: 'invoice-extraction-project',
+            name: 'Invoice Data Extraction',
+            description: 'AI-powered invoice data extraction and processing.',
+            owner: { connect: { id: testUser.id } }
         },
     });
     console.log(`Upserted Project: ${invoiceProject.name}`);
+
+    // Crear región es-ES y datos culturales para el proyecto Invoice Extraction
+    await createSpanishRegionAndCulturalData(invoiceProject.id);
+
     const invProjectId = invoiceProject.id;
 
     // Create specific AI models for this project
@@ -101,15 +106,19 @@ async function main() {
     };
 
     // 3. Upsert Invoice Extraction Assets and Versions
+    const invoiceFieldsAssetName = 'Invoice Standard Fields List';
     const assetInvoiceFields = await prisma.promptAsset.upsert({
         where: {
-            projectId_key: {
+            project_asset_key_unique: {
                 projectId: invProjectId,
                 key: 'invoice-standard-fields'
             }
         },
-        update: { name: 'Invoice Standard Fields List', type: 'List' },
-        create: { key: 'invoice-standard-fields', name: 'Invoice Standard Fields List', type: 'List', projectId: invProjectId }
+        update: {},
+        create: {
+            key: 'invoice-standard-fields',
+            projectId: invProjectId
+        }
     });
     const assetInvoiceFieldsV1 = await prisma.promptAssetVersion.upsert({
         where: {
@@ -118,25 +127,34 @@ async function main() {
                 versionTag: 'v1.0.0'
             }
         },
-        update: { value: 'Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price\nLine Item Total', status: 'active' },
+        update: {
+            value: 'Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price\nLine Item Total',
+            status: 'active',
+            changeMessage: invoiceFieldsAssetName
+        },
         create: {
             assetId: assetInvoiceFields.id,
             value: 'Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price\nLine Item Total',
             versionTag: 'v1.0.0',
-            status: 'active'
+            status: 'active',
+            changeMessage: invoiceFieldsAssetName
         },
         select: { id: true }
     });
 
+    const jsonSchemaAssetName = 'Target JSON Schema for Invoice';
     const assetJsonSchema = await prisma.promptAsset.upsert({
         where: {
-            projectId_key: {
+            project_asset_key_unique: {
                 projectId: invProjectId,
                 key: 'invoice-json-schema'
             }
         },
-        update: { name: 'Target JSON Schema for Invoice', type: 'JSON Schema' },
-        create: { key: 'invoice-json-schema', name: 'Target JSON Schema for Invoice', type: 'JSON Schema', projectId: invProjectId }
+        update: {},
+        create: {
+            key: 'invoice-json-schema',
+            projectId: invProjectId
+        }
     });
     const assetJsonSchemaV1 = await prisma.promptAssetVersion.upsert({
         where: {
@@ -159,7 +177,8 @@ async function main() {
                 },
                 required: ["invoiceNumber", "invoiceDate", "vendorName", "totalAmount"]
             }, null, 2),
-            status: 'active'
+            status: 'active',
+            changeMessage: jsonSchemaAssetName
         },
         create: {
             assetId: assetJsonSchema.id,
@@ -177,7 +196,8 @@ async function main() {
                 required: ["invoiceNumber", "invoiceDate", "vendorName", "totalAmount"]
             }, null, 2),
             versionTag: 'v1.0.0',
-            status: 'active'
+            status: 'active',
+            changeMessage: jsonSchemaAssetName
         },
         select: { id: true }
     });

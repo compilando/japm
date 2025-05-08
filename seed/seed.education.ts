@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { createSpanishRegionAndCulturalData } from './helpers';
 
 // Definición de la función slugify (copiada de otros seeds)
 function slugify(text: string): string {
@@ -34,16 +35,19 @@ async function main() {
     });
 
     const educationProject = await prisma.project.upsert({
-        where: { id: 'biology-101-courseware' },
-        update: { name: 'Biology 101 AI Tutor & Content Generator', description: 'Tools for creating quizzes and explanations for introductory biology.', ownerUserId: testUser.id },
+        where: { id: 'biology-101-project' },
+        update: { name: 'Biology 101 AI Tutor & Content Generator', description: 'AI-powered biology tutoring and content generation.', ownerUserId: testUser.id },
         create: {
-            id: 'biology-101-courseware',
+            id: 'biology-101-project',
             name: 'Biology 101 AI Tutor & Content Generator',
-            description: 'Tools for creating quizzes and explanations for introductory biology.',
-            owner: { connect: { id: testUser.id } },
+            description: 'AI-powered biology tutoring and content generation.',
+            owner: { connect: { id: testUser.id } }
         },
     });
     console.log(`Upserted Project: ${educationProject.name}`);
+
+    // Crear región es-ES y datos culturales para el proyecto Education
+    await createSpanishRegionAndCulturalData(educationProject.id);
 
     // Create specific AI models for this project
     const eduProjectId = educationProject.id;
@@ -86,15 +90,19 @@ async function main() {
     };
 
     // --- Upsert Educational Assets ---
+    const definitionCellAssetName = 'Definition - Cell (Biology)';
     const assetDefinitionCell = await prisma.promptAsset.upsert({
         where: {
-            projectId_key: {
+            project_asset_key_unique: {
                 projectId: eduProjectId,
                 key: 'definition-cell-biology'
             }
         },
-        update: { name: 'Definition - Cell (Biology)', type: 'Definition' },
-        create: { key: 'definition-cell-biology', name: 'Definition - Cell (Biology)', type: 'Definition', projectId: eduProjectId }
+        update: {},
+        create: {
+            key: 'definition-cell-biology',
+            projectId: eduProjectId
+        }
     });
     const assetDefinitionCellV1 = await prisma.promptAssetVersion.upsert({
         where: {
@@ -103,25 +111,34 @@ async function main() {
                 versionTag: 'v1.0.0'
             }
         },
-        update: { value: 'The basic structural, functional, and biological unit of all known organisms. A cell is the smallest unit of life.', status: 'active' },
+        update: {
+            value: 'The basic structural, functional, and biological unit of all known organisms. A cell is the smallest unit of life.',
+            status: 'active',
+            changeMessage: definitionCellAssetName
+        },
         create: {
             assetId: assetDefinitionCell.id,
             value: 'The basic structural, functional, and biological unit of all known organisms. A cell is the smallest unit of life.',
             versionTag: 'v1.0.0',
-            status: 'active'
+            status: 'active',
+            changeMessage: definitionCellAssetName
         },
         select: { id: true }
     });
 
+    const mcqTemplateAssetName = 'Multiple Choice Question Template (4 Options)';
     const assetMcqTemplate = await prisma.promptAsset.upsert({
         where: {
-            projectId_key: {
+            project_asset_key_unique: {
                 projectId: eduProjectId,
                 key: 'mcq-template-4-options'
             }
         },
-        update: { name: 'Multiple Choice Question Template (4 Options)', type: 'Template' },
-        create: { key: 'mcq-template-4-options', name: 'Multiple Choice Question Template (4 Options)', type: 'Template', projectId: eduProjectId }
+        update: {},
+        create: {
+            key: 'mcq-template-4-options',
+            projectId: eduProjectId
+        }
     });
     const assetMcqTemplateV1 = await prisma.promptAssetVersion.upsert({
         where: {
@@ -130,25 +147,34 @@ async function main() {
                 versionTag: 'v1.0.0'
             }
         },
-        update: { value: 'Question:\n{Question Text}\nA) {Option A}\nB) {Option B}\nC) {Option C}\nD) {Option D}\nCorrect Answer: {Correct Letter}\nExplanation: {Explanation Text}', status: 'active' },
+        update: {
+            value: 'Question:\n{Question Text}\nA) {Option A}\nB) {Option B}\nC) {Option C}\nD) {Option D}\nCorrect Answer: {Correct Letter}\nExplanation: {Explanation Text}',
+            status: 'active',
+            changeMessage: mcqTemplateAssetName
+        },
         create: {
             assetId: assetMcqTemplate.id,
             value: 'Question:\n{Question Text}\nA) {Option A}\nB) {Option B}\nC) {Option C}\nD) {Option D}\nCorrect Answer: {Correct Letter}\nExplanation: {Explanation Text}',
             versionTag: 'v1.0.0',
-            status: 'active'
+            status: 'active',
+            changeMessage: mcqTemplateAssetName
         },
         select: { id: true }
     });
 
+    const explanationStyleAssetName = 'Explanation Style - Use Analogies';
     const assetExplanationStyle = await prisma.promptAsset.upsert({
         where: {
-            projectId_key: {
+            project_asset_key_unique: {
                 projectId: eduProjectId,
                 key: 'explanation-style-analogy'
             }
         },
-        update: { name: 'Explanation Style - Use Analogies', type: 'Instruction' },
-        create: { key: 'explanation-style-analogy', name: 'Explanation Style - Use Analogies', type: 'Instruction', projectId: eduProjectId }
+        update: {},
+        create: {
+            key: 'explanation-style-analogy',
+            projectId: eduProjectId
+        }
     });
     const assetExplanationStyleV1 = await prisma.promptAssetVersion.upsert({
         where: {
@@ -157,12 +183,17 @@ async function main() {
                 versionTag: 'v1.0.0'
             }
         },
-        update: { value: 'Explain the concept clearly and concisely. Use simple language suitable for a high school student. Where possible, include a simple analogy to aid understanding.', status: 'active' },
+        update: {
+            value: 'Explain the concept clearly and concisely. Use simple language suitable for a high school student. Where possible, include a simple analogy to aid understanding.',
+            status: 'active',
+            changeMessage: explanationStyleAssetName
+        },
         create: {
             assetId: assetExplanationStyle.id,
             value: 'Explain the concept clearly and concisely. Use simple language suitable for a high school student. Where possible, include a simple analogy to aid understanding.',
             versionTag: 'v1.0.0',
-            status: 'active'
+            status: 'active',
+            changeMessage: explanationStyleAssetName
         },
         select: { id: true }
     });
