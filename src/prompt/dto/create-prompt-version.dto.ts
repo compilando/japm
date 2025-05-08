@@ -39,20 +39,11 @@ class InitialTranslationDto {
 }
 
 export class CreatePromptVersionDto {
-    // @ApiProperty({ description: 'Texto BASE del prompt para esta nueva versión.' })
-    @ApiProperty({ description: 'BASE prompt text for this new version.' })
+    @ApiProperty({ description: 'El valor/texto del prompt para esta nueva versión' })
     @IsString()
-    @IsDefined()
     promptText: string;
 
-    // @ApiProperty({ description: 'Etiqueta única para esta versión dentro del prompt (e.g., v1.1.0, beta-feature-x).', example: 'v1.1.0' })
-    @ApiProperty({ description: 'Unique tag for this version within the prompt (e.g., v1.1.0, beta-feature-x).', example: 'v1.1.0' })
-    @IsString()
-    @IsDefined()
-    versionTag: string;
-
-    // @ApiPropertyOptional({ description: 'Mensaje describiendo los cambios en esta versión.' })
-    @ApiPropertyOptional({ description: 'Message describing the changes in this version.' })
+    @ApiPropertyOptional({ description: 'Mensaje describiendo los cambios en esta versión.' })
     @IsString()
     @IsOptional()
     changeMessage?: string;

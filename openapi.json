@@ -614,7 +614,7 @@
             "name": "culturalDataId",
             "required": true,
             "in": "path",
-            "description": "ID of the cultural data",
+            "description": "Key of the cultural data (e.g., direct-and-formal)",
             "schema": {
               "type": "string"
             }
@@ -661,7 +661,7 @@
             "name": "culturalDataId",
             "required": true,
             "in": "path",
-            "description": "ID to update",
+            "description": "Key of the cultural data to update (e.g., direct-and-formal)",
             "schema": {
               "type": "string"
             }
@@ -721,7 +721,7 @@
             "name": "culturalDataId",
             "required": true,
             "in": "path",
-            "description": "ID to delete",
+            "description": "Key of the cultural data to delete (e.g., direct-and-formal)",
             "schema": {
               "type": "string"
             }
@@ -766,7 +766,7 @@
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "Project ID",
+            "description": "Project ID (slug)",
             "schema": {
               "type": "string"
             }
@@ -794,13 +794,13 @@
             }
           },
           "400": {
-            "description": "Invalid data (e.g., missing initial promptText)."
+            "description": "Invalid data."
           },
           "404": {
             "description": "Project or Tag not found."
           },
           "409": {
-            "description": "Conflict, a prompt with this name already exists in the project."
+            "description": "Conflict, the generated slug for this prompt name already exists globally."
           }
         },
         "security": [
@@ -808,7 +808,7 @@
             "bearer": []
           }
         ],
-        "summary": "Creates a new logical prompt within a project",
+        "summary": "Creates a new logical prompt (with ID as slug) within a project",
         "tags": [
           "Prompts"
         ]
@@ -820,7 +820,7 @@
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "Project ID",
+            "description": "Project ID (slug)",
             "schema": {
               "type": "string"
             }
@@ -855,15 +855,15 @@
         ]
       }
     },
-    "/api/projects/{projectId}/prompts/{promptName}": {
+    "/api/projects/{projectId}/prompts/{promptId}": {
       "get": {
         "operationId": "PromptController_findOne",
         "parameters": [
           {
-            "name": "promptName",
+            "name": "promptId",
             "required": true,
             "in": "path",
-            "description": "Unique name of the prompt within the project",
+            "description": "ID (slug) of the prompt",
             "schema": {
               "type": "string"
             }
@@ -872,7 +872,7 @@
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "Project ID",
+            "description": "Project ID (slug)",
             "schema": {
               "type": "string"
             }
@@ -898,7 +898,7 @@
             "bearer": []
           }
         ],
-        "summary": "Gets a logical prompt by its name within a project",
+        "summary": "Gets a logical prompt by its ID (slug) within a project",
         "tags": [
           "Prompts"
         ]
@@ -907,10 +907,10 @@
         "operationId": "PromptController_update",
         "parameters": [
           {
-            "name": "promptName",
+            "name": "promptId",
             "required": true,
             "in": "path",
-            "description": "Name of the prompt to update",
+            "description": "ID (slug) of the prompt to update",
             "schema": {
               "type": "string"
             }
@@ -919,7 +919,7 @@
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "Project ID",
+            "description": "Project ID (slug)",
             "schema": {
               "type": "string"
             }
@@ -952,7 +952,7 @@
             "bearer": []
           }
         ],
-        "summary": "Updates an existing prompt by its name for a specific project",
+        "summary": "Updates an existing prompt by its ID (slug) for a specific project",
         "tags": [
           "Prompts"
         ]
@@ -961,10 +961,10 @@
         "operationId": "PromptController_remove",
         "parameters": [
           {
-            "name": "promptName",
+            "name": "promptId",
             "required": true,
             "in": "path",
-            "description": "Name of the prompt to delete",
+            "description": "ID (slug) of the prompt to delete",
             "schema": {
               "type": "string"
             }
@@ -973,7 +973,7 @@
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "Project ID",
+            "description": "Project ID (slug)",
             "schema": {
               "type": "string"
             }
@@ -995,7 +995,7 @@
             "bearer": []
           }
         ],
-        "summary": "Deletes a logical prompt (and its associated versions via Cascade) within a project by name",
+        "summary": "Deletes a logical prompt (and its associated versions via Cascade) within a project by ID (slug)",
         "tags": [
           "Prompts"
         ]
@@ -1125,12 +1125,12 @@
         ]
       }
     },
-    "/api/projects/{projectId}/prompts/{promptName}/versions/{versionId}/translations": {
+    "/api/projects/{projectId}/prompts/versions/{versionIdCuid}/translations": {
       "put": {
         "operationId": "PromptController_addOrUpdateTranslation",
         "parameters": [
           {
-            "name": "versionId",
+            "name": "versionIdCuid",
             "required": true,
             "in": "path",
             "description": "ID of the version to translate (CUID)",
@@ -1139,19 +1139,10 @@
             }
           },
           {
-            "name": "promptName",
-            "required": true,
-            "in": "path",
-            "description": "Parent prompt name (contextual)",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "Project ID",
+            "description": "Project ID (slug)",
             "schema": {
               "type": "string"
             }
@@ -1174,6 +1165,9 @@
           "400": {
             "description": "Invalid data."
           },
+          "403": {
+            "description": "Forbidden (Version not in Project)."
+          },
           "404": {
             "description": "Project or Version not found."
           }
@@ -1183,7 +1177,7 @@
             "bearer": []
           }
         ],
-        "summary": "Adds or updates a translation for a specific prompt version in the project.",
+        "summary": "Adds or updates a translation for a specific prompt version (identified by CUID) in the project.",
         "tags": [
           "Prompts"
         ]
@@ -2689,6 +2683,36 @@
           }
         ],
         "summary": "Delete an AI model by ID (must belong to project)",
+        "tags": [
+          "AI Models (Project Specific)"
+        ]
+      }
+    },
+    "/api/projects/{projectId}/aimodels/providers/types": {
+      "get": {
+        "operationId": "AiModelController_getProviderTypes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "A list of Langchain provider types.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List available Langchain provider types",
         "tags": [
           "AI Models (Project Specific)"
         ]
@@ -5036,74 +5060,72 @@
       "CreateCulturalDataDto": {
         "type": "object",
         "properties": {
-          "id": {
+          "key": {
             "type": "string",
-            "description": "Unique ID for this cultural data (slug format)",
+            "description": "Unique key for the cultural data within the project",
             "example": "direct-and-formal"
           },
           "regionId": {
             "type": "string",
             "minLength": 5,
             "maxLength": 5,
-            "description": "Associated region ID (xx-XX language code)",
-            "example": "es-ES"
+            "description": "ID (CUID) of the Region this data applies to"
           },
           "formalityLevel": {
             "type": "number",
-            "description": "Formality level (optional)",
-            "example": 5
+            "minimum": 1,
+            "maximum": 10,
+            "description": "Formality level (1-10)"
           },
           "style": {
             "type": "string",
-            "description": "Communication style (optional)",
-            "example": "Direct"
+            "description": "Description of the communication style"
           },
           "considerations": {
             "type": "string",
-            "description": "Cultural considerations (optional)"
+            "description": "Specific cultural considerations"
           },
           "notes": {
             "type": "string",
-            "description": "Additional notes (optional)"
+            "description": "General notes"
           }
         },
         "required": [
-          "id",
+          "key",
           "regionId"
         ]
       },
       "CulturalDataResponse": {
         "type": "object",
         "properties": {
-          "id": {
+          "key": {
             "type": "string",
-            "description": "Unique ID for this cultural data (slug format)",
+            "description": "Unique key for the cultural data within the project",
             "example": "direct-and-formal"
           },
           "regionId": {
             "type": "string",
             "minLength": 5,
             "maxLength": 5,
-            "description": "Associated region ID (xx-XX language code)",
-            "example": "es-ES"
+            "description": "ID (CUID) of the Region this data applies to"
           },
           "formalityLevel": {
             "type": "number",
-            "description": "Formality level (optional)",
-            "example": 5
+            "minimum": 1,
+            "maximum": 10,
+            "description": "Formality level (1-10)"
           },
           "style": {
             "type": "string",
-            "description": "Communication style (optional)",
-            "example": "Direct"
+            "description": "Description of the communication style"
           },
           "considerations": {
             "type": "string",
-            "description": "Cultural considerations (optional)"
+            "description": "Specific cultural considerations"
           },
           "notes": {
             "type": "string",
-            "description": "Additional notes (optional)"
+            "description": "General notes"
           },
           "region": {
             "$ref": "#/components/schemas/CreateRegionDto"
@@ -5113,7 +5135,7 @@
           }
         },
         "required": [
-          "id",
+          "key",
           "regionId",
           "region",
           "projectId"
@@ -5124,21 +5146,21 @@
         "properties": {
           "formalityLevel": {
             "type": "number",
-            "description": "Formality level (optional)",
-            "example": 5
+            "minimum": 1,
+            "maximum": 10,
+            "description": "Formality level (1-10)"
           },
           "style": {
             "type": "string",
-            "description": "Communication style (optional)",
-            "example": "Direct"
+            "description": "Description of the communication style"
           },
           "considerations": {
             "type": "string",
-            "description": "Cultural considerations (optional)"
+            "description": "Specific cultural considerations"
           },
           "notes": {
             "type": "string",
-            "description": "Additional notes (optional)"
+            "description": "General notes"
           }
         }
       },
@@ -5213,11 +5235,6 @@
             "description": "New description of the prompt's purpose.",
             "example": "Updated prompt for greetings."
           },
-          "promptText": {
-            "type": "string",
-            "description": "Base prompt text for the latest version. If provided, updates the text of the most recent version of this prompt.",
-            "example": "Hello {{customer_name}}, welcome again."
-          },
           "tagIds": {
             "description": "Complete list of Tag IDs to associate (replaces existing ones). Empty array to remove all.",
             "example": [
@@ -5256,16 +5273,11 @@
         "properties": {
           "promptText": {
             "type": "string",
-            "description": "BASE prompt text for this new version."
-          },
-          "versionTag": {
-            "type": "string",
-            "description": "Unique tag for this version within the prompt (e.g., v1.1.0, beta-feature-x).",
-            "example": "v1.1.0"
+            "description": "El valor/texto del prompt para esta nueva versión"
           },
           "changeMessage": {
             "type": "string",
-            "description": "Message describing the changes in this version."
+            "description": "Mensaje describiendo los cambios en esta versión."
           },
           "assetLinks": {
             "description": "List of asset versions to link to this prompt version.",
@@ -5284,7 +5296,6 @@
         },
         "required": [
           "promptText",
-          "versionTag",
           "assetLinks"
         ]
       },
@@ -5381,13 +5392,6 @@
           "enabled": {
             "type": "boolean",
             "description": "Activa o desactiva el asset"
-          },
-          "projectId": {
-            "type": "string",
-            "nullable": true,
-            "minLength": 25,
-            "maxLength": 25,
-            "description": "ID opcional del proyecto al que pertenece el asset (null para desvincular)"
           }
         }
       },
@@ -5570,14 +5574,15 @@
             "description": "Optional description for the project",
             "example": "A project to demonstrate NestJS and Prisma"
           },
-          "ownerUserId": {
+          "owner": {
             "type": "string",
-            "description": "Optional ID of the User who owns this project",
-            "example": "cl..."
+            "description": "ID (CUID) of the User who owns this project",
+            "example": "user-cuid-xxxx"
           }
         },
         "required": [
-          "name"
+          "name",
+          "owner"
         ]
       },
       "UpdateProjectDto": {
@@ -5593,10 +5598,10 @@
             "description": "Optional description for the project",
             "example": "A project to demonstrate NestJS and Prisma"
           },
-          "ownerUserId": {
+          "owner": {
             "type": "string",
-            "description": "Optional ID of the User who owns this project",
-            "example": "cl..."
+            "description": "ID (CUID) of the User who owns this project",
+            "example": "user-cuid-xxxx"
           }
         }
       },
@@ -5796,11 +5801,11 @@
         "properties": {
           "promptText": {
             "type": "string",
-            "description": "BASE prompt text for this new version."
+            "description": "El valor/texto del prompt para esta nueva versión"
           },
           "changeMessage": {
             "type": "string",
-            "description": "Message describing the changes in this version."
+            "description": "Mensaje describiendo los cambios en esta versión."
           },
           "assetLinks": {
             "description": "List of asset versions to link to this prompt version.",
@@ -5856,20 +5861,14 @@
       "CreatePromptAssetVersionDto": {
         "type": "object",
         "properties": {
-          "assetId": {
-            "type": "string",
-            "description": "Key (slug) del asset lógico al que pertenece esta versión",
-            "example": "saludo-inicial"
-          },
           "value": {
             "type": "string",
-            "description": "El valor del asset para esta versión"
+            "description": "El valor del asset para esta nueva versión"
           },
           "versionTag": {
             "type": "string",
-            "default": "v1.0.0",
-            "description": "Etiqueta de versión (e.g., v1.0.0). Debe ser única por asset.",
-            "example": "v1.0.0"
+            "description": "Etiqueta de versión (e.g., v1.0.1, v1.1.0). Si no se provee, se podría auto-incrementar o requerir.",
+            "example": "v1.0.1"
           },
           "changeMessage": {
             "type": "string",
@@ -5877,7 +5876,6 @@
           }
         },
         "required": [
-          "assetId",
           "value"
         ]
       },

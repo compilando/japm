@@ -178,60 +178,96 @@ async function main() {
     // 6. Create ES Region and CulturalData (Associated with Default Project)
     console.log('Upserting Region ES...');
     const regionES = await prisma.region.upsert({
-        where: { languageCode: 'es-ES' },
-        update: { name: 'Spain', timeZone: 'Europe/Madrid', projectId: defaultProject.id }, // Ensure projectId on update too
-        create: {
+        where: {
+            projectId_languageCode: { // Prisma utiliza este patrón para campos @@unique compuestos
+                projectId: defaultProject.id,
+                languageCode: 'es-ES'
+            }
+        },
+        update: {
             name: 'Spain',
+            timeZone: 'Europe/Madrid'
+            // projectId no se actualiza aquí porque es parte del where
+        },
+        create: {
             languageCode: 'es-ES',
+            name: 'Spain',
             timeZone: 'Europe/Madrid',
-            projectId: defaultProject.id // Connect using projectId directly in create
+            project: { connect: { id: defaultProject.id } } // Conectar al proyecto
         }
     });
-    console.log(`Upserted Region: ${regionES.name}`);
+    // El objeto regionES devuelto por upsert contendrá el campo 'id' (CUID)
+    console.log(`Upserted Region: ${regionES.name} (ID: ${regionES.id})`);
 
     console.log('Upserting CulturalData ES...');
     await prisma.culturalData.upsert({
-        where: { id: "direct-and-formal" },
-        update: { formalityLevel: 8, style: 'Direct, formal language common in Spanish business.', regionId: regionES.languageCode, projectId: defaultProject.id },
-        create: {
-            id: "direct-and-formal",
+        where: {
+            projectId_key: { // Prisma utiliza este patrón para campos @@unique compuestos
+                projectId: defaultProject.id,
+                key: 'direct-and-formal' // Este es el campo que antes era 'id' en CulturalData
+            }
+        },
+        update: {
             formalityLevel: 8,
             style: 'Direct, formal language common in Spanish business.',
-            regionId: regionES.languageCode, // Use direct regionId
-            projectId: defaultProject.id // Use direct projectId
+            region: { connect: { id: regionES.id } } // Conectar a la Region usando su nuevo 'id' CUID
+        },
+        create: {
+            key: 'direct-and-formal',
+            formalityLevel: 8,
+            style: 'Direct, formal language common in Spanish business.',
+            project: { connect: { id: defaultProject.id } },
+            region: { connect: { id: regionES.id } } // Conectar a la Region usando su nuevo 'id' CUID
         }
     });
-    console.log(`Upserted CulturalData for ES (ID: direct-and-formal)`);
+    console.log(`Upserted CulturalData for ES (Key: direct-and-formal)`);
 
     // 7. Create US Region and CulturalData (Associated with Default Project)
     console.log('Upserting Region US...');
     const regionUS = await prisma.region.upsert({
-        where: { languageCode: 'en-US' },
-        update: { name: 'United States', timeZone: 'America/New_York', projectId: defaultProject.id }, // Ensure projectId on update too
-        create: {
+        where: {
+            projectId_languageCode: {
+                projectId: defaultProject.id,
+                languageCode: 'en-US'
+            }
+        },
+        update: {
             name: 'United States',
+            timeZone: 'America/New_York'
+        },
+        create: {
             languageCode: 'en-US',
+            name: 'United States',
             timeZone: 'America/New_York',
-            projectId: defaultProject.id // Connect using projectId directly in create
+            project: { connect: { id: defaultProject.id } }
         }
     });
-    console.log(`Upserted Region: ${regionUS.name}`);
+    console.log(`Upserted Region: ${regionUS.name} (ID: ${regionUS.id})`);
 
     console.log('Upserting CulturalData US...');
     await prisma.culturalData.upsert({
-        where: { id: 'en-US' },
-        update: { formalityLevel: 5, style: 'Standard American English, generally informal.', regionId: regionUS.languageCode, projectId: defaultProject.id },
-        create: {
-            id: 'en-US',
+        where: {
+            projectId_key: {
+                projectId: defaultProject.id,
+                key: 'standard-american-english'
+            }
+        },
+        update: {
             formalityLevel: 5,
             style: 'Standard American English, generally informal.',
-            regionId: regionUS.languageCode, // Use direct regionId
-            projectId: defaultProject.id // Use direct projectId
+            region: { connect: { id: regionUS.id } }
+        },
+        create: {
+            key: 'standard-american-english',
+            formalityLevel: 5,
+            style: 'Standard American English, generally informal.',
+            project: { connect: { id: defaultProject.id } },
+            region: { connect: { id: regionUS.id } }
         }
     });
-    console.log(`Upserted CulturalData for US (ID: en-US)`);
+    console.log(`Upserted CulturalData for US (Key: standard-american-english)`);
 
-    console.log('Upserted CulturalData for US (ID: standard-business)');
+    // console.log('Upserted CulturalData for US (ID: standard-business)'); // Esta línea parecía un log huérfano
 
     // 8. Upsert Specific System Prompts (Global)
     console.log('Upserting specific System Prompts...');

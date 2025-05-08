@@ -9,106 +9,115 @@ export class CulturalDataService {
     constructor(private prisma: PrismaService) { }
 
     async create(createDto: CreateCulturalDataDto, projectId: string): Promise<CulturalData> {
-        const { id, regionId, ...restData } = createDto;
+        const { key, regionId: regionLanguageCode, ...restData } = createDto;
 
-        // Optional: Verify regionId belongs to the project first if necessary
+        // Verificar si la Region existe y obtener su ID CUID
+        // Asumimos que regionId en el DTO es el languageCode de la región para ese proyecto.
+        const region = await this.prisma.region.findUnique({
+            where: { projectId_languageCode: { projectId, languageCode: regionLanguageCode } },
+            select: { id: true }
+        });
+
+        if (!region) {
+            throw new NotFoundException(`Region with languageCode "${regionLanguageCode}" not found in project "${projectId}".`);
+        }
 
         try {
-            // Try setting projectId directly based on @map("project")
             return await this.prisma.culturalData.create({
                 data: {
-                    id: id,
-                    regionId: regionId,
-                    projectId: projectId, // Use direct field assignment
                     ...restData,
+                    key: key,
+                    project: { connect: { id: projectId } },
+                    region: { connect: { id: region.id } } // Conectar Region por su CUID id
                 },
                 include: { region: true },
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError) {
                 if (error.code === 'P2002') {
-                    // ID is global, conflict is not project-specific
-                    throw new ConflictException(`CulturalData with ID "${id}" already exists.`);
-                }
-                if (error.code === 'P2025') {
-                    // Could be Project or Region not found
-                    throw new NotFoundException(`Project with ID "${projectId}" or Region with ID "${regionId}" not found.`);
+                    // El target debería ser ['projectId', 'key']
+                    throw new ConflictException(`CulturalData with key "${key}" already exists in project "${projectId}".`);
+                } else if (error.code === 'P2025') {
+                    // Error de FK, e.g. project o region no existe (aunque region ya se verificó)
+                    throw new NotFoundException(`Data integrity error for CulturalData: ${error.message}. Ensure Project and Region exist.`);
                 }
             }
-            console.error(`Error creating CulturalData "${id}" in project ${projectId}:`, error);
+            console.error(`Error creating CulturalData with key "${key}" in project ${projectId}:`, error);
             throw error;
         }
     }
 
     findAll(projectId: string): Promise<CulturalData[]> {
         return this.prisma.culturalData.findMany({
-            where: { projectId }, // Filter by project
+            where: { projectId },
             include: { region: true }
         });
     }
 
-    async findOne(id: string, projectId: string): Promise<CulturalData> {
-        const culturalData = await this.prisma.culturalData.findFirst({
-            where: { id, projectId }, // Find by id WITHIN the project
+    // El 'id' en la ruta ahora será la 'key'
+    async findOne(key: string, projectId: string): Promise<CulturalData> {
+        const culturalData = await this.prisma.culturalData.findUnique({
+            where: { projectId_key: { projectId, key } },
             include: { region: true },
         });
         if (!culturalData) {
-            throw new NotFoundException(`CulturalData with ID "${id}" not found in project "${projectId}"`);
+            throw new NotFoundException(`CulturalData with key "${key}" not found in project "${projectId}"`);
         }
         return culturalData;
     }
 
-    async update(id: string, updateDto: UpdateCulturalDataDto, projectId: string): Promise<CulturalData> {
-        // 1. Verify the data exists in the project first
-        await this.findOne(id, projectId);
+    // El 'id' en la ruta ahora será la 'key'
+    async update(key: string, updateDto: UpdateCulturalDataDto, projectId: string): Promise<CulturalData> {
+        // 1. Verificar que existe y obtener su CUID id
+        const currentData = await this.findOne(key, projectId); // Esto ya valida que pertenece al proyecto
 
-        // Assuming UpdateCulturalDataDto does NOT contain regionId
-        const data: Prisma.CulturalDataUpdateInput = { ...updateDto };
+        // No permitir cambiar 'key', 'regionId', 'projectId' vía este método.
+        // UpdateCulturalDataDto no debería tenerlos.
+        const {
+            key: dtoKey,
+            regionId: dtoRegionId,
+            projectId: dtoProjectId,
+            ...restUpdateData
+        } = updateDto as any; // Se usa 'as any' si el DTO está bien definido y no los incluye.
 
-        // Remove logic for updating region as regionId is not in UpdateCulturalDataDto
-        // if (regionId) {
-        //     data.region = { connect: { languageCode: regionId } };
-        // }
-
-        if (Object.keys(data).length === 0) {
-            console.warn(`Update called for CulturalData "${id}" in project "${projectId}" with no data to change.`);
-            return this.findOne(id, projectId);
+        if (Object.keys(restUpdateData).length === 0) {
+            return currentData; // Devolver el dato existente si no hay cambios
         }
 
         try {
-            // Update using the global ID, existence in project was verified
             return await this.prisma.culturalData.update({
-                where: { id },
-                data,
+                where: { id: currentData.id }, // Actualizar por CUID id
+                data: restUpdateData,
                 include: { region: true },
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException(`CulturalData with ID "${id}" not found during update.`);
+                throw new NotFoundException(`CulturalData with key "${key}" not found during update (P2025).`);
             }
-            console.error(`Error updating CulturalData "${id}" in project ${projectId}:`, error);
+            console.error(`Error updating CulturalData with key "${key}" in project ${projectId}:`, error);
             throw error;
         }
     }
 
-    async remove(id: string, projectId: string): Promise<CulturalData> {
-        // 1. Verify it exists in the project and get data to return
-        const culturalDataToDelete = await this.findOne(id, projectId);
+    // El 'id' en la ruta ahora será la 'key'
+    async remove(key: string, projectId: string): Promise<CulturalData> {
+        // 1. Verificar que existe y obtener el objeto completo para devolverlo
+        const culturalDataToDelete = await this.findOne(key, projectId); // Valida pertenencia al proyecto
 
         try {
-            // Delete using the global ID, existence in project was verified
             await this.prisma.culturalData.delete({
-                where: { id },
+                where: { id: culturalDataToDelete.id }, // Eliminar por CUID id
             });
-            return culturalDataToDelete; // Return the data found before deletion
+            return culturalDataToDelete;
         } catch (error) {
-            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException(`CulturalData with ID "${id}" not found during deletion.`);
+            if (error instanceof Prisma.PrismaClientKnownRequestError) {
+                if (error.code === 'P2025') {
+                    throw new NotFoundException(`CulturalData with key "${key}" not found during deletion (P2025).`);
+                } else if (error.code === 'P2003') { // Foreign key constraint
+                    throw new ConflictException(`Cannot delete CulturalData with key "${key}" as it's referenced by other entities.`);
+                }
             }
-            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-                throw new ConflictException(`Cannot delete CulturalData "${id}" as it's still referenced by other entities.`);
-            }
-            console.error(`Error deleting CulturalData "${id}" in project ${projectId}:`, error);
+            console.error(`Error deleting CulturalData with key "${key}" in project ${projectId}:`, error);
             throw error;
         }
     }

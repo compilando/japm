@@ -1,12 +1,12 @@
 import { PartialType, OmitType } from '@nestjs/swagger';
 import { CreatePromptAssetDto } from './create-prompt-asset.dto';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsBoolean, IsString, Length, ValidateIf } from 'class-validator';
+import { IsOptional, IsBoolean } from 'class-validator';
 
 // Para actualizar un Asset, solo permitimos cambiar sus metadatos.
-// La clave (key) es inmutable.
-// El valor (value) y las traducciones se gestionan a través de versiones.
+// La clave (key), projectId, initialValue, initialChangeMessage son inmutables a través de este DTO.
 export class UpdatePromptAssetDto extends PartialType(
+    // Omitimos los campos que no deben ser actualizables aquí o que se gestionan de otra forma.
     OmitType(CreatePromptAssetDto, ['key', 'initialValue', 'initialChangeMessage', 'projectId'] as const)
 ) {
     @ApiPropertyOptional({ description: 'Activa o desactiva el asset' })
@@ -14,10 +14,7 @@ export class UpdatePromptAssetDto extends PartialType(
     @IsBoolean()
     enabled?: boolean;
 
-    @ApiPropertyOptional({ description: 'ID opcional del proyecto al que pertenece el asset (null para desvincular)' })
-    @IsOptional()
-    @ValidateIf((o, v) => v !== null)
-    @IsString()
-    @Length(25, 25)
-    projectId?: string | null;
+    // El campo projectId fue eliminado de aquí, ya que no se debe permitir cambiar
+    // el proyecto de un asset mediante esta operación de actualización.
+    // La pertenencia a un proyecto se establece en la creación y es fundamental para su identidad.
 } 

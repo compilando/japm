@@ -17,19 +17,23 @@ model User {
   email     String    @unique @default("")
   password  String
   createdAt DateTime? @default(now())
+  updatedAt DateTime  @updatedAt
 
   projects            Project[]
   promptExecutionLogs PromptExecutionLog[] // Relación inversa añadida
 }
 
 model Region {
-  languageCode             String                @id
+  id                       String                @id @default(cuid())
+  languageCode             String
   name                     String                @default("")
-  parentRegion             Region?               @relation("Region_parentRegion", fields: [parentRegionId], references: [languageCode])
-  parentRegionId           String?               @map("parentRegion")
+  parentRegion             Region?               @relation("Region_parentRegion", fields: [parentRegionId], references: [id])
+  parentRegionId           String?               @map("parentRegion") // Este será el CUID del padre
   timeZone                 String                @default("")
   defaultFormalityLevel    String?
   notes                    String                @default("")
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
   culturalData             CulturalData[]        @relation("CulturalData_region")
   from_Region_parentRegion Region[]              @relation("Region_parentRegion")
   from_RagDocumentMetadata RagDocumentMetadata[] @relation("RagDocumentMetadata_region")
@@ -37,37 +41,48 @@ model Region {
   project                  Project               @relation("ProjectRegions", fields: [projectId], references: [id], onDelete: Cascade)
   projectId                String                @map("project")
 
+  @@unique([projectId, languageCode])
   @@index([parentRegionId])
   @@index([projectId])
+  @@index([languageCode])
 }
 
 model CulturalData {
-  id                  String               @id
-  regionId            String
-  region              Region               @relation("CulturalData_region", fields: [regionId], references: [languageCode])
-  formalityLevel      Int?
-  style               String               @default("")
-  considerations      String               @default("")
-  notes               String               @default("")
+  id                 String               @id @default(cuid())
+  key                String               // ANTERIORMENTE 'id', ahora parte de la clave única compuesta
+  regionId           String
+  region             Region               @relation("CulturalData_region", fields: [regionId], references: [id])
+  formalityLevel     Int?
+  style              String               @default("")
+  considerations     String               @default("")
+  notes              String               @default("")
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
-  project             Project              @relation("ProjectCulturalData", fields: [projectId], references: [id], onDelete: Cascade)
-  projectId           String               @map("project")
+  project            Project              @relation("ProjectCulturalData", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId          String               @map("project")
 
+  @@unique([projectId, key]) // NUEVO: la 'key' (anterior id) es única por proyecto
   @@index([regionId])
   @@index([projectId])
+  @@index([key]) // Indexar la nueva key
 }
 
 model Prompt {
-  id              String            @id @default(cuid())
-  name            String
-  description     String            @default("")
-  versions        PromptVersion[]   @relation("PromptVersion_prompt")
-  tags            Tag[]             @relation("PromptTags")
-  project         Project           @relation("ProjectPrompts", fields: [projectId], references: [id], onDelete: Cascade)
-  projectId       String            @map("project")
+  id          String    @id @default(cuid()) // Clave primaria globalmente única
+  slug        String    // Campo para el slug
+  name        String
+  description String    @default("")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  versions    PromptVersion[]   @relation("PromptVersion_prompt")
+  tags        Tag[]             @relation("PromptTags")
+  project     Project           @relation("ProjectPrompts", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String            @map("project")
 
+  @@unique([slug, projectId], name: "prompt_slug_project_unique") // Slug único por proyecto
   @@index([projectId])
-  @@unique([projectId, name])
+  @@index([slug]) // Opcional, pero bueno si buscas por slug
 }
 
 model PromptVersion {
@@ -79,17 +94,17 @@ model PromptVersion {
   changeMessage       String?
   status              String             @default("draft")
   createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
   translations        PromptTranslation[] @relation("PromptTranslation_version")
   assets              PromptAssetLink[]  @relation("PromptAssetLink_promptVersion")
   activeInEnvironments Environment[]      @relation("ActivePromptsInEnvironment")
-  executionLogs       PromptExecutionLog[] // Relación inversa añadida
-  aiModel             AIModel?           @relation(fields: [aiModelId], references: [id]) // Optional link to a global AI Model
-  aiModelId           String?            // FK for AIModel
+  executionLogs       PromptExecutionLog[]
+  aiModel             AIModel?           @relation(fields: [aiModelId], references: [id])
+  aiModelId           String?
 
-  // Implicitly linked to Project via Prompt
   @@unique([promptId, versionTag])
   @@index([promptId])
-  @@index([aiModelId]) // Index the new FK
+  @@index([aiModelId])
 }
 
 model PromptTranslation {
@@ -98,6 +113,8 @@ model PromptTranslation {
   versionId    String        @map("version")
   languageCode String
   promptText   String        @default("")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@unique([versionId, languageCode])
   @@index([versionId])
@@ -105,28 +122,34 @@ model PromptTranslation {
 }
 
 model PromptAsset {
-  key             String                @id
+  id              String                @id @default(cuid())
+  key             String                // MODIFICADO: ya no es @id
   name            String                @default("")
   type            String?
   description     String                @default("")
   category        String?
   enabled         Boolean               @default(true)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
   versions        PromptAssetVersion[]  @relation("PromptAssetVersion_asset")
   project         Project               @relation("ProjectAssets", fields: [projectId], references: [id], onDelete: Cascade)
   projectId       String                @map("project")
 
+  @@unique([projectId, key]) // NUEVO: key es única por proyecto
   @@index([projectId])
+  @@index([key]) // Indexar key si se busca por ella
 }
 
 model PromptAssetVersion {
   id                  String             @id @default(cuid())
-  asset               PromptAsset        @relation("PromptAssetVersion_asset", fields: [assetId], references: [key])
-  assetId             String             @map("asset")
+  asset               PromptAsset        @relation("PromptAssetVersion_asset", fields: [assetId], references: [id]) // MODIFICADO: Referencia al nuevo id de PromptAsset
+  assetId             String             @map("asset") // Este será el CUID del PromptAsset
   value               String             @default("")
   versionTag          String             @default("v1.0.0")
   changeMessage       String?
   status              String             @default("draft")
   createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
   translations        AssetTranslation[] @relation("AssetTranslation_version")
   links               PromptAssetLink[]  @relation("PromptAssetLink_assetVersion")
   activeInEnvironments Environment[]      @relation("ActiveAssetsInEnvironment")
@@ -142,6 +165,8 @@ model AssetTranslation {
   versionId    String             @map("version")
   languageCode String
   value        String             @default("")
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
   @@unique([versionId, languageCode])
   @@index([versionId])
@@ -158,6 +183,8 @@ model PromptAssetLink {
   position        Int?
   insertionLogic  String?
   isRequired      Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
   @@unique([promptVersionId, assetVersionId])
   @@index([promptVersionId])
@@ -165,26 +192,31 @@ model PromptAssetLink {
 }
 
 model RagDocumentMetadata {
-  id                 String  @id @default(cuid())
-  region             Region? @relation("RagDocumentMetadata_region", fields: [regionId], references: [languageCode])
-  regionId           String? @map("region")
-  documentName       String  @default("")
-  category           String?
-  complianceReviewed Boolean @default(false)
-  piiRiskLevel       String?
-  lastReviewedBy     String  @default("")
+  id                   String    @id @default(cuid())
+  documentName         String
+  category             String?   @default("")
+  complianceReviewed   Boolean?  @default(false)
+  piiRiskLevel         String?   @default("")
+  lastReviewedBy       String?   @default("")
+  regionId             String?   // CUID de Region
+  region               Region?   @relation("RagDocumentMetadata_region", fields: [regionId], references: [id])
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  project            Project @relation("ProjectRagDocs", fields: [projectId], references: [id], onDelete: Cascade)
-  projectId          String  @map("project")
+  project              Project   @relation("ProjectRagDocs", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId            String    @map("project")
 
-  @@index([regionId])
+  @@unique([projectId, documentName]) // NUEVO: documentName es único por proyecto
   @@index([projectId])
+  @@index([regionId])
 }
 
 model Tag {
   id          String    @id @default(cuid())
-  name        String    @unique
+  name        String
   description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   prompts     Prompt[] @relation("PromptTags")
 
   project     Project  @relation("ProjectTags", fields: [projectId], references: [id], onDelete: Cascade)
@@ -195,7 +227,7 @@ model Tag {
 }
 
 model Project {
-  id                  String               @id @default(cuid())
+  id                  String               @id
   name                String
   description         String?
   ownerUserId         String?              @map("ownerUser")
@@ -225,6 +257,7 @@ model AIModel {
   apiKeyEnvVar  String?   // Nombre de la variable de entorno para la API Key (e.g., "OPENAI_API_KEY") - Made optional
   temperature   Float?    // Added temperature field
   createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   maxTokens     Int?
   supportsJson  Boolean @default(false)
   contextWindow Int?   // Tamaño máximo de contexto
@@ -243,8 +276,10 @@ model AIModel {
 
 model Environment {
   id                  String             @id @default(cuid())
-  name                String             @unique
+  name                String
   description         String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
   activePromptVersions PromptVersion[]    @relation("ActivePromptsInEnvironment")
   activeAssetVersions PromptAssetVersion[] @relation("ActiveAssetsInEnvironment")
   promptExecutionLogs PromptExecutionLog[] // Relación inversa añadida

@@ -12,8 +12,8 @@ export class CreateProjectDto {
     @IsOptional()
     description?: string;
 
-    @ApiPropertyOptional({ description: 'Optional ID of the User who owns this project', example: 'cl...' })
+    @ApiProperty({ description: 'ID (CUID) of the User who owns this project', example: 'user-cuid-xxxx' })
     @IsString()
-    @IsOptional()
-    ownerUserId?: string;
+    @IsNotEmpty()
+    owner: string;
 } 

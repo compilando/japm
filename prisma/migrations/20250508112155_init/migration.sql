@@ -4,40 +4,50 @@ CREATE TABLE "User" (
     "name" TEXT NOT NULL DEFAULT '',
     "email" TEXT NOT NULL DEFAULT '',
     "password" TEXT NOT NULL,
-    "createdAt" DATETIME DEFAULT CURRENT_TIMESTAMP
+    "createdAt" DATETIME DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "Region" (
-    "languageCode" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "languageCode" TEXT NOT NULL,
     "name" TEXT NOT NULL DEFAULT '',
     "parentRegion" TEXT,
     "timeZone" TEXT NOT NULL DEFAULT '',
     "defaultFormalityLevel" TEXT,
     "notes" TEXT NOT NULL DEFAULT '',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
     "project" TEXT NOT NULL,
-    CONSTRAINT "Region_parentRegion_fkey" FOREIGN KEY ("parentRegion") REFERENCES "Region" ("languageCode") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "Region_parentRegion_fkey" FOREIGN KEY ("parentRegion") REFERENCES "Region" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "Region_project_fkey" FOREIGN KEY ("project") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "CulturalData" (
     "id" TEXT NOT NULL PRIMARY KEY,
+    "key" TEXT NOT NULL,
     "regionId" TEXT NOT NULL,
     "formalityLevel" INTEGER,
     "style" TEXT NOT NULL DEFAULT '',
     "considerations" TEXT NOT NULL DEFAULT '',
     "notes" TEXT NOT NULL DEFAULT '',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
     "project" TEXT NOT NULL,
-    CONSTRAINT "CulturalData_regionId_fkey" FOREIGN KEY ("regionId") REFERENCES "Region" ("languageCode") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "CulturalData_regionId_fkey" FOREIGN KEY ("regionId") REFERENCES "Region" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "CulturalData_project_fkey" FOREIGN KEY ("project") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "Prompt" (
     "id" TEXT NOT NULL PRIMARY KEY,
+    "slug" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL DEFAULT '',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
     "project" TEXT NOT NULL,
     CONSTRAINT "Prompt_project_fkey" FOREIGN KEY ("project") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
@@ -51,6 +61,7 @@ CREATE TABLE "PromptVersion" (
     "changeMessage" TEXT,
     "status" TEXT NOT NULL DEFAULT 'draft',
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
     "aiModelId" TEXT,
     CONSTRAINT "PromptVersion_prompt_fkey" FOREIGN KEY ("prompt") REFERENCES "Prompt" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "PromptVersion_aiModelId_fkey" FOREIGN KEY ("aiModelId") REFERENCES "AIModel" ("id") ON DELETE SET NULL ON UPDATE CASCADE
@@ -62,17 +73,22 @@ CREATE TABLE "PromptTranslation" (
     "version" TEXT NOT NULL,
     "languageCode" TEXT NOT NULL,
     "promptText" TEXT NOT NULL DEFAULT '',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "PromptTranslation_version_fkey" FOREIGN KEY ("version") REFERENCES "PromptVersion" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "PromptAsset" (
-    "key" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "key" TEXT NOT NULL,
     "name" TEXT NOT NULL DEFAULT '',
     "type" TEXT,
     "description" TEXT NOT NULL DEFAULT '',
     "category" TEXT,
     "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
     "project" TEXT NOT NULL,
     CONSTRAINT "PromptAsset_project_fkey" FOREIGN KEY ("project") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
@@ -86,7 +102,8 @@ CREATE TABLE "PromptAssetVersion" (
     "changeMessage" TEXT,
     "status" TEXT NOT NULL DEFAULT 'draft',
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "PromptAssetVersion_asset_fkey" FOREIGN KEY ("asset") REFERENCES "PromptAsset" ("key") ON DELETE RESTRICT ON UPDATE CASCADE
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "PromptAssetVersion_asset_fkey" FOREIGN KEY ("asset") REFERENCES "PromptAsset" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -95,6 +112,8 @@ CREATE TABLE "AssetTranslation" (
     "version" TEXT NOT NULL,
     "languageCode" TEXT NOT NULL,
     "value" TEXT NOT NULL DEFAULT '',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "AssetTranslation_version_fkey" FOREIGN KEY ("version") REFERENCES "PromptAssetVersion" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
@@ -107,6 +126,8 @@ CREATE TABLE "PromptAssetLink" (
     "position" INTEGER,
     "insertionLogic" TEXT,
     "isRequired" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "PromptAssetLink_promptVersion_fkey" FOREIGN KEY ("promptVersion") REFERENCES "PromptVersion" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "PromptAssetLink_assetVersion_fkey" FOREIGN KEY ("assetVersion") REFERENCES "PromptAssetVersion" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
@@ -114,14 +135,16 @@ CREATE TABLE "PromptAssetLink" (
 -- CreateTable
 CREATE TABLE "RagDocumentMetadata" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "region" TEXT,
-    "documentName" TEXT NOT NULL DEFAULT '',
-    "category" TEXT,
-    "complianceReviewed" BOOLEAN NOT NULL DEFAULT false,
-    "piiRiskLevel" TEXT,
-    "lastReviewedBy" TEXT NOT NULL DEFAULT '',
+    "documentName" TEXT NOT NULL,
+    "category" TEXT DEFAULT '',
+    "complianceReviewed" BOOLEAN DEFAULT false,
+    "piiRiskLevel" TEXT DEFAULT '',
+    "lastReviewedBy" TEXT DEFAULT '',
+    "regionId" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
     "project" TEXT NOT NULL,
-    CONSTRAINT "RagDocumentMetadata_region_fkey" FOREIGN KEY ("region") REFERENCES "Region" ("languageCode") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "RagDocumentMetadata_regionId_fkey" FOREIGN KEY ("regionId") REFERENCES "Region" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "RagDocumentMetadata_project_fkey" FOREIGN KEY ("project") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -130,6 +153,8 @@ CREATE TABLE "Tag" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "description" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
     "project" TEXT NOT NULL,
     CONSTRAINT "Tag_project_fkey" FOREIGN KEY ("project") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
@@ -155,6 +180,7 @@ CREATE TABLE "AIModel" (
     "apiKeyEnvVar" TEXT,
     "temperature" REAL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
     "maxTokens" INTEGER,
     "supportsJson" BOOLEAN NOT NULL DEFAULT false,
     "contextWindow" INTEGER,
@@ -167,6 +193,8 @@ CREATE TABLE "Environment" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "description" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
     "project" TEXT NOT NULL,
     CONSTRAINT "Environment_project_fkey" FOREIGN KEY ("project") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
@@ -235,16 +263,31 @@ CREATE INDEX "Region_parentRegion_idx" ON "Region"("parentRegion");
 CREATE INDEX "Region_project_idx" ON "Region"("project");
 
 -- CreateIndex
+CREATE INDEX "Region_languageCode_idx" ON "Region"("languageCode");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Region_project_languageCode_key" ON "Region"("project", "languageCode");
+
+-- CreateIndex
 CREATE INDEX "CulturalData_regionId_idx" ON "CulturalData"("regionId");
 
 -- CreateIndex
 CREATE INDEX "CulturalData_project_idx" ON "CulturalData"("project");
 
 -- CreateIndex
+CREATE INDEX "CulturalData_key_idx" ON "CulturalData"("key");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CulturalData_project_key_key" ON "CulturalData"("project", "key");
+
+-- CreateIndex
 CREATE INDEX "Prompt_project_idx" ON "Prompt"("project");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Prompt_project_name_key" ON "Prompt"("project", "name");
+CREATE INDEX "Prompt_slug_idx" ON "Prompt"("slug");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Prompt_slug_project_key" ON "Prompt"("slug", "project");
 
 -- CreateIndex
 CREATE INDEX "PromptVersion_prompt_idx" ON "PromptVersion"("prompt");
@@ -266,6 +309,12 @@ CREATE UNIQUE INDEX "PromptTranslation_version_languageCode_key" ON "PromptTrans
 
 -- CreateIndex
 CREATE INDEX "PromptAsset_project_idx" ON "PromptAsset"("project");
+
+-- CreateIndex
+CREATE INDEX "PromptAsset_key_idx" ON "PromptAsset"("key");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PromptAsset_project_key_key" ON "PromptAsset"("project", "key");
 
 -- CreateIndex
 CREATE INDEX "PromptAssetVersion_asset_idx" ON "PromptAssetVersion"("asset");
@@ -292,13 +341,13 @@ CREATE INDEX "PromptAssetLink_assetVersion_idx" ON "PromptAssetLink"("assetVersi
 CREATE UNIQUE INDEX "PromptAssetLink_promptVersion_assetVersion_key" ON "PromptAssetLink"("promptVersion", "assetVersion");
 
 -- CreateIndex
-CREATE INDEX "RagDocumentMetadata_region_idx" ON "RagDocumentMetadata"("region");
-
--- CreateIndex
 CREATE INDEX "RagDocumentMetadata_project_idx" ON "RagDocumentMetadata"("project");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Tag_name_key" ON "Tag"("name");
+CREATE INDEX "RagDocumentMetadata_regionId_idx" ON "RagDocumentMetadata"("regionId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "RagDocumentMetadata_project_documentName_key" ON "RagDocumentMetadata"("project", "documentName");
 
 -- CreateIndex
 CREATE INDEX "Tag_project_idx" ON "Tag"("project");
@@ -314,9 +363,6 @@ CREATE INDEX "AIModel_projectId_idx" ON "AIModel"("projectId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "AIModel_projectId_name_key" ON "AIModel"("projectId", "name");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Environment_name_key" ON "Environment"("name");
 
 -- CreateIndex
 CREATE INDEX "Environment_project_idx" ON "Environment"("project");

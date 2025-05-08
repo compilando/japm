@@ -9,24 +9,27 @@ export class RegionService {
     constructor(private prisma: PrismaService) { }
 
     async create(createRegionDto: CreateRegionDto, projectId: string): Promise<Region> {
-        const { parentRegionId, ...restData } = createRegionDto;
+        const { parentRegionId, languageCode, ...restData } = createRegionDto;
 
-        // Check if parent region exists *within the same project* if provided
-        if (parentRegionId) {
-            const parentExists = await this.prisma.region.findUnique({
-                where: { languageCode: parentRegionId, projectId } // Check parent in same project
+        let parentRegionConnect: Prisma.RegionCreateNestedOneWithoutFrom_Region_parentRegionInput | undefined = undefined;
+        if (parentRegionId) { // parentRegionId es el languageCode del padre desde el DTO
+            const parent = await this.prisma.region.findUnique({
+                where: { projectId_languageCode: { projectId, languageCode: parentRegionId } },
+                select: { id: true } // Obtener el CUID id del padre
             });
-            if (!parentExists) {
+            if (!parent) {
                 throw new NotFoundException(`Parent Region with languageCode "${parentRegionId}" not found in project "${projectId}".`);
             }
+            parentRegionConnect = { connect: { id: parent.id } }; // Conectar usando el CUID id del padre
         }
 
-        // Use correct connect syntax for project
         const data: Prisma.RegionCreateInput = {
             ...restData,
-            project: { connect: { id: projectId } }, // Correct way to connect project
-            parentRegion: parentRegionId ? { connect: { languageCode: parentRegionId } } : undefined,
+            languageCode, // Asegurar que languageCode se incluye en los datos a crear
+            project: { connect: { id: projectId } },
+            parentRegion: parentRegionConnect,
         };
+
         try {
             return await this.prisma.region.create({
                 data,
@@ -34,17 +37,14 @@ export class RegionService {
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError) {
-                // Unique constraint is now (languageCode), assuming languageCode is globally unique despite project relation?
-                // If languageCode should be unique PER PROJECT, the schema needs @@unique([projectId, languageCode])
-                // and this check needs adjustment.
                 if (error.code === 'P2002') {
-                    // Check if error.meta.target exists and is an array before calling includes
-                    if (error.meta?.target && Array.isArray(error.meta.target) && error.meta.target.includes('languageCode')) {
-                        throw new ConflictException(`Region with languageCode "${restData.languageCode}" already exists.`);
-                    } // Add checks for other unique constraints if needed
+                    // Verificar si el error es por la combinación de projectId y languageCode
+                    if (error.meta?.target && Array.isArray(error.meta.target) &&
+                        error.meta.target.includes('projectId') && error.meta.target.includes('languageCode')) {
+                        throw new ConflictException(`Region with languageCode "${languageCode}" already exists in project "${projectId}".`);
+                    }
                 } else if (error.code === 'P2025') {
-                    // This specific P2025 might be less likely now due to the explicit parent check above
-                    throw new NotFoundException(`Data integrity error: ${error.message}`);
+                    throw new NotFoundException(`Data integrity error during region creation: ${error.message}`);
                 }
             }
             throw error;
@@ -53,14 +53,15 @@ export class RegionService {
 
     findAll(projectId: string): Promise<Region[]> {
         return this.prisma.region.findMany({
-            where: { projectId }, // Filter by project
+            where: { projectId },
             include: { culturalData: true, parentRegion: true }
         });
     }
 
     async findOne(languageCode: string, projectId: string): Promise<Region> {
         const region = await this.prisma.region.findUnique({
-            where: { languageCode, projectId }, // Filter by project and languageCode
+            // Usar el identificador único compuesto para la búsqueda
+            where: { projectId_languageCode: { projectId, languageCode } },
             include: {
                 culturalData: true,
                 parentRegion: true,
@@ -73,42 +74,50 @@ export class RegionService {
     }
 
     async update(languageCode: string, updateRegionDto: UpdateRegionDto, projectId: string): Promise<Region> {
-        // Ensure the region to update exists within the project first
-        await this.findOne(languageCode, projectId); // Re-uses findOne logic including not found check
+        // Primero, encontrar la región para obtener su CUID id y verificar que existe en el proyecto.
+        const regionToUpdate = await this.findOne(languageCode, projectId);
 
         const { parentRegionId, ...restData } = updateRegionDto;
 
-        // Check if parent region exists *within the same project* if provided
-        if (parentRegionId !== undefined && parentRegionId !== null) {
-            const parentExists = await this.prisma.region.findUnique({
-                where: { languageCode: parentRegionId, projectId } // Check parent in same project
-            });
-            if (!parentExists) {
-                throw new NotFoundException(`Parent Region with languageCode "${parentRegionId}" not found in project "${projectId}".`);
+        // Corregir el tipo de la variable para la actualización anidada de parentRegion
+        let parentRegionUpdate: Prisma.RegionUpdateOneWithoutFrom_Region_parentRegionNestedInput | undefined = undefined;
+        if (parentRegionId !== undefined) {
+            if (parentRegionId === null) {
+                parentRegionUpdate = { disconnect: true };
+            } else { // parentRegionId es el languageCode del nuevo padre
+                const parent = await this.prisma.region.findUnique({
+                    where: { projectId_languageCode: { projectId, languageCode: parentRegionId } },
+                    select: { id: true }
+                });
+                if (!parent) {
+                    throw new NotFoundException(`Parent Region with languageCode "${parentRegionId}" not found in project "${projectId}".`);
+                }
+                parentRegionUpdate = { connect: { id: parent.id } };
             }
         }
 
         const data: Prisma.RegionUpdateInput = {
-            ...restData,
-            // projectId: projectId, // Don't update projectId itself usually
-            parentRegion: parentRegionId !== undefined ?
-                (parentRegionId === null ? { disconnect: true } : { connect: { languageCode: parentRegionId } })
-                : undefined,
+            ...restData, // Esto puede incluir un nuevo languageCode, name, timeZone, etc.
+            parentRegion: parentRegionUpdate,
         };
 
         try {
-            // Update using the composite key ensures we only update the correct project's region
-            // Note: Prisma doesn't directly support update by composite key easily, need to use findOne first (done above)
-            // So we update by the primary key (languageCode) after verifying project ownership.
+            // Actualizar usando el CUID id de la región
             return await this.prisma.region.update({
-                where: { languageCode }, // Update by primary key
+                where: { id: regionToUpdate.id },
                 data,
                 include: { culturalData: true, parentRegion: true }
             });
         } catch (error) {
-            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                // Error could be the region itself (unlikely due to findOne check) or the parent to connect
-                throw new NotFoundException(`Data integrity error during update: ${error.message}`);
+            if (error instanceof Prisma.PrismaClientKnownRequestError) {
+                if (error.code === 'P2002') {
+                    // Como languageCode no es parte de UpdateRegionDto, no puede causar un P2002 
+                    // sobre el constraint (projectId, languageCode) a través de un cambio directo.
+                    // Podría haber otros P2002 si otros campos en restData tienen constraints unique.
+                    throw new ConflictException(`Update failed due to a unique constraint violation.`);
+                } else if (error.code === 'P2025') {
+                    throw new NotFoundException(`Data integrity error during region update: ${error.message}.`);
+                }
             }
             throw error;
         }
@@ -116,25 +125,25 @@ export class RegionService {
 
     async remove(languageCode: string, projectId: string): Promise<Region> {
         return this.prisma.$transaction(async (tx) => {
-            // Find the region within the specific project first to ensure ownership
-            const region = await tx.region.findUnique({
-                where: { languageCode, projectId },
-                select: { languageCode: true } // Select only necessary field
+            // Encontrar la región por su projectId y languageCode para obtener su CUID id
+            const regionFound = await tx.region.findUnique({
+                where: { projectId_languageCode: { projectId, languageCode } },
+                select: { id: true } // Solo necesitamos el id para la eliminación
             });
 
-            if (!region) {
+            if (!regionFound) {
                 throw new NotFoundException(`Region with languageCode "${languageCode}" not found in project "${projectId}"`);
             }
 
-            // Delete associated CulturalData first (still assuming CulturalData belongs to the same project implicitly via Region)
+            // Eliminar CulturalData asociada usando el CUID id de la región
+            // Nota: CulturalData.regionId ahora se refiere al CUID de Region
             await tx.culturalData.deleteMany({
-                where: { regionId: region.languageCode }
-                // Could add projectId here too for extra safety if CulturalData has direct project FK
+                where: { regionId: regionFound.id }
             });
 
-            // Delete the region itself
+            // Eliminar la región usando su CUID id
             const deletedRegion = await tx.region.delete({
-                where: { languageCode: region.languageCode }, // Delete by primary key
+                where: { id: regionFound.id },
             });
             return deletedRegion;
         });

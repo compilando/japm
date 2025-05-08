@@ -8,122 +8,118 @@ import { Prisma, PromptAssetVersion, PromptAsset } from '@prisma/client';
 export class PromptAssetVersionService {
   constructor(private prisma: PrismaService) { }
 
-  // Helper to verify asset access
-  private async verifyAssetAccess(projectId: string, assetKey: string): Promise<PromptAsset> {
+  // Helper para obtener el PromptAsset padre y verificar pertenencia al proyecto.
+  // Devuelve el PromptAsset con su ID CUID.
+  private async getParentAsset(projectId: string, assetKey: string): Promise<PromptAsset> {
     const asset = await this.prisma.promptAsset.findUnique({
-      where: { key: assetKey },
+      where: { projectId_key: { projectId, key: assetKey } }, // Usar constraint único
     });
     if (!asset) {
-      throw new NotFoundException(`PromptAsset with key "${assetKey}" not found.`);
-    }
-    if (asset.projectId !== projectId) {
-      throw new ForbiddenException(`Access denied to PromptAsset "${assetKey}" for project "${projectId}".`);
+      throw new NotFoundException(`PromptAsset with key "${assetKey}" not found in project "${projectId}".`);
     }
     return asset;
   }
 
   async create(projectId: string, assetKey: string, createDto: CreatePromptAssetVersionDto): Promise<PromptAssetVersion> {
-    await this.verifyAssetAccess(projectId, assetKey); // Ensure asset exists in project
+    const parentAsset = await this.getParentAsset(projectId, assetKey);
 
-    // Excluir assetId si está presente en el DTO (aunque no debería)
-    const { assetId: _a, versionTag, ...versionData } = createDto;
+    const { versionTag, ...versionData } = createDto; // versionTag es requerido en el DTO
 
     try {
       return await this.prisma.promptAssetVersion.create({
         data: {
-          ...versionData, // value, changeMessage, status?
-          versionTag: versionTag || 'v1.0.0',
-          asset: { connect: { key: assetKey } }, // Connect using assetKey
+          ...versionData, // value, changeMessage
+          versionTag: versionTag,
+          asset: { connect: { id: parentAsset.id } }, // Conectar usando el ID CUID del PromptAsset padre
+          // status: 'active', // Considerar si las nuevas versiones deben ser activas por defecto
         },
         include: { asset: true }
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         // Unique constraint violation (assetId + versionTag)
-        throw new ConflictException(`Version tag "${versionTag || 'v1.0.0'}" already exists for asset "${assetKey}".`);
+        throw new ConflictException(`Version tag "${versionTag}" already exists for asset "${assetKey}" (ID: ${parentAsset.id}).`);
       }
-      // P2025 should be caught by verifyAssetAccess
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new NotFoundException(`Asset with key "${assetKey}" not found when creating version.`);
-      }
+      console.error(`Error creating version "${versionTag}" for asset "${assetKey}" (ID: ${parentAsset.id}):`, error);
       throw error;
     }
   }
 
   async findAllForAsset(projectId: string, assetKey: string): Promise<PromptAssetVersion[]> {
-    await this.verifyAssetAccess(projectId, assetKey);
+    const parentAsset = await this.getParentAsset(projectId, assetKey);
     return this.prisma.promptAssetVersion.findMany({
-      where: { assetId: assetKey }, // Filter by assetKey
+      where: { assetId: parentAsset.id }, // Filtrar por el ID CUID del PromptAsset padre
       orderBy: { createdAt: 'desc' },
-      include: { translations: true }, // Optional includes
+      include: { translations: true }, // asset: false para evitar redundancia si no se necesita
     });
   }
 
   async findOneByTag(projectId: string, assetKey: string, versionTag: string): Promise<PromptAssetVersion> {
-    await this.verifyAssetAccess(projectId, assetKey);
+    const parentAsset = await this.getParentAsset(projectId, assetKey);
     const version = await this.prisma.promptAssetVersion.findUnique({
       where: {
-        assetId_versionTag: { assetId: assetKey, versionTag: versionTag } // Use composite key
+        assetId_versionTag: { assetId: parentAsset.id, versionTag: versionTag }
       },
       include: {
         asset: true,
         translations: true,
-        links: { include: { promptVersion: { include: { prompt: true } } } } // Deep include if needed
+        links: { include: { promptVersion: { include: { prompt: true } } } }
       },
     });
 
     if (!version) {
-      throw new NotFoundException(`PromptAssetVersion with tag "${versionTag}" not found for asset "${assetKey}".`);
-    }
-    // Double check project match via asset
-    if (version.asset.projectId !== projectId) {
-      throw new ForbiddenException(`AssetVersion ${versionTag} does not belong to project ${projectId}`);
+      throw new NotFoundException(`PromptAssetVersion with tag "${versionTag}" not found for asset "${assetKey}" (ID: ${parentAsset.id}).`);
     }
     return version;
   }
 
   async update(projectId: string, assetKey: string, versionTag: string, updateDto: UpdatePromptAssetVersionDto): Promise<PromptAssetVersion> {
     const existingVersion = await this.findOneByTag(projectId, assetKey, versionTag);
-    // Usar updateDto directamente
+
+    // Excluir campos que no deben actualizarse o no existen en UpdatePromptAssetVersionDto
+    const { assetId: _dtoAssetId, versionTag: _dtoVersionTag, ...dataToUpdate } = updateDto as any;
+
+    if (Object.keys(dataToUpdate).length === 0) {
+      return existingVersion;
+    }
+
     try {
       return await this.prisma.promptAssetVersion.update({
         where: {
-          id: existingVersion.id // Use CUID
+          id: existingVersion.id // Usar el CUID id de la PromptAssetVersion para la actualización
         },
-        data: updateDto, // Only update allowed fields (value, changeMessage, status)
+        data: dataToUpdate,
         include: { asset: true }
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new NotFoundException(`PromptAssetVersion not found for update.`);
+        throw new NotFoundException(`PromptAssetVersion with ID "${existingVersion.id}" not found during update.`);
       }
+      console.error(`Error updating version ID "${existingVersion.id}" for asset "${assetKey}" with tag "${versionTag}":`, error);
       throw error;
     }
   }
 
   async remove(projectId: string, assetKey: string, versionTag: string): Promise<PromptAssetVersion> {
     const existingVersion = await this.findOneByTag(projectId, assetKey, versionTag);
-    // TODO: Add logic? Prevent deleting active versions?
+
     try {
       return await this.prisma.promptAssetVersion.delete({
         where: {
-          id: existingVersion.id // Use CUID
+          id: existingVersion.id // Usar el CUID id de la PromptAssetVersion para la eliminación
         },
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new NotFoundException(`PromptAssetVersion not found.`);
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException(`PromptAssetVersion with ID "${existingVersion.id}" not found during deletion.`);
+        }
+        if (error.code === 'P2003') {
+          throw new ConflictException(`Cannot delete AssetVersion ID "${existingVersion.id}" (Tag: "${versionTag}", AssetKey: "${assetKey}") because it is still referenced.`);
+        }
       }
-      // P2003 if translations/links exist
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-        throw new ConflictException(`Cannot delete AssetVersion "${versionTag}" because it is still referenced by other entities (e.g., translations, links).`);
-      }
+      console.error(`Error deleting version ID "${existingVersion.id}" for asset "${assetKey}" with tag "${versionTag}":`, error);
       throw error;
     }
   }
-
-  // Remove or comment out old methods
-  // findAll(): Promise<PromptAssetVersion[]> { ... }
-  // findOne(id: string): Promise<PromptAssetVersion> { ... }
-  // findByAssetId(assetId: string): Promise<PromptAssetVersion[]> { ... }
 }

@@ -5,6 +5,17 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
 
+// Función slugify (igual que en los servicios)
+function slugify(text: string): string {
+    return text
+        .toString()
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^\w\-]+/g, '')
+        .replace(/\-\-+/g, '-');
+}
+
 async function main() {
     console.log(`-----------------------------------`);
     console.log(`Start seeding for Code Generation & Assistance...`);
@@ -30,18 +41,19 @@ async function main() {
 
     // --- Create Project Specific Data ---
     // 1. Upsert Code Gen Project
+    const codeGenProjectName = 'Developer Tools AI Assistance';
+    const cgProjectId = slugify(codeGenProjectName); // ID es slug del nombre
     const codeGenProject = await prisma.project.upsert({
-        where: { id: 'dev-tools-enhancement' }, // Use ID as the unique identifier
-        update: { name: 'Developer Tools AI Assistance', description: 'Prompts to help developers with common coding tasks.', ownerUserId: testUser.id },
+        where: { id: cgProjectId },
+        update: { name: codeGenProjectName, description: 'Prompts to help developers with common coding tasks.', ownerUserId: testUser.id },
         create: {
-            id: 'dev-tools-enhancement',
-            name: 'Developer Tools AI Assistance',
+            id: cgProjectId,
+            name: codeGenProjectName,
             description: 'Prompts to help developers with common coding tasks.',
-            owner: { connect: { id: testUser.id } }, // Connect owner on create
+            owner: { connect: { id: testUser.id } },
         },
     });
-    console.log(`Upserted Project: ${codeGenProject.name}`);
-    const cgProjectId = codeGenProject.id;
+    console.log(`Upserted Project: ${codeGenProject.name} (ID: ${cgProjectId})`);
 
     // Create specific AI models for this project
     const cgGpt4o = await prisma.aIModel.upsert({
@@ -60,100 +72,99 @@ async function main() {
 
     // 2. Upsert common asset and its version
     const assetPythonImports = await prisma.promptAsset.upsert({
-        where: { key: 'python-standard-imports' },
-        update: { name: 'Python Standard Imports', type: 'List', projectId: cgProjectId },
+        where: { projectId_key: { projectId: cgProjectId, key: 'python-standard-imports' } },
+        update: { name: 'Python Standard Imports', type: 'List' },
         create: { key: 'python-standard-imports', name: 'Python Standard Imports', type: 'List', projectId: cgProjectId }
     });
     const assetPythonImportsV1 = await prisma.promptAssetVersion.upsert({
-        where: { assetId_versionTag: { assetId: assetPythonImports.key, versionTag: 'v1.0.0' } },
+        where: { assetId_versionTag: { assetId: assetPythonImports.id, versionTag: 'v1.0.0' } },
         update: { value: 'import os\nimport sys\nimport json\nimport datetime\nimport math', status: 'active' },
-        create: { assetId: assetPythonImports.key, value: 'import os\nimport sys\nimport json\nimport datetime\nimport math', versionTag: 'v1.0.0', status: 'active' },
-        select: { id: true } // Select the ID for linking
+        create: { assetId: assetPythonImports.id, value: 'import os\nimport sys\nimport json\nimport datetime\nimport math', versionTag: 'v1.0.0', status: 'active' },
+        select: { id: true }
     });
     console.log('Upserted common Asset: python-standard-imports V1');
 
     // 3. Upsert Code Gen Tags with prefix
     const cgPrefix = 'cg_';
     const cgBaseTags = ['code-generation', 'python', 'javascript', 'unit-test', 'explanation', 'refactoring', 'api-integration'];
-    const cgTagMap: Map<string, string> = new Map(); // Map tagName to tagId
-
+    const cgTagMap: Map<string, string> = new Map();
     for (const baseTagName of cgBaseTags) {
         const tagName = `${cgPrefix}${baseTagName}`;
         const tag = await prisma.tag.upsert({
-            where: { projectId_name: { projectId: cgProjectId, name: tagName } }, // Use unique constraint
-            update: {}, // No specific fields to update if it exists
+            where: { projectId_name: { projectId: cgProjectId, name: tagName } },
+            update: {},
             create: { name: tagName, projectId: cgProjectId },
-            select: { id: true } // Select ID
+            select: { id: true }
         });
-        cgTagMap.set(tagName, tag.id); // Store ID in map
+        cgTagMap.set(tagName, tag.id);
         console.log(`Upserted Tag: ${tagName} for project ${cgProjectId}`);
     }
-
-    // Helper function to get tag IDs from map based on base names
     const getTagIds = (baseNames: string[]): { id: string }[] => {
         return baseNames
             .map(baseName => cgTagMap.get(`${cgPrefix}${baseName}`))
-            .filter((id): id is string => id !== undefined) // Filter out undefined results
-            .map(id => ({ id })); // Map to Prisma connect format
+            .filter((id): id is string => id !== undefined)
+            .map(id => ({ id }));
     };
 
     // 4. Upsert Code Gen Assets (excluding the common one) and their versions
     const assetErrorHandling = await prisma.promptAsset.upsert({
-        where: { key: 'python-try-except-template' },
-        update: { name: 'Python Try-Except Template', type: 'Code Snippet', projectId: cgProjectId },
+        where: { projectId_key: { projectId: cgProjectId, key: 'python-try-except-template' } },
+        update: { name: 'Python Try-Except Template', type: 'Code Snippet' },
         create: { key: 'python-try-except-template', name: 'Python Try-Except Template', type: 'Code Snippet', projectId: cgProjectId }
     });
     const assetErrorHandlingV1 = await prisma.promptAssetVersion.upsert({
-        where: { assetId_versionTag: { assetId: assetErrorHandling.key, versionTag: 'v1.0.0' } },
+        where: { assetId_versionTag: { assetId: assetErrorHandling.id, versionTag: 'v1.0.0' } },
         update: { value: 'try:\n    # Your code here\n    pass\nexcept Exception as e:\n    print(f"An error occurred: {e}")\n    # Add specific error handling or logging', status: 'active' },
-        create: { assetId: assetErrorHandling.key, value: 'try:\n    # Your code here\n    pass\nexcept Exception as e:\n    print(f"An error occurred: {e}")\n    # Add specific error handling or logging', versionTag: 'v1.0.0', status: 'active' },
+        create: { assetId: assetErrorHandling.id, value: 'try:\n    # Your code here\n    pass\nexcept Exception as e:\n    print(f"An error occurred: {e}")\n    # Add specific error handling or logging', versionTag: 'v1.0.0', status: 'active' },
         select: { id: true }
     });
-
     const assetUnitTestStructure = await prisma.promptAsset.upsert({
-        where: { key: 'python-unittest-structure' },
-        update: { name: 'Python Unittest Structure', type: 'Code Template', projectId: cgProjectId },
+        where: { projectId_key: { projectId: cgProjectId, key: 'python-unittest-structure' } },
+        update: { name: 'Python Unittest Structure', type: 'Code Template' },
         create: { key: 'python-unittest-structure', name: 'Python Unittest Structure', type: 'Code Template', projectId: cgProjectId }
     });
     const assetUnitTestStructureV1 = await prisma.promptAssetVersion.upsert({
-        where: { assetId_versionTag: { assetId: assetUnitTestStructure.key, versionTag: 'v1.0.0' } },
+        where: { assetId_versionTag: { assetId: assetUnitTestStructure.id, versionTag: 'v1.0.0' } },
         update: { value: 'import unittest\n\n# Assume function_to_test is imported from your module\n# from my_module import function_to_test\n\nclass TestMyFunction(unittest.TestCase):\n\n    def test_case_1(self):\n        # Arrange\n        input_data = ...\n        expected_output = ...\n        # Act\n        actual_output = function_to_test(input_data)\n        # Assert\n        self.assertEqual(actual_output, expected_output)\n\n    # Add more test methods\n\nif __name__ == \'__main__\':\n    unittest.main()', status: 'active' },
-        create: { assetId: assetUnitTestStructure.key, value: 'import unittest\n\n# Assume function_to_test is imported from your module\n# from my_module import function_to_test\n\nclass TestMyFunction(unittest.TestCase):\n\n    def test_case_1(self):\n        # Arrange\n        input_data = ...\n        expected_output = ...\n        # Act\n        actual_output = function_to_test(input_data)\n        # Assert\n        self.assertEqual(actual_output, expected_output)\n\n    # Add more test methods\n\nif __name__ == \'__main__\':\n    unittest.main()', versionTag: 'v1.0.0', status: 'active' },
+        create: { assetId: assetUnitTestStructure.id, value: 'import unittest\n\n# Assume function_to_test is imported from your module\n# from my_module import function_to_test\n\nclass TestMyFunction(unittest.TestCase):\n\n    def test_case_1(self):\n        # Arrange\n        input_data = ...\n        expected_output = ...\n        # Act\n        actual_output = function_to_test(input_data)\n        # Assert\n        self.assertEqual(actual_output, expected_output)\n\n    # Add more test methods\n\nif __name__ == \'__main__\':\n    unittest.main()', versionTag: 'v1.0.0', status: 'active' },
         select: { id: true }
     });
     console.log('Upserted Code Gen Assets and V1 Versions');
 
     // 5. Upsert Code Gen Prompts and Versions
     const promptGenFuncName = 'generate-python-function';
+    const promptGenFuncSlug = slugify(promptGenFuncName);
     const promptGenFunc = await prisma.prompt.upsert({
-        where: { projectId_name: { projectId: cgProjectId, name: promptGenFuncName } },
+        where: {
+            prompt_slug_project_unique: { // Usar el nombre correcto del tipo generado
+                slug: promptGenFuncSlug,
+                projectId: cgProjectId
+            }
+        },
         update: {
+            name: promptGenFuncName,
             description: 'Generate a Python function based on requirements.',
-            tags: { set: getTagIds(['code-generation', 'python']) } // Use helper to get IDs
+            slug: promptGenFuncSlug, // Asegurarse que el slug se actualice
+            tags: { set: getTagIds(['code-generation', 'python']) }
         },
         create: {
+            slug: promptGenFuncSlug,
             name: promptGenFuncName,
             description: 'Generate a Python function based on requirements.',
             projectId: cgProjectId,
-            tags: { connect: getTagIds(['code-generation', 'python']) } // Use helper to get IDs
+            tags: { connect: getTagIds(['code-generation', 'python']) }
         },
-        select: { id: true, name: true }
+        select: { id: true, slug: true, name: true }
     });
 
+    // Upsert de PromptVersion usa promptGenFunc.id que ahora es el CUID
     const promptGenFuncV1 = await prisma.promptVersion.upsert({
-        where: { promptId_versionTag: { promptId: promptGenFunc.id, versionTag: 'v1.0.0' } },
+        where: { promptId_versionTag: { promptId: promptGenFunc.id, versionTag: 'v1.0.0' } }, // promptId ahora es el CUID
         update: {
-            promptText: `Generate a Python function that performs the following task: {{Task Description}}.
-            Requirements:
-            - Input arguments: {{Input Arguments}}
-            - Return value: {{Return Value}}
-            - Include standard imports: {{python-standard-imports}}
-            - Implement basic error handling using this template: {{python-try-except-template}}
-            - Include type hints.
-            - Add a concise docstring explaining what the function does, its arguments, and what it returns.`,
+            promptText: `Generate a Python function that performs the following task: {{Task Description}}.\n            Requirements:\n            - Input arguments: {{Input Arguments}}\n            - Return value: {{Return Value}}\n            - Include standard imports: {{python-standard-imports}}\n            - Implement basic error handling using this template: {{python-try-except-template}}\n            - Include type hints.\n            - Add a concise docstring explaining what the function does, its arguments, and what it returns.`,
             status: 'active',
-            activeInEnvironments: { set: [{ id: devEnvironment.id }] }, // Use set for updates
-            aiModelId: cgGpt4o.id // Assign default AI model
+            activeInEnvironments: { set: [{ id: devEnvironment.id }] },
+            aiModelId: cgGpt4o.id
         },
         create: {
             promptId: promptGenFunc.id,
@@ -161,11 +172,11 @@ async function main() {
             versionTag: 'v1.0.0', status: 'active',
             changeMessage: 'Initial version for generating Python functions with error handling and imports.',
             activeInEnvironments: { connect: [{ id: devEnvironment.id }] },
-            aiModelId: cgGpt4o.id // Assign default AI model
+            aiModelId: cgGpt4o.id
         },
         select: { id: true }
     });
-    console.log(`Upserted Prompt ${promptGenFunc.name} V1`);
+    console.log(`Upserted Prompt ${promptGenFunc.name} V1 (ID: ${promptGenFunc.id})`);
 
     // Upsert Links individually
     await prisma.promptAssetLink.upsert({
@@ -181,47 +192,57 @@ async function main() {
     console.log(`Upserted links for ${promptGenFunc.name} V1`);
 
     const promptGenTestName = 'generate-python-unittest';
+    const promptGenTestSlug = slugify(promptGenTestName);
     const promptGenTest = await prisma.prompt.upsert({
-        where: { projectId_name: { projectId: cgProjectId, name: promptGenTestName } },
+        where: {
+            prompt_slug_project_unique: { // Usar el nombre correcto del tipo generado
+                slug: promptGenTestSlug,
+                projectId: cgProjectId
+            }
+        },
         update: {
+            name: promptGenTestName,
             description: 'Generate a Python unit test for a given function.',
-            tags: { set: getTagIds(['code-generation', 'python', 'unit-test']) } // Use helper to get IDs
+            slug: promptGenTestSlug, // Asegurarse que el slug se actualice
+            tags: { set: getTagIds(['code-generation', 'python', 'unit-test']) }
         },
         create: {
+            slug: promptGenTestSlug,
             name: promptGenTestName,
             description: 'Generate a Python unit test for a given function.',
             projectId: cgProjectId,
-            tags: { connect: getTagIds(['code-generation', 'python', 'unit-test']) } // Use helper to get IDs
+            tags: { connect: getTagIds(['code-generation', 'python', 'unit-test']) }
         },
-        select: { id: true, name: true }
+        select: { id: true, slug: true, name: true }
     });
 
+    // Upsert de PromptVersion usa promptGenTest.id que ahora es el CUID
     const promptGenTestV1 = await prisma.promptVersion.upsert({
-        where: { promptId_versionTag: { promptId: promptGenTest.id, versionTag: 'v1.0.0' } },
+        where: { promptId_versionTag: { promptId: promptGenTest.id, versionTag: 'v1.0.0' } }, // promptId ahora es el CUID
         update: {
-            promptText: `Generate a Python unit test class using the \\'unittest\\' module for the following function:\\n\\n\\\`\\\`\\\`python\\n{{Function Code}}\\n\\\`\\\`\\\`\\n\\nUse this structure:\\n{{python-unittest-structure}}\\n\\nCreate test cases covering:\\n- {{Test Case 1 Description}}\\n- {{Test Case 2 Description}}\\n- (Optional) Edge cases: {{Edge Cases Description}}`,
+            promptText: `Generate a Python unit test class using the \'unittest\' module for the following function:\\n\\n\\\`\\\`\\\`python\\n{{Function Code}}\\n\\\`\\\`\\\`\\n\\nUse this structure:\\n{{python-unittest-structure}}\\n\\nCreate test cases covering:\\n- {{Test Case 1 Description}}\\n- {{Test Case 2 Description}}\\n- (Optional) Edge cases: {{Edge Cases Description}}`,
             status: 'active',
-            activeInEnvironments: { set: [{ id: devEnvironment.id }, { id: testEnvironment.id }] }, // Use set for update
-            aiModelId: cgGpt4o.id // Assign default AI model
+            activeInEnvironments: { set: [{ id: devEnvironment.id }, { id: testEnvironment.id }] },
+            aiModelId: cgGpt4o.id
         },
         create: {
             promptId: promptGenTest.id,
-            promptText: `Generate a Python unit test class using the \\'unittest\\' module for the following function:\\n\\n\\\`\\\`\\\`python\\n{{Function Code}}\\n\\\`\\\`\\\`\\n\\nUse this structure:\\n{{python-unittest-structure}}\\n\\nCreate test cases covering:\\n- {{Test Case 1 Description}}\\n- {{Test Case 2 Description}}\\n- (Optional) Edge cases: {{Edge Cases Description}}`,
+            promptText: `Generate a Python unit test class using the \'unittest\' module for the following function:\\n\\n\\\`\\\`\\\`python\\n{{Function Code}}\\n\\\`\\\`\\\`\\n\\nUse this structure:\\n{{python-unittest-structure}}\\n\\nCreate test cases covering:\\n- {{Test Case 1 Description}}\\n- {{Test Case 2 Description}}\\n- (Optional) Edge cases: {{Edge Cases Description}}`,
             versionTag: 'v1.0.0', status: 'active',
             changeMessage: 'Initial version for generating Python unit tests.',
             activeInEnvironments: { connect: [{ id: devEnvironment.id }, { id: testEnvironment.id }] },
-            aiModelId: cgGpt4o.id // Assign default AI model
+            aiModelId: cgGpt4o.id
         },
         select: { id: true }
     });
-    console.log(`Upserted Prompt ${promptGenTest.name} V1`);
+    console.log(`Upserted Prompt ${promptGenTest.name} V1 (ID: ${promptGenTest.id})`);
 
     await prisma.promptAssetLink.upsert({
         where: { promptVersionId_assetVersionId: { promptVersionId: promptGenTestV1.id, assetVersionId: assetUnitTestStructureV1.id } },
-        update: { usageContext: 'Unittest class template' },
-        create: { promptVersionId: promptGenTestV1.id, assetVersionId: assetUnitTestStructureV1.id, usageContext: 'Unittest class template' }
+        update: { usageContext: 'Unit test class structure' },
+        create: { promptVersionId: promptGenTestV1.id, assetVersionId: assetUnitTestStructureV1.id, usageContext: 'Unit test class structure' },
     });
-    console.log(`Upserted link for ${promptGenTest.name} V1`);
+    console.log(`Upserted links for ${promptGenTest.name} V1`);
 
     console.log(`Code Generation & Assistance seeding finished.`);
 }

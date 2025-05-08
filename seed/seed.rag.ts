@@ -2,6 +2,17 @@ import { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
+// Definición de la función slugify (copiada de otros seeds)
+function slugify(text: string): string {
+    return text
+        .toString()
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-') // Replace spaces with -
+        .replace(/[^\w\-]+/g, '') // Remove all non-word chars
+        .replace(/\-\-+/g, '-'); // Replace multiple - with single -
+}
+
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
 
@@ -95,38 +106,83 @@ async function main() {
 
     // --- Upsert RAG Assets ---
     const assetSystemInstruction = await prisma.promptAsset.upsert({
-        where: { key: 'rag-system-instruction' },
-        update: { name: 'RAG System Instruction', type: 'Instruction', projectId: ragProjectId },
+        where: {
+            projectId_key: {
+                projectId: ragProjectId,
+                key: 'rag-system-instruction'
+            }
+        },
+        update: { name: 'RAG System Instruction', type: 'Instruction' },
         create: { key: 'rag-system-instruction', name: 'RAG System Instruction', type: 'Instruction', projectId: ragProjectId }
     });
     const assetSystemInstructionV1 = await prisma.promptAssetVersion.upsert({
-        where: { assetId_versionTag: { assetId: assetSystemInstruction.key, versionTag: 'v1.0.0' } },
+        where: {
+            assetId_versionTag: {
+                assetId: assetSystemInstruction.id,
+                versionTag: 'v1.0.0'
+            }
+        },
         update: { value: 'You are an AI assistant helping employees answer questions based ONLY on the provided internal documents. Answer concisely and accurately using the information given in the context. Cite the source document name(s) for your answer. If the answer cannot be found in the provided context, state that clearly. Do not make assumptions or use external knowledge.', status: 'active' },
-        create: { assetId: assetSystemInstruction.key, value: 'You are an AI assistant helping employees answer questions based ONLY on the provided internal documents. Answer concisely and accurately using the information given in the context. Cite the source document name(s) for your answer. If the answer cannot be found in the provided context, state that clearly. Do not make assumptions or use external knowledge.', versionTag: 'v1.0.0', status: 'active' },
+        create: {
+            assetId: assetSystemInstruction.id,
+            value: 'You are an AI assistant helping employees answer questions based ONLY on the provided internal documents. Answer concisely and accurately using the information given in the context. Cite the source document name(s) for your answer. If the answer cannot be found in the provided context, state that clearly. Do not make assumptions or use external knowledge.',
+            versionTag: 'v1.0.0',
+            status: 'active'
+        },
         select: { id: true }
     });
 
     const assetCitationFormat = await prisma.promptAsset.upsert({
-        where: { key: 'rag-citation-format' },
-        update: { name: 'RAG Citation Format', type: 'Instruction', projectId: ragProjectId },
+        where: {
+            projectId_key: {
+                projectId: ragProjectId,
+                key: 'rag-citation-format'
+            }
+        },
+        update: { name: 'RAG Citation Format', type: 'Instruction' },
         create: { key: 'rag-citation-format', name: 'RAG Citation Format', type: 'Instruction', projectId: ragProjectId }
     });
     const assetCitationFormatV1 = await prisma.promptAssetVersion.upsert({
-        where: { assetId_versionTag: { assetId: assetCitationFormat.key, versionTag: 'v1.0.0' } },
+        where: {
+            assetId_versionTag: {
+                assetId: assetCitationFormat.id,
+                versionTag: 'v1.0.0'
+            }
+        },
         update: { value: 'Cite sources like this: (Source: [Document Name])', status: 'active' },
-        create: { assetId: assetCitationFormat.key, value: 'Cite sources like this: (Source: [Document Name])', versionTag: 'v1.0.0', status: 'active' },
+        create: {
+            assetId: assetCitationFormat.id,
+            value: 'Cite sources like this: (Source: [Document Name])',
+            versionTag: 'v1.0.0',
+            status: 'active'
+        },
         select: { id: true }
     });
 
     const assetNotFoundResponse = await prisma.promptAsset.upsert({
-        where: { key: 'rag-not-found-response' },
-        update: { name: 'RAG Not Found Response', type: 'Instruction', projectId: ragProjectId },
+        where: {
+            projectId_key: {
+                projectId: ragProjectId,
+                key: 'rag-not-found-response'
+            }
+        },
+        update: { name: 'RAG Not Found Response', type: 'Instruction' },
         create: { key: 'rag-not-found-response', name: 'RAG Not Found Response', type: 'Instruction', projectId: ragProjectId }
     });
     const assetNotFoundResponseV1 = await prisma.promptAssetVersion.upsert({
-        where: { assetId_versionTag: { assetId: assetNotFoundResponse.key, versionTag: 'v1.0.0' } },
+        where: {
+            assetId_versionTag: {
+                assetId: assetNotFoundResponse.id,
+                versionTag: 'v1.0.0'
+            }
+        },
         update: { value: 'I could not find information about that in the provided documents.', status: 'active' },
-        create: { assetId: assetNotFoundResponse.key, value: 'I could not find information about that in the provided documents.', versionTag: 'v1.0.0', status: 'active' },
+        create: {
+            assetId: assetNotFoundResponse.id,
+            value: 'I could not find information about that in the provided documents.',
+            versionTag: 'v1.0.0',
+            status: 'active'
+        },
         select: { id: true }
     });
     console.log('Upserted RAG Assets and V1 Versions');
@@ -134,19 +190,28 @@ async function main() {
 
     // --- Upsert RAG Prompt: Answer Question ---
     const promptRagQueryName = 'answer-hr-question-rag';
+    const promptRagQuerySlug = slugify(promptRagQueryName); // Crear el slug
     const promptRagQuery = await prisma.prompt.upsert({
-        where: { projectId_name: { projectId: ragProjectId, name: promptRagQueryName } },
+        where: {
+            prompt_slug_project_unique: { // Usar la clave correcta
+                slug: promptRagQuerySlug,
+                projectId: ragProjectId
+            }
+        },
         update: {
+            name: promptRagQueryName, // Mantener el nombre original
             description: 'Core RAG prompt to answer user questions based on retrieved context.',
+            slug: promptRagQuerySlug, // Asegurar que el slug se actualice
             tags: { set: getRagTagIds(['rag', 'hr-policy', 'employee-faq']) }
         },
         create: {
+            slug: promptRagQuerySlug, // Establecer el nuevo campo slug
             name: promptRagQueryName,
             description: 'Core RAG prompt to answer user questions based on retrieved context.',
             projectId: ragProjectId,
             tags: { connect: getRagTagIds(['rag', 'hr-policy', 'employee-faq']) }
         },
-        select: { id: true, name: true }
+        select: { id: true, name: true, slug: true } // Incluir slug en la selección
     });
 
     // This prompt takes the user's question and the retrieved context as input at runtime.

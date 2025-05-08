@@ -6,6 +6,18 @@ import { ExecutePromptParamsDto } from './dto/execute-prompt-params.dto';
 import { ExecutePromptQueryDto } from './dto/execute-prompt-query.dto';
 import { ExecutePromptBodyDto } from './dto/execute-prompt-body.dto';
 
+// Definición de la función slugify (copiada de prompt.service.ts)
+function slugify(text: string): string {
+    return text
+        .toString()
+        .normalize('NFKD') // Normalize to decompose combined graphemes
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-') // Replace spaces with -
+        .replace(/[^\w\-]+/g, '') // Remove all non-word chars (keeps hyphen)
+        .replace(/\-\-+/g, '-'); // Replace multiple - with single -
+}
+
 @Injectable()
 export class ServePromptService {
     private readonly logger = new Logger(ServePromptService.name);
@@ -30,12 +42,18 @@ export class ServePromptService {
         const { variables } = body;
 
         // 1. Find the Prompt within the Project
+        const promptNameSlug = slugify(promptName); // Slugify el promptName
         const prompt = await this.prisma.prompt.findUnique({
-            where: { projectId_name: { projectId, name: promptName } },
+            where: {
+                prompt_slug_project_unique: {
+                    slug: promptNameSlug,
+                    projectId: projectId
+                }
+            },
         });
 
         if (!prompt) {
-            throw new NotFoundException(`Prompt "${promptName}" not found in project "${projectId}".`);
+            throw new NotFoundException(`Prompt "${promptName}" (slug: "${promptNameSlug}") not found in project "${projectId}".`);
         }
 
         // 2. Find the specific PromptVersion

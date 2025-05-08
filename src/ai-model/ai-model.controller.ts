@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { CacheInterceptor } from '@nestjs/cache-manager';
 import { AiModelService } from './ai-model.service';
 import { CreateAiModelDto } from './dto/create-ai-model.dto';
@@ -81,5 +81,20 @@ export class AiModelController {
         @Param('aiModelId') aiModelId: string
     ): Promise<AIModel> {
         return this.aiModelService.remove(projectId, aiModelId);
+    }
+
+    @Get('providers/types') // New endpoint
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'List available Langchain provider types' })
+    @ApiResponse({
+        status: 200,
+        description: 'A list of Langchain provider types.',
+        type: [String]
+    })
+    // Note: ProjectGuard is applied globally. If this should be accessible without a specific project context,
+    // consider moving it to a different controller or overriding guards for this specific route.
+    getProviderTypes(): string[] {
+        this.logger.debug('[getProviderTypes] Received request for Langchain provider types');
+        return this.aiModelService.getProviderTypes();
     }
 }

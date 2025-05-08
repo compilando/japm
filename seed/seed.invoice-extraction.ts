@@ -102,24 +102,49 @@ async function main() {
 
     // 3. Upsert Invoice Extraction Assets and Versions
     const assetInvoiceFields = await prisma.promptAsset.upsert({
-        where: { key: 'invoice-standard-fields' },
-        update: { name: 'Invoice Standard Fields List', type: 'List', projectId: invProjectId },
+        where: {
+            projectId_key: {
+                projectId: invProjectId,
+                key: 'invoice-standard-fields'
+            }
+        },
+        update: { name: 'Invoice Standard Fields List', type: 'List' },
         create: { key: 'invoice-standard-fields', name: 'Invoice Standard Fields List', type: 'List', projectId: invProjectId }
     });
     const assetInvoiceFieldsV1 = await prisma.promptAssetVersion.upsert({
-        where: { assetId_versionTag: { assetId: assetInvoiceFields.key, versionTag: 'v1.0.0' } },
+        where: {
+            assetId_versionTag: {
+                assetId: assetInvoiceFields.id,
+                versionTag: 'v1.0.0'
+            }
+        },
         update: { value: 'Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price\nLine Item Total', status: 'active' },
-        create: { assetId: assetInvoiceFields.key, value: 'Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price\nLine Item Total', versionTag: 'v1.0.0', status: 'active' },
+        create: {
+            assetId: assetInvoiceFields.id,
+            value: 'Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price\nLine Item Total',
+            versionTag: 'v1.0.0',
+            status: 'active'
+        },
         select: { id: true }
     });
 
     const assetJsonSchema = await prisma.promptAsset.upsert({
-        where: { key: 'invoice-json-schema' },
-        update: { name: 'Target JSON Schema for Invoice', type: 'JSON Schema', projectId: invProjectId },
+        where: {
+            projectId_key: {
+                projectId: invProjectId,
+                key: 'invoice-json-schema'
+            }
+        },
+        update: { name: 'Target JSON Schema for Invoice', type: 'JSON Schema' },
         create: { key: 'invoice-json-schema', name: 'Target JSON Schema for Invoice', type: 'JSON Schema', projectId: invProjectId }
     });
     const assetJsonSchemaV1 = await prisma.promptAssetVersion.upsert({
-        where: { assetId_versionTag: { assetId: assetJsonSchema.key, versionTag: 'v1.0.0' } },
+        where: {
+            assetId_versionTag: {
+                assetId: assetJsonSchema.id,
+                versionTag: 'v1.0.0'
+            }
+        },
         update: {
             value: JSON.stringify({
                 type: "object",
@@ -137,7 +162,7 @@ async function main() {
             status: 'active'
         },
         create: {
-            assetId: assetJsonSchema.key,
+            assetId: assetJsonSchema.id,
             value: JSON.stringify({
                 type: "object",
                 properties: {
@@ -160,19 +185,28 @@ async function main() {
 
     // 4. Upsert Invoice Extraction Prompt and Version
     const promptExtractName = 'extract-invoice-data';
+    const promptExtractSlug = toSlug(promptExtractName);
     const promptExtract = await prisma.prompt.upsert({
-        where: { projectId_name: { projectId: invProjectId, name: promptExtractName } },
+        where: {
+            prompt_slug_project_unique: {
+                slug: promptExtractSlug,
+                projectId: invProjectId
+            }
+        },
         update: {
+            name: promptExtractName,
             description: 'Extract key fields from invoice text (OCR result). Output as JSON.',
+            slug: promptExtractSlug,
             tags: { set: getInvTagIds(['invoice', 'data-extraction', 'structured-data', 'json-output']) }
         },
         create: {
+            slug: promptExtractSlug,
             name: promptExtractName,
             description: 'Extract key fields from invoice text (OCR result). Output as JSON.',
             projectId: invProjectId,
             tags: { connect: getInvTagIds(['invoice', 'data-extraction', 'structured-data', 'json-output']) }
         },
-        select: { id: true, name: true }
+        select: { id: true, name: true, slug: true }
     });
 
     const promptExtractV1 = await prisma.promptVersion.upsert({

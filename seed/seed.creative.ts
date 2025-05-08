@@ -2,6 +2,17 @@ import { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
+// Definición de la función slugify (copiada de seed.codegen.ts)
+function slugify(text: string): string {
+    return text
+        .toString()
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-') // Replace spaces with -
+        .replace(/[^\w\-]+/g, '') // Remove all non-word chars
+        .replace(/\-\-+/g, '-'); // Replace multiple - with single -
+}
+
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
 
@@ -72,57 +83,111 @@ async function main() {
 
     // --- Upsert Creative Assets ---
     const assetMainChar = await prisma.promptAsset.upsert({
-        where: { key: 'main-char-profile-jax' },
-        update: { name: 'Main Character Profile - Jax', type: 'Character', projectId: crProjectId },
+        where: {
+            projectId_key: {
+                projectId: crProjectId,
+                key: 'main-char-profile-jax'
+            }
+        },
+        update: { name: 'Main Character Profile - Jax', type: 'Character' },
         create: { key: 'main-char-profile-jax', name: 'Main Character Profile - Jax', type: 'Character', projectId: crProjectId }
     });
     const assetMainCharV1 = await prisma.promptAssetVersion.upsert({
-        where: { assetId_versionTag: { assetId: assetMainChar.key, versionTag: 'v1.0.0' } },
+        where: {
+            assetId_versionTag: {
+                assetId: assetMainChar.id,
+                versionTag: 'v1.0.0'
+            }
+        },
         update: { value: 'Jax: Ex-military cyborg, cynical but skilled pilot. Haunted by past mission. Distrusts authority. Has a cybernetic arm with hidden tools. Motivation: Find his missing sister.', status: 'active' },
-        create: { assetId: assetMainChar.key, value: 'Jax: Ex-military cyborg, cynical but skilled pilot. Haunted by past mission. Distrusts authority. Has a cybernetic arm with hidden tools. Motivation: Find his missing sister.', versionTag: 'v1.0.0', status: 'active' },
+        create: {
+            assetId: assetMainChar.id,
+            value: 'Jax: Ex-military cyborg, cynical but skilled pilot. Haunted by past mission. Distrusts authority. Has a cybernetic arm with hidden tools. Motivation: Find his missing sister.',
+            versionTag: 'v1.0.0',
+            status: 'active'
+        },
         select: { id: true } // Select ID
     });
 
     const assetSetting = await prisma.promptAsset.upsert({
-        where: { key: 'setting-neo-kyoto' },
-        update: { name: 'Setting Description - Neo-Kyoto', type: 'Setting', projectId: crProjectId },
+        where: {
+            projectId_key: {
+                projectId: crProjectId,
+                key: 'setting-neo-kyoto'
+            }
+        },
+        update: { name: 'Setting Description - Neo-Kyoto', type: 'Setting' },
         create: { key: 'setting-neo-kyoto', name: 'Setting Description - Neo-Kyoto', type: 'Setting', projectId: crProjectId }
     });
     const assetSettingV1 = await prisma.promptAssetVersion.upsert({
-        where: { assetId_versionTag: { assetId: assetSetting.key, versionTag: 'v1.0.0' } },
+        where: {
+            assetId_versionTag: {
+                assetId: assetSetting.id,
+                versionTag: 'v1.0.0'
+            }
+        },
         update: { value: 'Neo-Kyoto, 2242: A sprawling, rain-slicked metropolis dominated by mega-corporations. Holographic ads flicker on towering skyscrapers. Lower levels are dangerous, filled with black markets and cyber-gangs. Upper levels are pristine but sterile.', status: 'active' },
-        create: { assetId: assetSetting.key, value: 'Neo-Kyoto, 2242: A sprawling, rain-slicked metropolis dominated by mega-corporations. Holographic ads flicker on towering skyscrapers. Lower levels are dangerous, filled with black markets and cyber-gangs. Upper levels are pristine but sterile.', versionTag: 'v1.0.0', status: 'active' },
+        create: {
+            assetId: assetSetting.id,
+            value: 'Neo-Kyoto, 2242: A sprawling, rain-slicked metropolis dominated by mega-corporations. Holographic ads flicker on towering skyscrapers. Lower levels are dangerous, filled with black markets and cyber-gangs. Upper levels are pristine but sterile.',
+            versionTag: 'v1.0.0',
+            status: 'active'
+        },
         select: { id: true } // Select ID
     });
 
     const assetTone = await prisma.promptAsset.upsert({
-        where: { key: 'narrative-tone-noir' },
-        update: { name: 'Narrative Tone - Cyberpunk Noir', type: 'Style', projectId: crProjectId },
+        where: {
+            projectId_key: {
+                projectId: crProjectId,
+                key: 'narrative-tone-noir'
+            }
+        },
+        update: { name: 'Narrative Tone - Cyberpunk Noir', type: 'Style' },
         create: { key: 'narrative-tone-noir', name: 'Narrative Tone - Cyberpunk Noir', type: 'Style', projectId: crProjectId }
     });
     const assetToneV1 = await prisma.promptAssetVersion.upsert({
-        where: { assetId_versionTag: { assetId: assetTone.key, versionTag: 'v1.0.0' } },
+        where: {
+            assetId_versionTag: {
+                assetId: assetTone.id,
+                versionTag: 'v1.0.0'
+            }
+        },
         update: { value: 'Maintain a gritty, noir tone. Focus on atmosphere, shadows, rain, moral ambiguity. Use descriptive language that emphasizes the contrast between high-tech and societal decay.', status: 'active' },
-        create: { assetId: assetTone.key, value: 'Maintain a gritty, noir tone. Focus on atmosphere, shadows, rain, moral ambiguity. Use descriptive language that emphasizes the contrast between high-tech and societal decay.', versionTag: 'v1.0.0', status: 'active' },
+        create: {
+            assetId: assetTone.id,
+            value: 'Maintain a gritty, noir tone. Focus on atmosphere, shadows, rain, moral ambiguity. Use descriptive language that emphasizes the contrast between high-tech and societal decay.',
+            versionTag: 'v1.0.0',
+            status: 'active'
+        },
         select: { id: true } // Select ID
     });
     console.log('Upserted Creative Assets and V1 Versions');
 
     // --- Upsert Creative Prompt: Generate Scene ---
     const promptGenSceneName = 'generate-scene-dialogue';
+    const promptGenSceneSlug = slugify(promptGenSceneName);
     const promptGenScene = await prisma.prompt.upsert({
-        where: { projectId_name: { projectId: crProjectId, name: promptGenSceneName } }, // Use correct name
+        where: {
+            prompt_slug_project_unique: {
+                slug: promptGenSceneSlug,
+                projectId: crProjectId
+            }
+        },
         update: {
+            name: promptGenSceneName,
             description: 'Generate a scene with dialogue between characters.',
-            tags: { set: getCrTagIds(['creative-writing', 'sci-fi', 'dialogue']) } // Use helper
+            slug: promptGenSceneSlug,
+            tags: { set: getCrTagIds(['creative-writing', 'sci-fi', 'dialogue']) }
         },
         create: {
-            name: promptGenSceneName, // Use correct name
+            slug: promptGenSceneSlug,
+            name: promptGenSceneName,
             description: 'Generate a scene with dialogue between characters.',
             projectId: crProjectId,
-            tags: { connect: getCrTagIds(['creative-writing', 'sci-fi', 'dialogue']) } // Use helper
+            tags: { connect: getCrTagIds(['creative-writing', 'sci-fi', 'dialogue']) }
         },
-        select: { id: true, name: true } // Select needed fields
+        select: { id: true, name: true, slug: true }
     });
 
     const promptGenSceneV1 = await prisma.promptVersion.upsert({

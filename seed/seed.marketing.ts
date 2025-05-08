@@ -2,6 +2,17 @@ import { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
+// Definición de la función slugify (copiada de otros seeds)
+function slugify(text: string): string {
+    return text
+        .toString()
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-') // Replace spaces with -
+        .replace(/[^\w\-]+/g, '') // Remove all non-word chars
+        .replace(/\-\-+/g, '-'); // Replace multiple - with single -
+}
+
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
 
@@ -73,45 +84,84 @@ async function main() {
 
     // --- Upsert Marketing Assets --- 
     const assetAudience = await prisma.promptAsset.upsert({
-        where: { key: 'target-audience-persona' },
-        update: { name: 'Target Audience Persona', type: 'Text Template', projectId: mktProjectId },
+        where: {
+            projectId_key: {
+                projectId: mktProjectId,
+                key: 'target-audience-persona'
+            }
+        },
+        update: { name: 'Target Audience Persona', type: 'Text Template' },
         create: { key: 'target-audience-persona', name: 'Target Audience Persona', type: 'Text Template', projectId: mktProjectId }
     });
     const assetAudienceV1 = await prisma.promptAssetVersion.upsert({
-        where: { assetId_versionTag: { assetId: assetAudience.key, versionTag: 'v1.0.0' } },
+        where: {
+            assetId_versionTag: {
+                assetId: assetAudience.id,
+                versionTag: 'v1.0.0'
+            }
+        },
         update: { value: 'Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]\n- Pain Points: [Challenges, Needs]', status: 'active' },
-        create: { assetId: assetAudience.key, value: 'Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]\n- Pain Points: [Challenges, Needs]', versionTag: 'v1.0.0', status: 'active' },
+        create: {
+            assetId: assetAudience.id,
+            value: 'Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]\n- Pain Points: [Challenges, Needs]',
+            versionTag: 'v1.0.0',
+            status: 'active'
+        },
         select: { id: true }
     });
 
     const assetCTA = await prisma.promptAsset.upsert({
-        where: { key: 'call-to-action-phrases' },
-        update: { name: 'Call to Action Phrases', type: 'List', projectId: mktProjectId },
+        where: {
+            projectId_key: {
+                projectId: mktProjectId,
+                key: 'call-to-action-phrases'
+            }
+        },
+        update: { name: 'Call to Action Phrases', type: 'List' },
         create: { key: 'call-to-action-phrases', name: 'Call to Action Phrases', type: 'List', projectId: mktProjectId }
     });
     const assetCTAV1 = await prisma.promptAssetVersion.upsert({
-        where: { assetId_versionTag: { assetId: assetCTA.key, versionTag: 'v1.0.0' } },
+        where: {
+            assetId_versionTag: {
+                assetId: assetCTA.id,
+                versionTag: 'v1.0.0'
+            }
+        },
         update: { value: 'Learn More\nShop Now\nSign Up Today\nDownload Free Guide', status: 'active' },
-        create: { assetId: assetCTA.key, value: 'Learn More\nShop Now\nSign Up Today\nDownload Free Guide', versionTag: 'v1.0.0', status: 'active' },
+        create: {
+            assetId: assetCTA.id,
+            value: 'Learn More\nShop Now\nSign Up Today\nDownload Free Guide',
+            versionTag: 'v1.0.0',
+            status: 'active'
+        },
         select: { id: true }
     });
     console.log('Upserted Marketing Assets and V1 Versions');
 
     // --- Upsert Marketing Prompt: Generate Blog Post Idea --- 
     const promptBlogPostIdeaName = 'generate-blog-post-idea';
+    const promptBlogPostIdeaSlug = slugify(promptBlogPostIdeaName);
     const promptBlogPostIdea = await prisma.prompt.upsert({
-        where: { projectId_name: { projectId: mktProjectId, name: promptBlogPostIdeaName } },
+        where: {
+            prompt_slug_project_unique: {
+                slug: promptBlogPostIdeaSlug,
+                projectId: mktProjectId
+            }
+        },
         update: {
+            name: promptBlogPostIdeaName,
             description: 'Generate blog post ideas for a target audience.',
+            slug: promptBlogPostIdeaSlug,
             tags: { set: getMktTagIds(['marketing', 'blog-post']) }
         },
         create: {
+            slug: promptBlogPostIdeaSlug,
             name: promptBlogPostIdeaName,
             description: 'Generate blog post ideas for a target audience.',
             projectId: mktProjectId,
             tags: { connect: getMktTagIds(['marketing', 'blog-post']) }
         },
-        select: { id: true, name: true }
+        select: { id: true, name: true, slug: true }
     });
 
     const promptBlogPostIdeaV1 = await prisma.promptVersion.upsert({

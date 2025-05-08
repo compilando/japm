@@ -119,4 +119,25 @@ export class AiModelService {
             throw error;
         }
     }
+
+    getProviderTypes(): string[] {
+        this.logger.debug('Fetching available Langchain provider types');
+        return [
+            'OpenAI',
+            'Anthropic',
+            'Azure OpenAI',
+            'Google Vertex AI',
+            'Google GenAI',
+            'Cohere',
+            'HuggingFace Inference',
+            'Ollama',
+            'MistralAI',
+            'AWS Bedrock',
+            'Fireworks AI',
+            'Together AI',
+            'AI21',
+            'AlephAlpha',
+            // Consider adding more or making this configurable if needed
+        ];
+    }
 } 
