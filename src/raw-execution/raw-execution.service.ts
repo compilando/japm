@@ -17,8 +17,17 @@ export class RawExecutionService {
         private systemPromptService: SystemPromptService
     ) { }
 
+    private substituteVariables(text: string, variables?: Record<string, any>): string {
+        if (!variables) return text;
+
+        return text.replace(/\${([^}]+)}/g, (match, key) => {
+            const value = variables[key.trim()];
+            return value !== undefined ? value : match;
+        });
+    }
+
     async executeRaw(dto: ExecuteRawDto): Promise<{ response: string }> {
-        const { userText, systemPromptName, aiModelId } = dto;
+        const { userText, systemPromptName, aiModelId, variables } = dto;
 
         // 1. Fetch System Prompt (Handles file directive resolution)
         const systemPrompt = await this.systemPromptService.findOneByName(systemPromptName);
@@ -27,7 +36,11 @@ export class RawExecutionService {
             throw new NotFoundException(`SystemPrompt "${systemPromptName}" not found.`);
         }
 
-        // 2. Fetch AI Model by ID (Globally unique CUID)
+        // 2. Substitute variables in the system prompt if any
+        const processedSystemPrompt = this.substituteVariables(systemPrompt.promptText, variables);
+        this.logger.debug(`Processed system prompt with variables: ${processedSystemPrompt}`);
+
+        // 3. Fetch AI Model by ID (Globally unique CUID)
         const aiModel = await this.prisma.aIModel.findUnique({
             where: { id: aiModelId },
         });
@@ -36,7 +49,7 @@ export class RawExecutionService {
             throw new NotFoundException(`AIModel with ID "${aiModelId}" not found.`);
         }
 
-        // 3. Get API Key
+        // 4. Get API Key
         let apiKey: string | undefined;
         if (aiModel.apiKeyEnvVar) {
             apiKey = this.configService.get<string>(aiModel.apiKeyEnvVar);
@@ -46,11 +59,11 @@ export class RawExecutionService {
             throw new InternalServerErrorException(`API Key configuration error for model ID "${aiModelId}".`);
         }
 
-        // 4. Construct Final Prompt
-        const finalPrompt = `${systemPrompt.promptText}\n\n---\n\nUser Input:\n${userText}`;
+        // 5. Construct Final Prompt
+        const finalPrompt = `${processedSystemPrompt}\n\n---\n\nUser Input:\n${userText}`;
         this.logger.debug(`Executing with AI Model: ${aiModel.name}, System Prompt: ${systemPrompt.name}, Final Prompt: ${finalPrompt}`);
 
-        // 5. Instantiate and Invoke LangChain Model
+        // 6. Instantiate and Invoke LangChain Model
         try {
             let llm: any; // Use a more specific type if possible, e.g., BaseChatModel
             const modelParams = {
@@ -88,7 +101,7 @@ export class RawExecutionService {
             // Ensure we have a string to return
             const responseText = typeof rawResponseContent === 'string'
                 ? rawResponseContent
-                : JSON.stringify(rawResponseContent ?? ''); // Stringify if not a string, or use empty string if null/undefined
+                : JSON.stringify(rawResponseContent ?? '');
 
             if (typeof rawResponseContent !== 'string') {
                 this.logger.warn(`LLM response content was not a string for model ID ${aiModelId}. Raw content: ${responseText}`);

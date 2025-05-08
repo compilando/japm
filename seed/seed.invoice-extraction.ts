@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { createSpanishRegionAndCulturalData } from './helpers';
+import { createSpanishRegionAndCulturalData, createUSRegionAndCulturalData } from './helpers';
 
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
@@ -63,6 +63,8 @@ async function main() {
 
     // Crear región es-ES y datos culturales para el proyecto Invoice Extraction
     await createSpanishRegionAndCulturalData(invoiceProject.id);
+    // Crear región en-US y datos culturales para el proyecto Invoice Extraction
+    await createUSRegionAndCulturalData(invoiceProject.id);
 
     const invProjectId = invoiceProject.id;
 

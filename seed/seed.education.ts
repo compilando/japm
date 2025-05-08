@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { createSpanishRegionAndCulturalData } from './helpers';
+import { createSpanishRegionAndCulturalData, createUSRegionAndCulturalData } from './helpers';
 
 // Definición de la función slugify (copiada de otros seeds)
 function slugify(text: string): string {
@@ -48,6 +48,8 @@ async function main() {
 
     // Crear región es-ES y datos culturales para el proyecto Education
     await createSpanishRegionAndCulturalData(educationProject.id);
+    // Crear región en-US y datos culturales para el proyecto Education
+    await createUSRegionAndCulturalData(educationProject.id);
 
     // Create specific AI models for this project
     const eduProjectId = educationProject.id;

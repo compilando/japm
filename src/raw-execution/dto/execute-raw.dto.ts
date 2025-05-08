@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsObject } from 'class-validator';
 
 export class ExecuteRawDto {
     @ApiProperty({
@@ -25,4 +25,13 @@ export class ExecuteRawDto {
     @IsString()
     @IsNotEmpty()
     aiModelId: string;
+
+    @ApiProperty({
+        description: 'Optional variables to substitute in the system prompt.',
+        example: { text: 'Hello world', targetLanguage: 'es-ES' },
+        required: false
+    })
+    @IsOptional()
+    @IsObject()
+    variables?: Record<string, any>;
 } 

@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { createSpanishRegionAndCulturalData } from './helpers';
+import { createSpanishRegionAndCulturalData, createUSRegionAndCulturalData } from './helpers';
 
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
@@ -66,6 +66,8 @@ async function main() {
 
     // Crear región es-ES y datos culturales para el proyecto por defecto
     await createSpanishRegionAndCulturalData(defaultProject.id);
+    // Crear región en-US y datos culturales para el proyecto por defecto
+    await createUSRegionAndCulturalData(defaultProject.id);
 
     // 3. Create Generic Tags for Default Project
     console.log('Upserting Generic Tags...');
@@ -242,6 +244,21 @@ async function main() {
         },
     });
     console.log('Upserted System Prompt: prompt-improver');
+
+    await prisma.systemPrompt.upsert({
+        where: { name: 'prompt-translator' },
+        update: {
+            description: 'Traduce texto a un idioma objetivo manteniendo el tono y estilo original.',
+            promptText: "${file('resources/system-prompts/prompt-translator.md')}",
+            category: 'Translation',
+        },
+        create: {
+            name: 'prompt-translator',
+            description: 'Traduce texto a un idioma objetivo manteniendo el tono y estilo original.',
+            promptText: "${file('resources/system-prompts/prompt-translator.md')}",
+            category: 'Translation',
+        },
+    });
 
     // --- Default Project Assets ---
     console.log('Upserting Default Project Assets...');
