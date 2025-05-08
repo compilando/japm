@@ -190,28 +190,27 @@ async function main() {
 
     // --- Upsert RAG Prompt: Answer Question ---
     const promptRagQueryName = 'answer-hr-question-rag';
-    const promptRagQuerySlug = slugify(promptRagQueryName); // Crear el slug
+    const promptRagQuerySlug = slugify(promptRagQueryName); // ID
     const promptRagQuery = await prisma.prompt.upsert({
         where: {
-            prompt_slug_project_unique: { // Usar la clave correcta
-                slug: promptRagQuerySlug,
+            prompt_id_project_unique: { // Usar nombre correcto
+                id: promptRagQuerySlug,
                 projectId: ragProjectId
             }
         },
         update: {
-            name: promptRagQueryName, // Mantener el nombre original
+            name: promptRagQueryName,
             description: 'Core RAG prompt to answer user questions based on retrieved context.',
-            slug: promptRagQuerySlug, // Asegurar que el slug se actualice
             tags: { set: getRagTagIds(['rag', 'hr-policy', 'employee-faq']) }
         },
         create: {
-            slug: promptRagQuerySlug, // Establecer el nuevo campo slug
+            id: promptRagQuerySlug, // ID es slug
             name: promptRagQueryName,
             description: 'Core RAG prompt to answer user questions based on retrieved context.',
             projectId: ragProjectId,
             tags: { connect: getRagTagIds(['rag', 'hr-policy', 'employee-faq']) }
         },
-        select: { id: true, name: true, slug: true } // Incluir slug en la selección
+        select: { id: true, name: true }
     });
 
     // This prompt takes the user's question and the retrieved context as input at runtime.
@@ -235,23 +234,6 @@ async function main() {
         select: { id: true }
     });
     console.log(`Upserted Prompt ${promptRagQuery.name} V1`);
-
-    // Upsert Links individually
-    const ragLinksToUpsert = [
-        { assetVersionId: assetSystemInstructionV1.id, usageContext: 'Overall system behavior instruction', position: 1 },
-        { assetVersionId: assetCitationFormatV1.id, usageContext: 'Instruction on how to cite sources', position: 2 },
-        { assetVersionId: assetNotFoundResponseV1.id, usageContext: 'Standard response when info is missing', position: 3 },
-        // Note: Retrieved Context Chunks and User Question are dynamic inputs, not static assets.
-    ];
-
-    for (const link of ragLinksToUpsert) {
-        await prisma.promptAssetLink.upsert({
-            where: { promptVersionId_assetVersionId: { promptVersionId: promptRagQueryV1.id, assetVersionId: link.assetVersionId } },
-            update: { usageContext: link.usageContext, position: link.position },
-            create: { promptVersionId: promptRagQueryV1.id, assetVersionId: link.assetVersionId, usageContext: link.usageContext, position: link.position },
-        });
-    }
-    console.log(`Upserted links for ${promptRagQuery.name} V1`);
 
     console.log(`Internal Knowledge Base (RAG) seeding finished.`);
 }

@@ -41,58 +41,32 @@ export class ServePromptService {
         const { languageCode, environmentName } = query;
         const { variables } = body;
 
-        // 1. Find the Prompt within the Project
-        const promptNameSlug = slugify(promptName); // Slugify el promptName
+        // 1. Find the Prompt within the Project using the correct composite key
+        const promptNameSlug = slugify(promptName); // Slug es el ID ahora
         const prompt = await this.prisma.prompt.findUnique({
             where: {
-                prompt_slug_project_unique: {
-                    slug: promptNameSlug,
+                prompt_id_project_unique: { // Usar la clave correcta definida en el schema
+                    id: promptNameSlug,     // El slug es el ID
                     projectId: projectId
                 }
             },
         });
 
         if (!prompt) {
-            throw new NotFoundException(`Prompt "${promptName}" (slug: "${promptNameSlug}") not found in project "${projectId}".`);
+            // Mantener el mensaje de error con slug es útil para debug
+            throw new NotFoundException(`Prompt "${promptName}" (ID/slug: "${promptNameSlug}") not found in project "${projectId}".`);
         }
 
         // 2. Find the specific PromptVersion
-        const includeRelations: Prisma.PromptVersionInclude = {
-            prompt: true,
-            translations: true,
-            assets: true,
-        };
-
         const versionToUse = await this.prisma.promptVersion.findUnique({
             where: {
                 promptId_versionTag: { promptId: prompt.id, versionTag },
             },
-            include: includeRelations,
+            include: { prompt: true, translations: true },
         });
 
         if (!versionToUse) {
             throw new NotFoundException(`Version "${versionTag}" for prompt "${promptName}" (ID: ${prompt.id}) in project "${projectId}" not found.`);
-        }
-
-        // --- NUEVO: Cargar detalles de AssetVersion por separado ---
-        let assetVersionsMap: Map<string, Prisma.PromptAssetVersionGetPayload<{ include: { asset: true, translations: true } }>> = new Map();
-        if (versionToUse.assets && versionToUse.assets.length > 0) {
-            // 1. Extraer IDs únicos de assetVersion
-            const assetVersionIds = [...new Set(versionToUse.assets.map(link => link.assetVersionId))];
-
-            // 2. Consultar los detalles de PromptAssetVersion
-            const assetVersionsDetails = await this.prisma.promptAssetVersion.findMany({
-                where: { id: { in: assetVersionIds } },
-                include: {
-                    asset: true, // Incluir el PromptAsset base
-                    translations: true // Incluir las AssetTranslations
-                }
-            });
-
-            // 3. Crear un mapa para búsqueda rápida por ID
-            for (const av of assetVersionsDetails) {
-                assetVersionsMap.set(av.id, av);
-            }
         }
 
         // 3. Determine language and get base prompt text
@@ -108,40 +82,90 @@ export class ServePromptService {
             }
         }
 
-        // 4. Prepare asset context (basic substitution)
+        // --- NUEVA LÓGICA DE ASSETS --- 
+        const potentialPlaceholders = [...basePromptText.matchAll(/\{\{([^}]+)\}\}/g)];
+        const potentialAssetKeys = potentialPlaceholders
+            .map(match => match[1].trim()) // Obtener la clave dentro de {{}}
+            .filter(key => !variables.hasOwnProperty(key)); // Filtrar claves que NO están en las variables de entrada
+
+        const uniquePotentialAssetKeys = [...new Set(potentialAssetKeys)];
         const assetContext: Record<string, string> = {};
-        for (const link of versionToUse.assets) {
-            // --- USAR MAPA ---
-            const assetVersion = assetVersionsMap.get(link.assetVersionId);
-            if (!assetVersion) {
-                console.warn(`AssetVersion details not found for ID: ${link.assetVersionId}. Skipping asset.`);
-                continue; // Saltar este asset si no se encontraron sus detalles
-            }
-            // --- FIN USAR MAPA ---
+        const resolvedAssetsMetadata: any[] = []; // Para metadata
 
-            // Ahora assetVersion tiene la estructura { id, asset, translations, value, ... }
-            const assetKey = assetVersion.asset.key; // Acceder a asset anidado
-            let assetValue = assetVersion.value;
+        if (uniquePotentialAssetKeys.length > 0) {
+            this.logger.debug(`Potential asset keys found: ${uniquePotentialAssetKeys.join(', ')}`);
+            // Buscar los assets por sus claves en este proyecto
+            const foundAssets = await this.prisma.promptAsset.findMany({
+                where: {
+                    projectId: projectId,
+                    key: { in: uniquePotentialAssetKeys }
+                },
+                // Incluir la versión activa más reciente
+                include: {
+                    versions: {
+                        where: { status: 'active' },
+                        orderBy: { createdAt: 'desc' },
+                        take: 1,
+                        include: { translations: true } // Incluir traducciones de la versión
+                    }
+                }
+            });
 
-            if (finalLanguageCode) {
-                const assetTranslation = assetVersion.translations.find(t => t.languageCode === finalLanguageCode);
-                if (assetTranslation) {
-                    assetValue = assetTranslation.value;
+            // Construir el assetContext
+            for (const asset of foundAssets) {
+                if (asset.versions && asset.versions.length > 0) {
+                    const activeVersion = asset.versions[0];
+                    let assetValue = activeVersion.value;
+
+                    // Aplicar traducción si es necesario
+                    if (finalLanguageCode) {
+                        const translation = activeVersion.translations.find(t => t.languageCode === finalLanguageCode);
+                        if (translation) {
+                            assetValue = translation.value;
+                            resolvedAssetsMetadata.push({
+                                key: asset.key,
+                                versionId: activeVersion.id,
+                                versionTag: activeVersion.versionTag,
+                                languageUsed: finalLanguageCode
+                            });
+                        } else {
+                            // Log fallback, pero usar valor base
+                            this.logger.warn(`Asset key "${asset.key}" v${activeVersion.versionTag}: No translation found for "${finalLanguageCode}". Using base value.`);
+                            resolvedAssetsMetadata.push({
+                                key: asset.key,
+                                versionId: activeVersion.id,
+                                versionTag: activeVersion.versionTag,
+                                languageUsed: 'base_asset_fallback'
+                            });
+                        }
+                    } else {
+                        // Usar valor base directamente
+                        resolvedAssetsMetadata.push({
+                            key: asset.key,
+                            versionId: activeVersion.id,
+                            versionTag: activeVersion.versionTag,
+                            languageUsed: 'base_asset'
+                        });
+                    }
+                    assetContext[asset.key] = assetValue;
+                } else {
+                    this.logger.warn(`Asset key "${asset.key}" found, but it has no active version.`);
                 }
             }
-            assetContext[assetKey] = assetValue;
         }
+        // --- FIN NUEVA LÓGICA DE ASSETS ---
 
         // 5. Combine contexts and render
-        const finalContext = { ...assetContext, ...variables };
+        const finalContext = { ...assetContext, ...variables }; // Ahora assetContext puede tener valores
         let processedPrompt: string;
         try {
             processedPrompt = basePromptText.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
                 const trimmedKey = key.trim();
                 if (finalContext.hasOwnProperty(trimmedKey)) {
-                    return String(finalContext[trimmedKey]);
+                    return String(finalContext[trimmedKey]); // Reemplaza con variable o asset
                 }
-                console.warn(`Placeholder {{${trimmedKey}}} not found in provided variables or assets.`);
+                // Si no está ni en variables ni en assets resueltos, advertir y dejar placeholder
+                this.logger.warn(`Placeholder {{${trimmedKey}}} not found in variables or resolved assets.`);
                 return match;
             });
         } catch (error) {
@@ -156,26 +180,10 @@ export class ServePromptService {
             promptVersionId: versionToUse.id,
             promptVersionTag: versionToUse.versionTag,
             languageUsed: finalLanguageCode ? (versionToUse.translations.some(t => t.languageCode === finalLanguageCode) ? finalLanguageCode : 'base_language_fallback') : 'base_language',
-            assetsUsed: versionToUse.assets.map(link => {
-                // --- USAR MAPA ---
-                const assetVersion = assetVersionsMap.get(link.assetVersionId);
-                if (!assetVersion) {
-                    // Retornar un objeto indicando el problema o filtrar este resultado
-                    return { key: `MISSING_ASSET_VERSION_${link.assetVersionId}`, error: true };
-                }
-                const assetTranslation = finalLanguageCode ? assetVersion.translations.find(t => t.languageCode === finalLanguageCode) : null;
-                // --- FIN USAR MAPA ---
-                return {
-                    key: assetVersion.asset.key, // Acceder a asset anidado
-                    versionId: assetVersion.id,
-                    versionTag: assetVersion.versionTag,
-                    languageUsed: finalLanguageCode ? (assetTranslation ? finalLanguageCode : 'base_asset_fallback') : 'base_asset'
-                };
-            }).filter(asset => !asset.error), // Filtrar los que tuvieron error (opcional)
+            assetsUsed: resolvedAssetsMetadata, // Usar los metadatos de assets resueltos
             variablesProvided: Object.keys(variables),
             environmentName: environmentName
         };
-
 
         return { processedPrompt, metadata };
     }

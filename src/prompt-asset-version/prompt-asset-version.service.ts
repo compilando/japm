@@ -62,8 +62,7 @@ export class PromptAssetVersionService {
       },
       include: {
         asset: true,
-        translations: true,
-        links: { include: { promptVersion: { include: { prompt: true } } } }
+        translations: true
       },
     });
 
@@ -121,5 +120,15 @@ export class PromptAssetVersionService {
       console.error(`Error deleting version ID "${existingVersion.id}" for asset "${assetKey}" with tag "${versionTag}":`, error);
       throw error;
     }
+  }
+
+  async findOne(id: string): Promise<PromptAssetVersion | null> {
+    return this.prisma.promptAssetVersion.findUnique({
+      where: { id },
+      include: {
+        asset: true,
+        translations: true
+      }
+    });
   }
 }

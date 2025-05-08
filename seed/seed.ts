@@ -22,7 +22,6 @@ async function main() {
 
     console.log('Deleting existing data...');
     await prisma.promptExecutionLog.deleteMany({});
-    await prisma.promptAssetLink.deleteMany({});
     await prisma.assetTranslation.deleteMany({});
     await prisma.promptTranslation.deleteMany({});
     await prisma.promptVersion.deleteMany({});

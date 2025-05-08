@@ -71,7 +71,7 @@ export class PromptVersionService {
       include: {
         prompt: true,
         translations: true,
-        assets: { include: { assetVersion: { include: { asset: true } } } }
+        // assets: { include: { assetVersion: { include: { asset: true } } } } // ELIMINADO: ya no existe la relación assets
       },
     });
 

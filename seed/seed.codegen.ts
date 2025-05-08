@@ -133,33 +133,32 @@ async function main() {
 
     // 5. Upsert Code Gen Prompts and Versions
     const promptGenFuncName = 'generate-python-function';
-    const promptGenFuncSlug = slugify(promptGenFuncName);
+    const promptGenFuncSlug = slugify(promptGenFuncName); // Este es el ID ahora
     const promptGenFunc = await prisma.prompt.upsert({
         where: {
-            prompt_slug_project_unique: { // Usar el nombre correcto del tipo generado
-                slug: promptGenFuncSlug,
+            prompt_id_project_unique: { // Usar el nombre definido en @@unique
+                id: promptGenFuncSlug,
                 projectId: cgProjectId
             }
         },
         update: {
             name: promptGenFuncName,
             description: 'Generate a Python function based on requirements.',
-            slug: promptGenFuncSlug, // Asegurarse que el slug se actualice
             tags: { set: getTagIds(['code-generation', 'python']) }
         },
         create: {
-            slug: promptGenFuncSlug,
+            id: promptGenFuncSlug,
             name: promptGenFuncName,
             description: 'Generate a Python function based on requirements.',
             projectId: cgProjectId,
             tags: { connect: getTagIds(['code-generation', 'python']) }
         },
-        select: { id: true, slug: true, name: true }
+        select: { id: true, name: true }
     });
 
-    // Upsert de PromptVersion usa promptGenFunc.id que ahora es el CUID
+    // Upsert de PromptVersion usa promptGenFunc.id que ahora es el slug (ID del Prompt)
     const promptGenFuncV1 = await prisma.promptVersion.upsert({
-        where: { promptId_versionTag: { promptId: promptGenFunc.id, versionTag: 'v1.0.0' } }, // promptId ahora es el CUID
+        where: { promptId_versionTag: { promptId: promptGenFunc.id, versionTag: 'v1.0.0' } }, // promptId es el slug/ID del Prompt
         update: {
             promptText: `Generate a Python function that performs the following task: {{Task Description}}.\n            Requirements:\n            - Input arguments: {{Input Arguments}}\n            - Return value: {{Return Value}}\n            - Include standard imports: {{python-standard-imports}}\n            - Implement basic error handling using this template: {{python-try-except-template}}\n            - Include type hints.\n            - Add a concise docstring explaining what the function does, its arguments, and what it returns.`,
             status: 'active',
@@ -178,47 +177,33 @@ async function main() {
     });
     console.log(`Upserted Prompt ${promptGenFunc.name} V1 (ID: ${promptGenFunc.id})`);
 
-    // Upsert Links individually
-    await prisma.promptAssetLink.upsert({
-        where: { promptVersionId_assetVersionId: { promptVersionId: promptGenFuncV1.id, assetVersionId: assetPythonImportsV1.id } },
-        update: { usageContext: 'Standard library imports' },
-        create: { promptVersionId: promptGenFuncV1.id, assetVersionId: assetPythonImportsV1.id, usageContext: 'Standard library imports' },
-    });
-    await prisma.promptAssetLink.upsert({
-        where: { promptVersionId_assetVersionId: { promptVersionId: promptGenFuncV1.id, assetVersionId: assetErrorHandlingV1.id } },
-        update: { usageContext: 'Basic error handling structure' },
-        create: { promptVersionId: promptGenFuncV1.id, assetVersionId: assetErrorHandlingV1.id, usageContext: 'Basic error handling structure' },
-    });
-    console.log(`Upserted links for ${promptGenFunc.name} V1`);
-
     const promptGenTestName = 'generate-python-unittest';
-    const promptGenTestSlug = slugify(promptGenTestName);
+    const promptGenTestSlug = slugify(promptGenTestName); // Este es el ID ahora
     const promptGenTest = await prisma.prompt.upsert({
         where: {
-            prompt_slug_project_unique: { // Usar el nombre correcto del tipo generado
-                slug: promptGenTestSlug,
+            prompt_id_project_unique: { // Usar el nombre definido en @@unique
+                id: promptGenTestSlug,
                 projectId: cgProjectId
             }
         },
         update: {
             name: promptGenTestName,
             description: 'Generate a Python unit test for a given function.',
-            slug: promptGenTestSlug, // Asegurarse que el slug se actualice
             tags: { set: getTagIds(['code-generation', 'python', 'unit-test']) }
         },
         create: {
-            slug: promptGenTestSlug,
+            id: promptGenTestSlug,
             name: promptGenTestName,
             description: 'Generate a Python unit test for a given function.',
             projectId: cgProjectId,
             tags: { connect: getTagIds(['code-generation', 'python', 'unit-test']) }
         },
-        select: { id: true, slug: true, name: true }
+        select: { id: true, name: true }
     });
 
-    // Upsert de PromptVersion usa promptGenTest.id que ahora es el CUID
+    // Upsert de PromptVersion usa promptGenTest.id que ahora es el slug (ID del Prompt)
     const promptGenTestV1 = await prisma.promptVersion.upsert({
-        where: { promptId_versionTag: { promptId: promptGenTest.id, versionTag: 'v1.0.0' } }, // promptId ahora es el CUID
+        where: { promptId_versionTag: { promptId: promptGenTest.id, versionTag: 'v1.0.0' } }, // promptId es el slug/ID del Prompt
         update: {
             promptText: `Generate a Python unit test class using the \'unittest\' module for the following function:\\n\\n\\\`\\\`\\\`python\\n{{Function Code}}\\n\\\`\\\`\\\`\\n\\nUse this structure:\\n{{python-unittest-structure}}\\n\\nCreate test cases covering:\\n- {{Test Case 1 Description}}\\n- {{Test Case 2 Description}}\\n- (Optional) Edge cases: {{Edge Cases Description}}`,
             status: 'active',
@@ -236,13 +221,6 @@ async function main() {
         select: { id: true }
     });
     console.log(`Upserted Prompt ${promptGenTest.name} V1 (ID: ${promptGenTest.id})`);
-
-    await prisma.promptAssetLink.upsert({
-        where: { promptVersionId_assetVersionId: { promptVersionId: promptGenTestV1.id, assetVersionId: assetUnitTestStructureV1.id } },
-        update: { usageContext: 'Unit test class structure' },
-        create: { promptVersionId: promptGenTestV1.id, assetVersionId: assetUnitTestStructureV1.id, usageContext: 'Unit test class structure' },
-    });
-    console.log(`Upserted links for ${promptGenTest.name} V1`);
 
     console.log(`Code Generation & Assistance seeding finished.`);
 }

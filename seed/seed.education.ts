@@ -173,25 +173,24 @@ async function main() {
     const promptExplainSlug = slugify(promptExplainName);
     const promptExplain = await prisma.prompt.upsert({
         where: {
-            prompt_slug_project_unique: {
-                slug: promptExplainSlug,
+            prompt_id_project_unique: {
+                id: promptExplainSlug,
                 projectId: eduProjectId
             }
         },
         update: {
             name: promptExplainName,
             description: 'Explain a biological concept using a specific style.',
-            slug: promptExplainSlug,
             tags: { set: getEduTagIds(['education', 'biology', 'explanation', 'tutoring']) }
         },
         create: {
-            slug: promptExplainSlug,
+            id: promptExplainSlug,
             name: promptExplainName,
             description: 'Explain a biological concept using a specific style.',
             projectId: eduProjectId,
             tags: { connect: getEduTagIds(['education', 'biology', 'explanation', 'tutoring']) }
         },
-        select: { id: true, name: true, slug: true }
+        select: { id: true, name: true }
     });
 
     const promptExplainV1 = await prisma.promptVersion.upsert({
@@ -214,44 +213,29 @@ async function main() {
     });
     console.log(`Upserted Prompt ${promptExplain.name} V1`);
 
-    // Upsert Links individually
-    const explainLinksToUpsert = [
-        { assetVersionId: assetDefinitionCellV1.id, usageContext: 'Optional starting definition (example)', isRequired: false },
-        { assetVersionId: assetExplanationStyleV1.id, usageContext: 'Instruction for explanation style' },
-    ];
-    for (const link of explainLinksToUpsert) {
-        await prisma.promptAssetLink.upsert({
-            where: { promptVersionId_assetVersionId: { promptVersionId: promptExplainV1.id, assetVersionId: link.assetVersionId } },
-            update: { usageContext: link.usageContext, isRequired: link.isRequired },
-            create: { promptVersionId: promptExplainV1.id, assetVersionId: link.assetVersionId, usageContext: link.usageContext, isRequired: link.isRequired },
-        });
-    }
-    console.log(`Upserted links for ${promptExplain.name} V1`);
-
     // --- Upsert Educational Prompt: Generate Quiz Question ---
     const promptQuizName = 'generate-biology-mcq';
     const promptQuizSlug = slugify(promptQuizName);
     const promptQuiz = await prisma.prompt.upsert({
         where: {
-            prompt_slug_project_unique: {
-                slug: promptQuizSlug,
+            prompt_id_project_unique: {
+                id: promptQuizSlug,
                 projectId: eduProjectId
             }
         },
         update: {
             name: promptQuizName,
             description: 'Generate a multiple-choice question about a biology topic.',
-            slug: promptQuizSlug,
             tags: { set: getEduTagIds(['education', 'biology', 'quiz', 'assessment']) }
         },
         create: {
-            slug: promptQuizSlug,
+            id: promptQuizSlug,
             name: promptQuizName,
             description: 'Generate a multiple-choice question about a biology topic.',
             projectId: eduProjectId,
             tags: { connect: getEduTagIds(['education', 'biology', 'quiz', 'assessment']) }
         },
-        select: { id: true, name: true, slug: true }
+        select: { id: true, name: true }
     });
 
     const promptQuizV1 = await prisma.promptVersion.upsert({
@@ -273,14 +257,6 @@ async function main() {
         select: { id: true }
     });
     console.log(`Upserted Prompt ${promptQuiz.name} V1`);
-
-    // Upsert Link
-    await prisma.promptAssetLink.upsert({
-        where: { promptVersionId_assetVersionId: { promptVersionId: promptQuizV1.id, assetVersionId: assetMcqTemplateV1.id } },
-        update: { usageContext: 'MCQ output format template' },
-        create: { promptVersionId: promptQuizV1.id, assetVersionId: assetMcqTemplateV1.id, usageContext: 'MCQ output format template' }
-    });
-    console.log(`Upserted links for ${promptQuiz.name} V1`);
 
     console.log(`Educational Content & Tutoring seeding finished.`);
 }

@@ -12,11 +12,12 @@ export type AssetWithInitialVersion = PromptAsset & {
 // Type for findOne response with details
 type PromptAssetWithDetails = Prisma.PromptAssetGetPayload<{
     include: {
+        project: true,
         versions: {
             orderBy: { createdAt: 'desc' },
             include: {
                 translations: true,
-                links: { include: { promptVersion: { select: { id: true, versionTag: true, prompt: { select: { name: true } } } } } },
+                activeInEnvironments: { select: { id: true, name: true } }
             }
         }
     }
@@ -103,7 +104,7 @@ export class PromptAssetService {
                     orderBy: { createdAt: 'desc' },
                     include: {
                         translations: true,
-                        links: { include: { promptVersion: { select: { id: true, versionTag: true, prompt: { select: { name: true, projectId: true } } } } } },
+                        activeInEnvironments: { select: { id: true, name: true } }
                     }
                 },
             }
@@ -172,4 +173,24 @@ export class PromptAssetService {
     }
 
     // Methods createVersion and addOrUpdateTranslation REMOVED as they belong elsewhere or are handled differently
+
+    async findOneByKey(projectId: string, key: string): Promise<PromptAssetWithDetails> {
+        const asset = await this.prisma.promptAsset.findUnique({
+            where: { projectId_key: { projectId, key } },
+            include: {
+                project: true,
+                versions: {
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        translations: true,
+                        activeInEnvironments: { select: { id: true, name: true } }
+                    }
+                }
+            }
+        });
+        if (!asset) {
+            throw new NotFoundException(`PromptAsset with KEY "${key}" not found in project "${projectId}"`);
+        }
+        return asset as PromptAssetWithDetails;
+    }
 }

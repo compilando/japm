@@ -188,25 +188,24 @@ async function main() {
     const promptExtractSlug = toSlug(promptExtractName);
     const promptExtract = await prisma.prompt.upsert({
         where: {
-            prompt_slug_project_unique: {
-                slug: promptExtractSlug,
+            prompt_id_project_unique: {
+                id: promptExtractSlug,
                 projectId: invProjectId
             }
         },
         update: {
             name: promptExtractName,
             description: 'Extract key fields from invoice text (OCR result). Output as JSON.',
-            slug: promptExtractSlug,
             tags: { set: getInvTagIds(['invoice', 'data-extraction', 'structured-data', 'json-output']) }
         },
         create: {
-            slug: promptExtractSlug,
+            id: promptExtractSlug,
             name: promptExtractName,
             description: 'Extract key fields from invoice text (OCR result). Output as JSON.',
             projectId: invProjectId,
             tags: { connect: getInvTagIds(['invoice', 'data-extraction', 'structured-data', 'json-output']) }
         },
-        select: { id: true, name: true, slug: true }
+        select: { id: true, name: true }
     });
 
     const promptExtractV1 = await prisma.promptVersion.upsert({
@@ -228,19 +227,6 @@ async function main() {
         select: { id: true }
     });
     console.log(`Upserted Prompt ${promptExtract.name} V1`);
-
-    // Upsert Links
-    await prisma.promptAssetLink.upsert({
-        where: { promptVersionId_assetVersionId: { promptVersionId: promptExtractV1.id, assetVersionId: assetInvoiceFieldsV1.id } },
-        update: { usageContext: 'List of fields to extract' },
-        create: { promptVersionId: promptExtractV1.id, assetVersionId: assetInvoiceFieldsV1.id, usageContext: 'List of fields to extract' }
-    });
-    await prisma.promptAssetLink.upsert({
-        where: { promptVersionId_assetVersionId: { promptVersionId: promptExtractV1.id, assetVersionId: assetJsonSchemaV1.id } },
-        update: { usageContext: 'Target JSON output structure' },
-        create: { promptVersionId: promptExtractV1.id, assetVersionId: assetJsonSchemaV1.id, usageContext: 'Target JSON output structure' }
-    });
-    console.log(`Upserted links for ${promptExtract.name} V1`);
 
     console.log(`Invoice Extraction seeding finished.`);
 }

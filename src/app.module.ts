@@ -6,7 +6,6 @@ import { RegionModule } from './region/region.module';
 import { CulturalDataModule } from './cultural-data/cultural-data.module';
 import { PromptModule } from './prompt/prompt.module';
 import { PromptAssetModule } from './prompt-asset/prompt-asset.module';
-import { PromptAssetLinkModule } from './prompt-asset-link/prompt-asset-link.module';
 import { RagDocumentMetadataModule } from './rag-document-metadata/rag-document-metadata.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
@@ -42,7 +41,6 @@ import { RawExecutionModule } from './raw-execution/raw-execution.module';
     CulturalDataModule,
     PromptModule,
     PromptAssetModule,
-    PromptAssetLinkModule,
     RagDocumentMetadataModule,
     HealthModule,
     ServePromptModule,

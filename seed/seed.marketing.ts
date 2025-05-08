@@ -143,25 +143,24 @@ async function main() {
     const promptBlogPostIdeaSlug = slugify(promptBlogPostIdeaName);
     const promptBlogPostIdea = await prisma.prompt.upsert({
         where: {
-            prompt_slug_project_unique: {
-                slug: promptBlogPostIdeaSlug,
+            prompt_id_project_unique: {
+                id: promptBlogPostIdeaSlug,
                 projectId: mktProjectId
             }
         },
         update: {
             name: promptBlogPostIdeaName,
             description: 'Generate blog post ideas for a target audience.',
-            slug: promptBlogPostIdeaSlug,
             tags: { set: getMktTagIds(['marketing', 'blog-post']) }
         },
         create: {
-            slug: promptBlogPostIdeaSlug,
+            id: promptBlogPostIdeaSlug,
             name: promptBlogPostIdeaName,
             description: 'Generate blog post ideas for a target audience.',
             projectId: mktProjectId,
             tags: { connect: getMktTagIds(['marketing', 'blog-post']) }
         },
-        select: { id: true, name: true, slug: true }
+        select: { id: true, name: true }
     });
 
     const promptBlogPostIdeaV1 = await prisma.promptVersion.upsert({
@@ -183,14 +182,6 @@ async function main() {
         select: { id: true }
     });
     console.log(`Upserted Prompt ${promptBlogPostIdea.name} V1`);
-
-    // Upsert Link
-    await prisma.promptAssetLink.upsert({
-        where: { promptVersionId_assetVersionId: { promptVersionId: promptBlogPostIdeaV1.id, assetVersionId: assetAudienceV1.id } },
-        update: { usageContext: 'Target audience definition' },
-        create: { promptVersionId: promptBlogPostIdeaV1.id, assetVersionId: assetAudienceV1.id, usageContext: 'Target audience definition' },
-    });
-    console.log(`Upserted link for ${promptBlogPostIdea.name} V1`);
 
     console.log(`Marketing Content seeding finished.`);
 }

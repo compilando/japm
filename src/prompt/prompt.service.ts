@@ -71,13 +71,11 @@ export class PromptService {
             tagsToConnect = existingTags.map(tag => ({ id: tag.id }));
         }
 
-        let createdPromptId: string | null = null;
-
         try {
             await this.prisma.$transaction(async (tx) => {
-                const newPrompt = await tx.prompt.create({
+                await tx.prompt.create({
                     data: {
-                        slug: slug,
+                        id: slug,
                         name: name,
                         description: description,
                         projectId: projectId,
@@ -85,11 +83,10 @@ export class PromptService {
                         ...restData
                     }
                 });
-                createdPromptId = newPrompt.id;
 
                 await tx.promptVersion.create({
                     data: {
-                        promptId: newPrompt.id,
+                        promptId: slug,
                         promptText: promptText,
                         versionTag: 'v1.0.0',
                         changeMessage: 'Initial version created automatically.',
@@ -100,12 +97,13 @@ export class PromptService {
                 });
             });
 
-            if (!createdPromptId) {
-                throw new Error('Prompt creation failed within transaction, ID not retrieved.');
-            }
-
             const createdPrompt = await this.prisma.prompt.findUniqueOrThrow({
-                where: { id: createdPromptId },
+                where: {
+                    prompt_id_project_unique: {
+                        id: slug,
+                        projectId: projectId
+                    }
+                },
                 include: {
                     tags: true,
                     versions: {
@@ -122,7 +120,7 @@ export class PromptService {
 
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-                throw new ConflictException(`Prompt with slug "${slug}" already exists in project "${projectId}".`);
+                throw new ConflictException(`Prompt with ID (slug) "${slug}" already exists in project "${projectId}".`);
             }
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
                 throw new NotFoundException(`Referenced Project (ID: ${projectId}) or Tag not found during prompt creation.`);
@@ -145,11 +143,11 @@ export class PromptService {
         });
     }
 
-    async findOne(promptSlug: string, projectId: string): Promise<PromptWithRelations> {
+    async findOne(promptIdSlug: string, projectId: string): Promise<PromptWithRelations> {
         const prompt = await this.prisma.prompt.findUnique({
             where: {
-                prompt_slug_project_unique: {
-                    slug: promptSlug,
+                prompt_id_project_unique: {
+                    id: promptIdSlug,
                     projectId: projectId
                 }
             },
@@ -159,30 +157,19 @@ export class PromptService {
                     orderBy: { createdAt: 'desc' },
                     include: {
                         translations: true,
-                        assets: {
-                            orderBy: { position: 'asc' },
-                            include: {
-                                assetVersion: {
-                                    include: {
-                                        asset: { select: { key: true, name: true } },
-                                        translations: true
-                                    }
-                                }
-                            }
-                        },
                         activeInEnvironments: { select: { id: true, name: true } }
                     }
                 }
             }
         });
         if (!prompt) {
-            throw new NotFoundException(`Prompt with slug "${promptSlug}" not found in project "${projectId}".`);
+            throw new NotFoundException(`Prompt with ID (slug) "${promptIdSlug}" not found in project "${projectId}".`);
         }
         return prompt as PromptWithRelations;
     }
 
-    async update(promptSlug: string, updateDto: UpdatePromptDto, projectId: string): Promise<PromptWithRelations> {
-        const promptToUpdate = await this.findOne(promptSlug, projectId);
+    async update(promptIdSlug: string, updateDto: UpdatePromptDto, projectId: string): Promise<PromptWithRelations> {
+        await this.findOne(promptIdSlug, projectId);
 
         const { tagIds, description } = updateDto;
         const promptDataToUpdate: Prisma.PromptUpdateInput = {};
@@ -205,37 +192,47 @@ export class PromptService {
         }
 
         if (Object.keys(promptDataToUpdate).length === 0) {
-            return this.findOne(promptSlug, projectId);
+            return this.findOne(promptIdSlug, projectId);
         }
 
         try {
             await this.prisma.prompt.update({
-                where: { id: promptToUpdate.id },
+                where: {
+                    prompt_id_project_unique: {
+                        id: promptIdSlug,
+                        projectId: projectId
+                    }
+                },
                 data: promptDataToUpdate,
             });
-            return this.findOne(promptSlug, projectId);
+            return this.findOne(promptIdSlug, projectId);
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException(`Prompt "${promptSlug}" or related entity not found during update.`);
+                throw new NotFoundException(`Prompt "${promptIdSlug}" or related entity not found during update.`);
             }
-            console.error(`Error updating prompt ${promptSlug}:`, error);
+            console.error(`Error updating prompt ${promptIdSlug}:`, error);
             throw error;
         }
     }
 
-    async remove(promptSlug: string, projectId: string): Promise<Prompt> {
-        const promptToDelete = await this.findOne(promptSlug, projectId);
+    async remove(promptIdSlug: string, projectId: string): Promise<Prompt> {
+        const promptToDelete = await this.findOne(promptIdSlug, projectId);
 
         try {
             return await this.prisma.prompt.delete({
-                where: { id: promptToDelete.id },
+                where: {
+                    prompt_id_project_unique: {
+                        id: promptIdSlug,
+                        projectId: projectId
+                    }
+                },
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException(`Prompt with slug "${promptSlug}" not found.`);
+                throw new NotFoundException(`Prompt with ID (slug) "${promptIdSlug}" not found.`);
             }
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-                throw new ConflictException(`Cannot delete prompt "${promptToDelete.name}" (slug: ${promptSlug}) because it is still referenced by other entities (e.g., PromptVersions).`);
+                throw new ConflictException(`Cannot delete prompt "${promptToDelete.name}" (slug: ${promptIdSlug}) because it is still referenced by other entities (e.g., PromptVersions).`);
             }
             throw error;
         }

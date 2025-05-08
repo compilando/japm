@@ -169,25 +169,24 @@ async function main() {
     const promptGenSceneSlug = slugify(promptGenSceneName);
     const promptGenScene = await prisma.prompt.upsert({
         where: {
-            prompt_slug_project_unique: {
-                slug: promptGenSceneSlug,
+            prompt_id_project_unique: {
+                id: promptGenSceneSlug,
                 projectId: crProjectId
             }
         },
         update: {
             name: promptGenSceneName,
             description: 'Generate a scene with dialogue between characters.',
-            slug: promptGenSceneSlug,
             tags: { set: getCrTagIds(['creative-writing', 'sci-fi', 'dialogue']) }
         },
         create: {
-            slug: promptGenSceneSlug,
+            id: promptGenSceneSlug,
             name: promptGenSceneName,
             description: 'Generate a scene with dialogue between characters.',
             projectId: crProjectId,
             tags: { connect: getCrTagIds(['creative-writing', 'sci-fi', 'dialogue']) }
         },
-        select: { id: true, name: true, slug: true }
+        select: { id: true, name: true }
     });
 
     const promptGenSceneV1 = await prisma.promptVersion.upsert({
@@ -211,22 +210,14 @@ async function main() {
     });
     console.log(`Upserted Prompt ${promptGenScene.name} V1`);
 
-    // Upsert Links individually
-    const linksToUpsert = [
-        { assetVersionId: assetSettingV1.id, usageContext: 'Setting context for the scene' },
-        { assetVersionId: assetMainCharV1.id, usageContext: 'Primary character details for AI' },
-        { assetVersionId: assetToneV1.id, usageContext: 'Stylistic instructions for narrative tone' },
-        // Note: Secondary Character, Scene Goal filled dynamically by the writer.
-    ];
-
+    // Eliminar Upsert de Links individuales
+    /*
+    const linksToUpsert = [ ... ];
     for (const link of linksToUpsert) {
-        await prisma.promptAssetLink.upsert({
-            where: { promptVersionId_assetVersionId: { promptVersionId: promptGenSceneV1.id, assetVersionId: link.assetVersionId } },
-            update: { usageContext: link.usageContext },
-            create: { promptVersionId: promptGenSceneV1.id, assetVersionId: link.assetVersionId, usageContext: link.usageContext },
-        });
+        await prisma.promptAssetLink.upsert({ ... });
     }
     console.log(`Upserted links for ${promptGenScene.name} V1`);
+    */
 
     // --- Creative Prompt: Adapt Content --- 
     // ... (Add another prompt, e.g., "adapt-chapter-summary-to-logline")

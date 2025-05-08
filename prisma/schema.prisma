@@ -69,20 +69,19 @@ model CulturalData {
 }
 
 model Prompt {
-  id          String    @id @default(cuid()) // Clave primaria globalmente única
-  slug        String    // Campo para el slug
-  name        String
-  description String    @default("")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  versions    PromptVersion[]   @relation("PromptVersion_prompt")
-  tags        Tag[]             @relation("PromptTags")
-  project     Project           @relation("ProjectPrompts", fields: [projectId], references: [id], onDelete: Cascade)
-  projectId   String            @map("project")
+  id              String            @id // Este es el slug
+  name            String
+  description     String            @default("")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  versions        PromptVersion[]   @relation("PromptVersion_prompt")
+  tags            Tag[]             @relation("PromptTags")
+  project         Project           @relation("ProjectPrompts", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId       String            @map("project")
 
-  @@unique([slug, projectId], name: "prompt_slug_project_unique") // Slug único por proyecto
+  @@unique([id, projectId], name: "prompt_id_project_unique") // Slug (id) único por proyecto
   @@index([projectId])
-  @@index([slug]) // Opcional, pero bueno si buscas por slug
+  // Ya no necesitamos un campo 'slug' separado ni un índice para él.
 }
 
 model PromptVersion {
@@ -96,7 +95,6 @@ model PromptVersion {
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
   translations        PromptTranslation[] @relation("PromptTranslation_version")
-  assets              PromptAssetLink[]  @relation("PromptAssetLink_promptVersion")
   activeInEnvironments Environment[]      @relation("ActivePromptsInEnvironment")
   executionLogs       PromptExecutionLog[]
   aiModel             AIModel?           @relation(fields: [aiModelId], references: [id])
@@ -122,28 +120,23 @@ model PromptTranslation {
 }
 
 model PromptAsset {
-  id              String                @id @default(cuid())
-  key             String                // MODIFICADO: ya no es @id
-  name            String                @default("")
-  type            String?
-  description     String                @default("")
-  category        String?
-  enabled         Boolean               @default(true)
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  versions        PromptAssetVersion[]  @relation("PromptAssetVersion_asset")
-  project         Project               @relation("ProjectAssets", fields: [projectId], references: [id], onDelete: Cascade)
-  projectId       String                @map("project")
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  key       String // User-defined key for the asset, e.g., "company-bio", "product-list"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@unique([projectId, key]) // NUEVO: key es única por proyecto
+  versions PromptAssetVersion[]
+
+  @@unique([projectId, key], name: "project_asset_key_unique")
   @@index([projectId])
-  @@index([key]) // Indexar key si se busca por ella
 }
 
 model PromptAssetVersion {
   id                  String             @id @default(cuid())
-  asset               PromptAsset        @relation("PromptAssetVersion_asset", fields: [assetId], references: [id]) // MODIFICADO: Referencia al nuevo id de PromptAsset
-  assetId             String             @map("asset") // Este será el CUID del PromptAsset
+  asset               PromptAsset        @relation("PromptAssetVersion_asset", fields: [assetId], references: [id])
+  assetId             String             @map("asset")
   value               String             @default("")
   versionTag          String             @default("v1.0.0")
   changeMessage       String?
@@ -151,10 +144,8 @@ model PromptAssetVersion {
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
   translations        AssetTranslation[] @relation("AssetTranslation_version")
-  links               PromptAssetLink[]  @relation("PromptAssetLink_assetVersion")
   activeInEnvironments Environment[]      @relation("ActiveAssetsInEnvironment")
 
-  // Implicitly linked to Project via PromptAsset
   @@unique([assetId, versionTag])
   @@index([assetId])
 }
@@ -171,24 +162,6 @@ model AssetTranslation {
   @@unique([versionId, languageCode])
   @@index([versionId])
   @@index([languageCode])
-}
-
-model PromptAssetLink {
-  id              String             @id @default(cuid())
-  promptVersion   PromptVersion      @relation("PromptAssetLink_promptVersion", fields: [promptVersionId], references: [id])
-  promptVersionId String             @map("promptVersion")
-  assetVersion    PromptAssetVersion @relation("PromptAssetLink_assetVersion", fields: [assetVersionId], references: [id])
-  assetVersionId  String             @map("assetVersion")
-  usageContext    String             @default("")
-  position        Int?
-  insertionLogic  String?
-  isRequired      Boolean            @default(true)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-
-  @@unique([promptVersionId, assetVersionId])
-  @@index([promptVersionId])
-  @@index([assetVersionId])
 }
 
 model RagDocumentMetadata {
