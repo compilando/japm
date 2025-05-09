@@ -17,8 +17,8 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('JAPM API')
-    .setDescription('API for the JAPM Prompt Engineering application')
+    .setTitle('japm.app API')
+    .setDescription('API for the japm.app Prompt Engineering application')
     .setVersion('1.0')
     // Add Bearer Authentication security definition for Swagger UI
     .addBearerAuth(

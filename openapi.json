@@ -1817,7 +1817,7 @@
     },
     "/serve-prompt/execute/{projectId}/{promptName}/{versionTag}": {
       "post": {
-        "operationId": "ServePromptController_executePrompt",
+        "operationId": "ServePromptController_executePromptWithoutLanguage",
         "parameters": [
           {
             "name": "projectId",
@@ -1849,17 +1849,7 @@
           {
             "name": "languageCode",
             "required": false,
-            "in": "query",
-            "description": "Optional language code for translation (e.g., \"es\")",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "environmentName",
-            "required": false,
-            "in": "query",
-            "description": "Optional environment context (currently informational)",
+            "in": "path",
             "schema": {
               "type": "string"
             }
@@ -1911,7 +1901,100 @@
             "bearer": []
           }
         ],
-        "summary": "Assembles and prepares a specific prompt version for execution with provided variables",
+        "summary": "Assembles and prepares a specific prompt version (base language) for execution with provided variables",
+        "tags": [
+          "Serve Prompt"
+        ]
+      }
+    },
+    "/serve-prompt/execute/{projectId}/{promptName}/{versionTag}/{languageCode}": {
+      "post": {
+        "operationId": "ServePromptController_executePromptWithLanguage",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptName",
+            "required": true,
+            "in": "path",
+            "description": "The unique name of the prompt within the project",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionTag",
+            "required": true,
+            "in": "path",
+            "description": "Specific version tag (e.g., \"v1.2.0\")",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "languageCode",
+            "required": true,
+            "in": "path",
+            "description": "Language code for translation (e.g., \"es\")",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Input variables for the prompt",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecutePromptBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Processed prompt text ready for execution and metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "processedPrompt": "string",
+                    "metadata": {}
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "Invalid parameters or failed template rendering."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
+          "404": {
+            "description": "Project, Prompt, or Version not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Assembles and prepares a specific prompt version (specific language) for execution with provided variables",
         "tags": [
           "Serve Prompt"
         ]
@@ -4538,8 +4621,8 @@
     }
   },
   "info": {
-    "title": "JAPM API",
-    "description": "API for the JAPM Prompt Engineering application",
+    "title": "japm.app API",
+    "description": "API for the japm.app Prompt Engineering application",
     "version": "1.0",
     "contact": {}
   },

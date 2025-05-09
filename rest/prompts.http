@@ -1,4 +1,4 @@
-# VS Code REST Client Test Suite for JAPM API
+# VS Code REST Client Test Suite for japm.app API
 
 # Variables (ajusta la base URL si es necesario)
 @baseUrl = http://localhost:3000

@@ -34,11 +34,9 @@ export class ServePromptService {
      */
     async executePromptVersion(
         params: ExecutePromptParamsDto,
-        query: ExecutePromptQueryDto,
         body: ExecutePromptBodyDto
     ): Promise<{ processedPrompt: string; metadata: any }> {
-        const { projectId, promptName, versionTag } = params;
-        const { languageCode, environmentName } = query;
+        const { projectId, promptName, versionTag, languageCode } = params;
         const { variables } = body;
 
         // 1. Find the Prompt within the Project using the correct composite key
@@ -84,72 +82,85 @@ export class ServePromptService {
 
         // --- NUEVA LÓGICA DE ASSETS --- 
         const potentialPlaceholders = [...basePromptText.matchAll(/\{\{([^}]+)\}\}/g)];
-        const potentialAssetKeys = potentialPlaceholders
-            .map(match => match[1].trim()) // Obtener la clave dentro de {{}}
-            .filter(key => !variables.hasOwnProperty(key)); // Filtrar claves que NO están en las variables de entrada
+        const assetSpecifications = potentialPlaceholders
+            .map(match => {
+                const placeholderContent = match[1].trim();
+                const parts = placeholderContent.split(':');
+                const key = parts[0];
+                const versionTag = parts.length > 1 ? parts[1] : undefined;
+                return { placeholderContent, key, versionTag };
+            })
+            .filter(spec => !variables.hasOwnProperty(spec.key)); // Filtrar claves que NO están en las variables de entrada
 
-        const uniquePotentialAssetKeys = [...new Set(potentialAssetKeys)];
         const assetContext: Record<string, string> = {};
-        const resolvedAssetsMetadata: any[] = []; // Para metadata
+        const resolvedAssetsMetadata: any[] = [];
 
-        if (uniquePotentialAssetKeys.length > 0) {
-            this.logger.debug(`Potential asset keys found: ${uniquePotentialAssetKeys.join(', ')}`);
-            // Buscar los assets por sus claves en este proyecto
+        if (assetSpecifications.length > 0) {
+            const uniqueAssetKeys = [...new Set(assetSpecifications.map(spec => spec.key))];
+            this.logger.debug(`Potential asset keys to resolve: ${uniqueAssetKeys.join(', ')}`);
+
             const foundAssets = await this.prisma.promptAsset.findMany({
                 where: {
                     projectId: projectId,
-                    key: { in: uniquePotentialAssetKeys }
+                    key: { in: uniqueAssetKeys }
                 },
-                // Incluir la versión activa más reciente
                 include: {
-                    versions: {
-                        where: { status: 'active' },
-                        orderBy: { createdAt: 'desc' },
-                        take: 1,
-                        include: { translations: true } // Incluir traducciones de la versión
+                    versions: { // Incluir todas las versiones para poder seleccionar la correcta
+                        orderBy: { createdAt: 'desc' }, // Ordenar para que la [0] sea la más nueva (fallback)
+                        include: { translations: true }
                     }
                 }
             });
 
-            // Construir el assetContext
-            for (const asset of foundAssets) {
-                if (asset.versions && asset.versions.length > 0) {
-                    const activeVersion = asset.versions[0];
-                    let assetValue = activeVersion.value;
+            for (const spec of assetSpecifications) {
+                const asset = foundAssets.find(a => a.key === spec.key);
+                if (!asset) {
+                    this.logger.warn(`Asset with key "${spec.key}" (referenced as "{{${spec.placeholderContent}}}") not found in project.`);
+                    continue;
+                }
 
-                    // Aplicar traducción si es necesario
+                // Explicitly type asset.versions to ensure compatibility
+                const assetVersions = asset.versions as (Prisma.PromptAssetVersionGetPayload<{ include: { translations: true } }>)[];
+
+                let targetVersion: Prisma.PromptAssetVersionGetPayload<{ include: { translations: true } }> | undefined = undefined;
+
+                if (spec.versionTag) {
+                    targetVersion = assetVersions.find(v => v.versionTag === spec.versionTag);
+                    if (!targetVersion) {
+                        this.logger.warn(`Asset key "${spec.key}", version "${spec.versionTag}" (referenced as "{{${spec.placeholderContent}}}") not found. Falling back to latest active version.`);
+                    }
+                }
+
+                if (!targetVersion) { // Si no se especificó versión, o la especificada no se encontró
+                    targetVersion = assetVersions.find(v => v.status === 'active');
+                }
+                
+
+                if (targetVersion) {
+                    let assetValue = targetVersion.value; // Correct property for PromptAssetVersion
+                    let languageSource = 'base_asset'; // Default language source
+
                     if (finalLanguageCode) {
-                        const translation = activeVersion.translations.find(t => t.languageCode === finalLanguageCode);
+                        const translation = targetVersion.translations.find(t => t.languageCode === finalLanguageCode);
                         if (translation) {
                             assetValue = translation.value;
-                            resolvedAssetsMetadata.push({
-                                key: asset.key,
-                                versionId: activeVersion.id,
-                                versionTag: activeVersion.versionTag,
-                                languageUsed: finalLanguageCode
-                            });
+                            languageSource = finalLanguageCode;
                         } else {
-                            // Log fallback, pero usar valor base
-                            this.logger.warn(`Asset key "${asset.key}" v${activeVersion.versionTag}: No translation found for "${finalLanguageCode}". Using base value.`);
-                            resolvedAssetsMetadata.push({
-                                key: asset.key,
-                                versionId: activeVersion.id,
-                                versionTag: activeVersion.versionTag,
-                                languageUsed: 'base_asset_fallback'
-                            });
+                            this.logger.warn(`Asset key "${spec.key}" v${targetVersion.versionTag} (referenced as "{{${spec.placeholderContent}}}"): No translation found for "${finalLanguageCode}". Using base value.`);
+                            languageSource = 'base_asset_fallback';
                         }
-                    } else {
-                        // Usar valor base directamente
-                        resolvedAssetsMetadata.push({
-                            key: asset.key,
-                            versionId: activeVersion.id,
-                            versionTag: activeVersion.versionTag,
-                            languageUsed: 'base_asset'
-                        });
                     }
-                    assetContext[asset.key] = assetValue;
+                    
+                    assetContext[spec.placeholderContent] = assetValue;
+                    resolvedAssetsMetadata.push({
+                        key: asset.key,
+                        placeholderUsed: spec.placeholderContent,
+                        versionId: targetVersion.id,
+                        versionTag: targetVersion.versionTag,
+                        languageUsed: languageSource
+                    });
                 } else {
-                    this.logger.warn(`Asset key "${asset.key}" found, but it has no active version.`);
+                    this.logger.warn(`Asset key "${spec.key}" (referenced as "{{${spec.placeholderContent}}}") found, but no suitable version (specified: ${spec.versionTag || 'any active'}) could be resolved.`);
                 }
             }
         }
@@ -160,7 +171,7 @@ export class ServePromptService {
         let processedPrompt: string;
         try {
             processedPrompt = basePromptText.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
-                const trimmedKey = key.trim();
+                const trimmedKey = key.trim(); // trimmedKey es ahora el placeholderContent, ej: "assetKey" o "assetKey:versionTag"
                 if (finalContext.hasOwnProperty(trimmedKey)) {
                     return String(finalContext[trimmedKey]); // Reemplaza con variable o asset
                 }
@@ -180,9 +191,8 @@ export class ServePromptService {
             promptVersionId: versionToUse.id,
             promptVersionTag: versionToUse.versionTag,
             languageUsed: finalLanguageCode ? (versionToUse.translations.some(t => t.languageCode === finalLanguageCode) ? finalLanguageCode : 'base_language_fallback') : 'base_language',
-            assetsUsed: resolvedAssetsMetadata, // Usar los metadatos de assets resueltos
+            assetsUsed: resolvedAssetsMetadata,
             variablesProvided: Object.keys(variables),
-            environmentName: environmentName
         };
 
         return { processedPrompt, metadata };
