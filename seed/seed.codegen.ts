@@ -6,6 +6,140 @@ import { createSpanishRegionAndCulturalData, createUSRegionAndCulturalData } fro
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
 
+// Traducciones específicas para el proyecto de generación de código
+const codegenTranslations = {
+    assets: {
+        'python-standard-imports': `import os
+import sys
+import json
+import datetime
+import math`,
+        'python-try-except-template': `try:
+    # Your code here
+    pass
+except Exception as e:
+    print(f"An error occurred: {e}")
+    # Add specific error handling or logging`,
+        'python-unittest-structure': `import unittest
+
+# Assume function_to_test is imported from your module
+# from my_module import function_to_test
+
+class TestMyFunction(unittest.TestCase):
+
+    def test_case_1(self):
+        # Arrange
+        input_data = ...
+        expected_output = ...
+        # Act
+        actual_output = function_to_test(input_data)
+        # Assert
+        self.assertEqual(actual_output, expected_output)
+
+    # Add more test methods
+
+if __name__ == '__main__':
+    unittest.main()`,
+    },
+    prompts: {
+        'generate-python-function': `Generate a Python function that performs the following task: {{Task Description}}.
+            Requirements:
+            - Input arguments: {{Input Arguments}}
+            - Return value: {{Return Value}}
+            - Include standard imports: {{python-standard-imports}}
+            - Implement basic error handling using this template: {{python-try-except-template}}
+            - Include type hints.
+            - Add a concise docstring explaining what the function does, its arguments, and what it returns.`,
+        'generate-python-unittest': `Generate a Python unit test class using the 'unittest' module for the following function:
+
+\`\`\`python
+{{Function Code}}
+\`\`\`
+
+Use this structure:
+{{python-unittest-structure}}
+
+Create test cases covering:
+- {{Test Case 1 Description}}
+- {{Test Case 2 Description}}
+- (Optional) Edge cases: {{Edge Cases Description}}`
+    }
+};
+
+// Función para crear traducciones en español
+async function createSpanishTranslations(projectId: string) {
+    console.log(`Creating Spanish translations for project ${projectId}...`);
+
+    // Obtener todas las promptversion y promptassetversion del proyecto
+    const promptVersions = await prisma.promptVersion.findMany({
+        where: {
+            prompt: {
+                projectId: projectId
+            }
+        },
+        include: {
+            prompt: true
+        }
+    });
+
+    const promptAssetVersions = await prisma.promptAssetVersion.findMany({
+        where: {
+            asset: {
+                projectId: projectId
+            }
+        },
+        include: {
+            asset: true
+        }
+    });
+
+    // Crear traducciones para promptversion
+    for (const version of promptVersions) {
+        const translation = codegenTranslations.prompts[version.prompt.id] || version.promptText;
+        await prisma.promptTranslation.upsert({
+            where: {
+                versionId_languageCode: {
+                    versionId: version.id,
+                    languageCode: 'es-ES'
+                }
+            },
+            update: {
+                promptText: translation
+            },
+            create: {
+                versionId: version.id,
+                languageCode: 'es-ES',
+                promptText: translation
+            }
+        });
+        console.log(`Created Spanish translation for prompt version ${version.id}`);
+    }
+
+    // Crear traducciones para promptassetversion
+    for (const version of promptAssetVersions) {
+        const translation = codegenTranslations.assets[version.asset.key] || version.value;
+        await prisma.assetTranslation.upsert({
+            where: {
+                versionId_languageCode: {
+                    versionId: version.id,
+                    languageCode: 'es-ES'
+                }
+            },
+            update: {
+                value: translation
+            },
+            create: {
+                versionId: version.id,
+                languageCode: 'es-ES',
+                value: translation
+            }
+        });
+        console.log(`Created Spanish translation for prompt asset version ${version.id}`);
+    }
+
+    console.log(`Finished creating Spanish translations for project ${projectId}`);
+}
+
 // Función slugify (igual que en los servicios)
 function slugify(text: string): string {
     return text
@@ -229,7 +363,14 @@ async function main() {
         },
         create: {
             promptId: promptGenFunc.id,
-            promptText: `Generate a Python function that performs the following task: {{Task Description}}.\\n            Requirements:\\n            - Input arguments: {{Input Arguments}}\\n            - Return value: {{Return Value}}\\n            - Include standard imports: {{python-standard-imports}}\\n            - Implement basic error handling using this template: {{python-try-except-template}}\\n            - Include type hints.\\n            - Add a concise docstring explaining what the function does, its arguments, and what it returns.`,
+            promptText: `Generate a Python function that performs the following task: {{Task Description}}.
+            Requirements:
+            - Input arguments: {{Input Arguments}}
+            - Return value: {{Return Value}}
+            - Include standard imports: {{python-standard-imports}}
+            - Implement basic error handling using this template: {{python-try-except-template}}
+            - Include type hints.
+            - Add a concise docstring explaining what the function does, its arguments, and what it returns.`,
             versionTag: 'v1.0.0', status: 'active',
             changeMessage: 'Initial version for generating Python functions with error handling and imports.',
             activeInEnvironments: { connect: [{ id: devEnvironment.id }] },
@@ -267,14 +408,38 @@ async function main() {
     const promptGenTestV1 = await prisma.promptVersion.upsert({
         where: { promptId_versionTag: { promptId: promptGenTest.id, versionTag: 'v1.0.0' } }, // promptId es el slug/ID del Prompt
         update: {
-            promptText: `Generate a Python unit test class using the \'unittest\' module for the following function:\\n\\n\\\`\\\`\\\`python\\n{{Function Code}}\\n\\\`\\\`\\\`\\n\\nUse this structure:\\n{{python-unittest-structure}}\\n\\nCreate test cases covering:\\n- {{Test Case 1 Description}}\\n- {{Test Case 2 Description}}\\n- (Optional) Edge cases: {{Edge Cases Description}}`,
+            promptText: `Generate a Python unit test class using the 'unittest' module for the following function:
+
+\`\`\`python
+{{Function Code}}
+\`\`\`
+
+Use this structure:
+{{python-unittest-structure}}
+
+Create test cases covering:
+- {{Test Case 1 Description}}
+- {{Test Case 2 Description}}
+- (Optional) Edge cases: {{Edge Cases Description}}`,
             status: 'active',
             activeInEnvironments: { set: [{ id: devEnvironment.id }, { id: testEnvironment.id }] },
             aiModelId: cgGpt4o.id
         },
         create: {
             promptId: promptGenTest.id,
-            promptText: `Generate a Python unit test class using the \'unittest\' module for the following function:\\n\\n\\\`\\\`\\\`python\\n{{Function Code}}\\n\\\`\\\`\\\`\\n\\nUse this structure:\\n{{python-unittest-structure}}\\n\\nCreate test cases covering:\\n- {{Test Case 1 Description}}\\n- {{Test Case 2 Description}}\\n- (Optional) Edge cases: {{Edge Cases Description}}`,
+            promptText: `Generate a Python unit test class using the 'unittest' module for the following function:
+
+\`\`\`python
+{{Function Code}}
+\`\`\`
+
+Use this structure:
+{{python-unittest-structure}}
+
+Create test cases covering:
+- {{Test Case 1 Description}}
+- {{Test Case 2 Description}}
+- (Optional) Edge cases: {{Edge Cases Description}}`,
             versionTag: 'v1.0.0', status: 'active',
             changeMessage: 'Initial version for generating Python unit tests.',
             activeInEnvironments: { connect: [{ id: devEnvironment.id }, { id: testEnvironment.id }] },
@@ -283,6 +448,9 @@ async function main() {
         select: { id: true }
     });
     console.log(`Upserted Prompt ${promptGenTest.name} V1 (ID: ${promptGenTest.id})`);
+
+    // Crear traducciones es-ES para los assets y prompts
+    await createSpanishTranslations(cgProjectId);
 
     console.log(`Code Generation & Assistance seeding finished.`);
 }

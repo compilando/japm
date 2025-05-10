@@ -17,6 +17,135 @@ function slugify(text: string): string {
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
 
+// Traducciones específicas para el proyecto de educación
+const educationTranslations = {
+    assets: {
+        'definition-cell-biology': 'La unidad estructural, funcional y biológica básica de todos los organismos conocidos. Una célula es la unidad más pequeña de vida.',
+        'mcq-template-4-options': `Question:
+{Question Text}
+A) {Option A}
+B) {Option B}
+C) {Option C}
+D) {Option D}
+Correct Answer: {Correct Letter}
+Explanation: {Explanation Text}`,
+        'explanation-style-analogy': 'Explica el concepto de manera clara y concisa. Usa un lenguaje simple adecuado para un estudiante de secundaria. Cuando sea posible, incluye una analogía simple para facilitar la comprensión.'
+    },
+    prompts: {
+        'generate-biology-quiz': `Generate a biology quiz with the following characteristics:
+
+Topic: {topic}
+Level: {level}
+Number of questions: {number}
+
+Include:
+- Multiple choice questions
+- One short answer question
+- One analysis question
+
+Ensure questions are clear and challenging.`,
+        'explain-biology-concept': `Explain the following biology concept:
+
+Concept: {concept}
+Level: {level}
+
+The explanation should include:
+- Clear definition
+- Relevant examples
+- Simple analogies
+- Practical applications
+
+Use language accessible to high school students.`,
+        'create-study-guide': `Create a study guide for the following biology topic:
+
+Topic: {topic}
+Level: {level}
+
+The guide should include:
+- Topic summary
+- Key points
+- Diagrams or visualizations
+- Practice exercises
+- Additional resources
+
+Organize the information in a clear and structured way.`
+    }
+};
+
+// Función para crear traducciones en español
+async function createSpanishTranslations(projectId: string) {
+    console.log(`Creating Spanish translations for project ${projectId}...`);
+
+    // Obtener todas las promptversion y promptassetversion del proyecto
+    const promptVersions = await prisma.promptVersion.findMany({
+        where: {
+            prompt: {
+                projectId: projectId
+            }
+        },
+        include: {
+            prompt: true
+        }
+    });
+
+    const promptAssetVersions = await prisma.promptAssetVersion.findMany({
+        where: {
+            asset: {
+                projectId: projectId
+            }
+        },
+        include: {
+            asset: true
+        }
+    });
+
+    // Crear traducciones para promptversion
+    for (const version of promptVersions) {
+        const translation = educationTranslations.prompts[version.prompt.id] || version.promptText;
+        await prisma.promptTranslation.upsert({
+            where: {
+                versionId_languageCode: {
+                    versionId: version.id,
+                    languageCode: 'es-ES'
+                }
+            },
+            update: {
+                promptText: translation
+            },
+            create: {
+                versionId: version.id,
+                languageCode: 'es-ES',
+                promptText: translation
+            }
+        });
+        console.log(`Created Spanish translation for prompt version ${version.id}`);
+    }
+
+    // Crear traducciones para promptassetversion
+    for (const version of promptAssetVersions) {
+        const translation = educationTranslations.assets[version.asset.key] || version.value;
+        await prisma.assetTranslation.upsert({
+            where: {
+                versionId_languageCode: {
+                    versionId: version.id,
+                    languageCode: 'es-ES'
+                }
+            },
+            update: {
+                value: translation
+            },
+            create: {
+                versionId: version.id,
+                languageCode: 'es-ES',
+                value: translation
+            }
+        });
+        console.log(`Created Spanish translation for prompt asset version ${version.id}`);
+    }
+
+    console.log(`Finished creating Spanish translations for project ${projectId}`);
+}
+
 async function main() {
     console.log(`-----------------------------------`);
     console.log(`Start seeding for Educational Content & Tutoring...`);
@@ -150,13 +279,15 @@ async function main() {
             }
         },
         update: {
-            value: 'Question:\n{Question Text}\nA) {Option A}\nB) {Option B}\nC) {Option C}\nD) {Option D}\nCorrect Answer: {Correct Letter}\nExplanation: {Explanation Text}',
+            value: `Question:\n{Question Text}\nA) {Option A}\nB) {Option B}\nC) {Option C}\nD) {Option D}\nCorrect Answer: {Correct Letter}
+Explanation: {Explanation Text}`,
             status: 'active',
             changeMessage: mcqTemplateAssetName
         },
         create: {
             assetId: assetMcqTemplate.id,
-            value: 'Question:\n{Question Text}\nA) {Option A}\nB) {Option B}\nC) {Option C}\nD) {Option D}\nCorrect Answer: {Correct Letter}\nExplanation: {Explanation Text}',
+            value: `Question:\n{Question Text}\nA) {Option A}\nB) {Option B}\nC) {Option C}\nD) {Option D}\nCorrect Answer: {Correct Letter}
+Explanation: {Explanation Text}`,
             versionTag: 'v1.0.0',
             status: 'active',
             changeMessage: mcqTemplateAssetName
@@ -290,6 +421,9 @@ async function main() {
         select: { id: true }
     });
     console.log(`Upserted Prompt ${promptQuiz.name} V1`);
+
+    // Crear traducciones es-ES para los assets y prompts
+    await createSpanishTranslations(eduProjectId);
 
     console.log(`Educational Content & Tutoring seeding finished.`);
 }

@@ -25,6 +25,145 @@ const invoiceFieldsToExtract = [
     { key: 'tax-amount', name: 'Tax Amount', description: 'The amount of tax included in the total. Look for labels like "Tax", "VAT", "IVA". Extract as a number. May be optional.' },
 ];
 
+// Traducciones específicas para el proyecto de extracción de facturas
+const invoiceTranslations = {
+    assets: {
+        'invoice-extraction-instructions': `Extract the following information from the document:
+- Invoice number
+- Date
+- Total amount
+- Vendor details
+- Customer details
+- Line items
+- Taxes
+- Payment terms`,
+        'invoice-validation-rules': `Validation rules:
+1. Invoice number must be unique
+2. Date cannot be in the future
+3. Total amount must match sum of items
+4. All required fields must be present
+5. Amounts must be positive`,
+        'invoice-error-messages': `Error messages:
+- "Duplicate invoice number"
+- "Invalid date"
+- "Total amount mismatch"
+- "Missing required fields"
+- "Negative amount detected"`,
+        'invoice-standard-fields': `Invoice Number
+Invoice Date
+Due Date
+Vendor Name
+Vendor Address
+Customer Name
+Customer Address
+Total Amount
+Tax Amount
+Line Item Description
+Line Item Quantity
+Line Item Unit Price
+Line Item Total`
+    },
+    prompts: {
+        'extract-invoice-data': `Given the following text extracted from an invoice via OCR:
+\`\`\`
+{{Invoice OCR Text}}
+\`\`\`
+
+Extract the following fields: {{invoice-standard-fields}}.
+
+Format the output as a JSON object conforming to this schema:
+{{invoice-json-schema}}
+
+If a field is not found, use null as the value. Pay close attention to dates and amounts.`,
+        'validate-invoice': `Validate the following invoice:
+
+Data: {data}
+
+Verify:
+1. Unique invoice number
+2. Valid date
+3. Correct amounts
+4. Required fields
+5. Accurate calculations
+
+Report any errors or inconsistencies.`
+    }
+};
+
+// Función para crear traducciones en español
+async function createSpanishTranslations(projectId: string) {
+    console.log(`Creating Spanish translations for project ${projectId}...`);
+
+    // Obtener todas las promptversion y promptassetversion del proyecto
+    const promptVersions = await prisma.promptVersion.findMany({
+        where: {
+            prompt: {
+                projectId: projectId
+            }
+        },
+        include: {
+            prompt: true
+        }
+    });
+
+    const promptAssetVersions = await prisma.promptAssetVersion.findMany({
+        where: {
+            asset: {
+                projectId: projectId
+            }
+        },
+        include: {
+            asset: true
+        }
+    });
+
+    // Crear traducciones para promptversion
+    for (const version of promptVersions) {
+        const translation = invoiceTranslations.prompts[version.prompt.id] || version.promptText;
+        await prisma.promptTranslation.upsert({
+            where: {
+                versionId_languageCode: {
+                    versionId: version.id,
+                    languageCode: 'es-ES'
+                }
+            },
+            update: {
+                promptText: translation
+            },
+            create: {
+                versionId: version.id,
+                languageCode: 'es-ES',
+                promptText: translation
+            }
+        });
+        console.log(`Created Spanish translation for prompt version ${version.id}`);
+    }
+
+    // Crear traducciones para promptassetversion
+    for (const version of promptAssetVersions) {
+        const translation = invoiceTranslations.assets[version.asset.key] || version.value;
+        await prisma.assetTranslation.upsert({
+            where: {
+                versionId_languageCode: {
+                    versionId: version.id,
+                    languageCode: 'es-ES'
+                }
+            },
+            update: {
+                value: translation
+            },
+            create: {
+                versionId: version.id,
+                languageCode: 'es-ES',
+                value: translation
+            }
+        });
+        console.log(`Created Spanish translation for prompt asset version ${version.id}`);
+    }
+
+    console.log(`Finished creating Spanish translations for project ${projectId}`);
+}
+
 async function main() {
     console.log(`-----------------------------------`);
     console.log(`Start seeding for Invoice Extraction...`);
@@ -130,13 +269,15 @@ async function main() {
             }
         },
         update: {
-            value: 'Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price\nLine Item Total',
+            value: `Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price
+Line Item Total`,
             status: 'active',
             changeMessage: invoiceFieldsAssetName
         },
         create: {
             assetId: assetInvoiceFields.id,
-            value: 'Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price\nLine Item Total',
+            value: `Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price
+Line Item Total`,
             versionTag: 'v1.0.0',
             status: 'active',
             changeMessage: invoiceFieldsAssetName
@@ -249,6 +390,9 @@ async function main() {
         select: { id: true }
     });
     console.log(`Upserted Prompt ${promptExtract.name} V1`);
+
+    // Crear traducciones es-ES para los assets y prompts
+    await createSpanishTranslations(invProjectId);
 
     console.log(`Invoice Extraction seeding finished.`);
 }

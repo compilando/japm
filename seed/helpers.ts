@@ -110,4 +110,5 @@ export async function createUSRegionAndCulturalData(projectId: string) {
     console.log(`Upserted CulturalData for US (Key: ${culturalDataUS.key})`);
 
     return { regionUS, culturalDataUS };
-} 
+}
+

@@ -3,6 +3,130 @@ import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createSpanishRegionAndCulturalData, createUSRegionAndCulturalData } from './helpers';
 
+// Traducciones específicas para el proyecto de marketing
+const marketingTranslations = {
+    assets: {
+        'brand-voice-eco': `Comunicación auténtica y transparente. Enfócate en la sostenibilidad y el impacto ambiental. Usa un tono optimista pero realista. Evita el greenwashing y las exageraciones.`,
+        'target-audience-millennials': `Describe the target audience:
+- Demographics: [Age, Location, Income]
+- Interests: [Hobbies, Media Consumption]
+- Pain Points: [Challenges, Needs]`,
+        'social-media-tone': `Learn More
+Shop Now
+Sign Up Today
+Download Free Guide`
+    },
+    prompts: {
+        'generate-social-post': `Generate 5 blog post ideas relevant to the following target audience:
+{{target-audience-persona}}
+
+Focus on topics related to: {{Topic Focus}}
+
+Ensure the ideas are engaging and SEO-friendly.`,
+        'create-email-campaign': `Create an email marketing campaign with the following characteristics:
+
+Audience: {audience}
+Objective: {objective}
+Topic: {topic}
+
+The campaign should include:
+- Email subject
+- Subject line
+- Email body
+- Call to action
+- Suggested segmentation
+
+Optimize for engagement and conversion.`,
+        'brand-messaging': `Develop brand messages for the following initiative:
+
+Initiative: {initiative}
+Audience: {audience}
+Channel: {channel}
+
+The messages should include:
+- Value proposition
+- Key benefits
+- Call to action
+- Tone of voice
+
+Align with brand strategy.`
+    }
+};
+
+// Función para crear traducciones en español
+async function createSpanishTranslations(projectId: string) {
+    console.log(`Creating Spanish translations for project ${projectId}...`);
+
+    // Obtener todas las promptversion y promptassetversion del proyecto
+    const promptVersions = await prisma.promptVersion.findMany({
+        where: {
+            prompt: {
+                projectId: projectId
+            }
+        },
+        include: {
+            prompt: true
+        }
+    });
+
+    const promptAssetVersions = await prisma.promptAssetVersion.findMany({
+        where: {
+            asset: {
+                projectId: projectId
+            }
+        },
+        include: {
+            asset: true
+        }
+    });
+
+    // Crear traducciones para promptversion
+    for (const version of promptVersions) {
+        const translation = marketingTranslations.prompts[version.prompt.id] || version.promptText;
+        await prisma.promptTranslation.upsert({
+            where: {
+                versionId_languageCode: {
+                    versionId: version.id,
+                    languageCode: 'es-ES'
+                }
+            },
+            update: {
+                promptText: translation
+            },
+            create: {
+                versionId: version.id,
+                languageCode: 'es-ES',
+                promptText: translation
+            }
+        });
+        console.log(`Created Spanish translation for prompt version ${version.id}`);
+    }
+
+    // Crear traducciones para promptassetversion
+    for (const version of promptAssetVersions) {
+        const translation = marketingTranslations.assets[version.asset.key] || version.value;
+        await prisma.assetTranslation.upsert({
+            where: {
+                versionId_languageCode: {
+                    versionId: version.id,
+                    languageCode: 'es-ES'
+                }
+            },
+            update: {
+                value: translation
+            },
+            create: {
+                versionId: version.id,
+                languageCode: 'es-ES',
+                value: translation
+            }
+        });
+        console.log(`Created Spanish translation for prompt asset version ${version.id}`);
+    }
+
+    console.log(`Finished creating Spanish translations for project ${projectId}`);
+}
+
 // Definición de la función slugify (copiada de otros seeds)
 function slugify(text: string): string {
     return text
@@ -110,13 +234,15 @@ async function main() {
             }
         },
         update: {
-            value: 'Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]\n- Pain Points: [Challenges, Needs]',
+            value: `Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]
+- Pain Points: [Challenges, Needs]`,
             status: 'active',
             changeMessage: audienceAssetName
         },
         create: {
             assetId: assetAudience.id,
-            value: 'Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]\n- Pain Points: [Challenges, Needs]',
+            value: `Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]
+- Pain Points: [Challenges, Needs]`,
             versionTag: 'v1.0.0',
             status: 'active',
             changeMessage: audienceAssetName
@@ -146,13 +272,15 @@ async function main() {
             }
         },
         update: {
-            value: 'Learn More\nShop Now\nSign Up Today\nDownload Free Guide',
+            value: `Learn More\nShop Now\nSign Up Today
+Download Free Guide`,
             status: 'active',
             changeMessage: ctaAssetName
         },
         create: {
             assetId: assetCTA.id,
-            value: 'Learn More\nShop Now\nSign Up Today\nDownload Free Guide',
+            value: `Learn More\nShop Now\nSign Up Today
+Download Free Guide`,
             versionTag: 'v1.0.0',
             status: 'active',
             changeMessage: ctaAssetName
@@ -206,7 +334,10 @@ async function main() {
     });
     console.log(`Upserted Prompt ${promptBlogPostIdea.name} V1`);
 
-    console.log(`Marketing Content seeding finished.`);
+    // Crear traducciones es-ES para los assets y prompts
+    await createSpanishTranslations(marketingProject.id);
+
+    console.log(`Marketing & Content Creation seeding finished.`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(async () => { await prisma.$disconnect(); });

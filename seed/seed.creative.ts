@@ -3,6 +3,131 @@ import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createSpanishRegionAndCulturalData, createUSRegionAndCulturalData } from './helpers';
 
+// Traducciones específicas para el proyecto creativo
+const creativeTranslations = {
+    assets: {
+        'main-char-profile-jax': `Jax: Ex-military cyborg, cynical but skilled pilot. Haunted by a past mission. Distrusts authority. Has a cybernetic arm with hidden tools. Motivation: Finding his missing sister.`,
+        'setting-neo-kyoto': `Neo-Kyoto, 2242: A sprawling, slick metropolis dominated by mega-corporations. Holographic ads flicker on imposing skyscrapers. Lower levels are dangerous, full of black markets and cyber gangs. Upper levels are pristine but sterile.`,
+        'narrative-tone-noir': `Maintain a raw, noir tone. Focus on atmosphere, shadows, rain, moral ambiguity. Use descriptive language that emphasizes the contrast between high technology and social decay.`
+    },
+    prompts: {
+        'generate-scene': `Generate a scene for the science fiction novel with the following characteristics:
+
+Scene: {scene type}
+Characters: {characters}
+Setting: {setting}
+
+The scene should include:
+- Natural dialogue
+- Atmospheric description
+- Character development
+- Plot advancement
+
+Maintain the established cyberpunk noir tone.`,
+        'develop-character': `Develop a character for the novel with the following characteristics:
+
+Name: {name}
+Role: {role}
+Background: {background}
+
+The development should include:
+- Backstory
+- Motivations
+- Internal conflicts
+- Relationships with other characters
+- Character arc
+
+Create a complex and memorable character.`,
+        'world-building': `Develop an aspect of the novel's world:
+
+Aspect: {aspect}
+Location: {location}
+
+The development should include:
+- Physical description
+- Social system
+- Technology
+- History
+- Impact on the plot
+
+Create a rich and coherent world.`
+    }
+};
+
+// Función para crear traducciones en español
+async function createSpanishTranslations(projectId: string) {
+    console.log(`Creating Spanish translations for project ${projectId}...`);
+
+    // Obtener todas las promptversion y promptassetversion del proyecto
+    const promptVersions = await prisma.promptVersion.findMany({
+        where: {
+            prompt: {
+                projectId: projectId
+            }
+        },
+        include: {
+            prompt: true
+        }
+    });
+
+    const promptAssetVersions = await prisma.promptAssetVersion.findMany({
+        where: {
+            asset: {
+                projectId: projectId
+            }
+        },
+        include: {
+            asset: true
+        }
+    });
+
+    // Crear traducciones para promptversion
+    for (const version of promptVersions) {
+        const translation = creativeTranslations.prompts[version.prompt.id] || version.promptText;
+        await prisma.promptTranslation.upsert({
+            where: {
+                versionId_languageCode: {
+                    versionId: version.id,
+                    languageCode: 'es-ES'
+                }
+            },
+            update: {
+                promptText: translation
+            },
+            create: {
+                versionId: version.id,
+                languageCode: 'es-ES',
+                promptText: translation
+            }
+        });
+        console.log(`Created Spanish translation for prompt version ${version.id}`);
+    }
+
+    // Crear traducciones para promptassetversion
+    for (const version of promptAssetVersions) {
+        const translation = creativeTranslations.assets[version.asset.key] || version.value;
+        await prisma.assetTranslation.upsert({
+            where: {
+                versionId_languageCode: {
+                    versionId: version.id,
+                    languageCode: 'es-ES'
+                }
+            },
+            update: {
+                value: translation
+            },
+            create: {
+                versionId: version.id,
+                languageCode: 'es-ES',
+                value: translation
+            }
+        });
+        console.log(`Created Spanish translation for prompt asset version ${version.id}`);
+    }
+
+    console.log(`Finished creating Spanish translations for project ${projectId}`);
+}
+
 // Definición de la función slugify (copiada de seed.codegen.ts)
 function slugify(text: string): string {
     return text
@@ -225,7 +350,8 @@ async function main() {
     const promptGenSceneV1 = await prisma.promptVersion.upsert({
         where: { promptId_versionTag: { promptId: promptGenScene.id, versionTag: 'v1.0.0' } },
         update: {
-            promptText: `Write a short scene (approx. 300 words) set in {{setting-neo-kyoto}}.\n            Characters involved: {{main-char-profile-jax}} and {{Secondary Character Description}}.\n            Scene Goal: {{Scene Goal / Conflict}}.\n            Dialogue should reflect the characters\' personalities and the {{narrative-tone-noir}}.\n            Focus on showing, not telling. Include brief descriptions of actions and environment.`,
+            promptText: `Write a short scene (approx. 300 words) set in {{setting-neo-kyoto}}.\n            Characters involved: {{main-char-profile-jax}} and {{Secondary Character Description}}.\n            Scene Goal: {{Scene Goal / Conflict}}.\n            Dialogue should reflect the characters\' personalities and the {{narrative-tone-noir}}.
+            Focus on showing, not telling. Include brief descriptions of actions and environment.`,
             status: 'active',
             changeMessage: 'Initial prompt for generating dialogue scenes. (Updated via upsert)',
             activeInEnvironments: { set: [{ id: devEnvironment.id }] }, // Use set for update
@@ -233,7 +359,8 @@ async function main() {
         },
         create: {
             promptId: promptGenScene.id,
-            promptText: `Write a short scene (approx. 300 words) set in {{setting-neo-kyoto}}.\n            Characters involved: {{main-char-profile-jax}} and {{Secondary Character Description}}.\n            Scene Goal: {{Scene Goal / Conflict}}.\n            Dialogue should reflect the characters\' personalities and the {{narrative-tone-noir}}.\n            Focus on showing, not telling. Include brief descriptions of actions and environment.`,
+            promptText: `Write a short scene (approx. 300 words) set in {{setting-neo-kyoto}}.\n            Characters involved: {{main-char-profile-jax}} and {{Secondary Character Description}}.\n            Scene Goal: {{Scene Goal / Conflict}}.\n            Dialogue should reflect the characters\' personalities and the {{narrative-tone-noir}}.
+            Focus on showing, not telling. Include brief descriptions of actions and environment.`,
             versionTag: 'v1.0.0', status: 'active',
             changeMessage: 'Initial prompt for generating dialogue scenes.',
             activeInEnvironments: { connect: [{ id: devEnvironment.id }] },
@@ -243,17 +370,8 @@ async function main() {
     });
     console.log(`Upserted Prompt ${promptGenScene.name} V1`);
 
-    // Eliminar Upsert de Links individuales
-    /*
-    const linksToUpsert = [ ... ];
-    for (const link of linksToUpsert) {
-        await prisma.promptAssetLink.upsert({ ... });
-    }
-    console.log(`Upserted links for ${promptGenScene.name} V1`);
-    */
-
-    // --- Creative Prompt: Adapt Content --- 
-    // ... (Add another prompt, e.g., "adapt-chapter-summary-to-logline")
+    // Crear traducciones es-ES para los assets y prompts
+    await createSpanishTranslations(crProjectId);
 
     console.log(`Creative Writing & Adaptation seeding finished.`);
 }

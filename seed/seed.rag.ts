@@ -3,6 +3,142 @@ import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createSpanishRegionAndCulturalData, createUSRegionAndCulturalData } from './helpers';
 
+// Traducciones específicas para el proyecto RAG
+const ragTranslations = {
+    assets: {
+        'rag-instructions': `RAG System Instructions:
+1. Process documents
+2. Extract relevant information
+3. Generate embeddings
+4. Store in vector database
+5. Enable semantic search`,
+        'rag-validation-rules': `Validation rules:
+1. Documents in supported format
+2. Maximum size allowed
+3. Non-malicious content
+4. Complete metadata
+5. Correctly generated embeddings`,
+        'rag-error-messages': `Error messages:
+- "Unsupported format"
+- "Size exceeds limit"
+- "Malicious content detected"
+- "Incomplete metadata"
+- "Embedding generation error"`
+    },
+    prompts: {
+        'process-document': `Process the following document:
+
+Document: {document}
+
+Steps:
+1. Validate format
+2. Extract text
+3. Generate embeddings
+4. Store metadata
+5. Index content
+
+Ensure all error cases are handled.`,
+        'search-documents': `Search in documents:
+
+Query: {query}
+
+Criteria:
+1. Semantic relevance
+2. Embedding similarity
+3. Metadata filters
+4. Score sorting
+5. Result limit
+
+Return the most relevant documents.`,
+        'update-index': `Update the index:
+
+Documents: {documents}
+
+Actions:
+1. Verify changes
+2. Update embeddings
+3. Modify metadata
+4. Reindex content
+5. Validate consistency
+
+Ensure index integrity is maintained.`
+    }
+};
+
+// Función para crear traducciones en español
+async function createSpanishTranslations(projectId: string) {
+    console.log(`Creating Spanish translations for project ${projectId}...`);
+
+    // Obtener todas las promptversion y promptassetversion del proyecto
+    const promptVersions = await prisma.promptVersion.findMany({
+        where: {
+            prompt: {
+                projectId: projectId
+            }
+        },
+        include: {
+            prompt: true
+        }
+    });
+
+    const promptAssetVersions = await prisma.promptAssetVersion.findMany({
+        where: {
+            asset: {
+                projectId: projectId
+            }
+        },
+        include: {
+            asset: true
+        }
+    });
+
+    // Crear traducciones para promptversion
+    for (const version of promptVersions) {
+        const translation = ragTranslations.prompts[version.prompt.id] || version.promptText;
+        await prisma.promptTranslation.upsert({
+            where: {
+                versionId_languageCode: {
+                    versionId: version.id,
+                    languageCode: 'es-ES'
+                }
+            },
+            update: {
+                promptText: translation
+            },
+            create: {
+                versionId: version.id,
+                languageCode: 'es-ES',
+                promptText: translation
+            }
+        });
+        console.log(`Created Spanish translation for prompt version ${version.id}`);
+    }
+
+    // Crear traducciones para promptassetversion
+    for (const version of promptAssetVersions) {
+        const translation = ragTranslations.assets[version.asset.key] || version.value;
+        await prisma.assetTranslation.upsert({
+            where: {
+                versionId_languageCode: {
+                    versionId: version.id,
+                    languageCode: 'es-ES'
+                }
+            },
+            update: {
+                value: translation
+            },
+            create: {
+                versionId: version.id,
+                languageCode: 'es-ES',
+                value: translation
+            }
+        });
+        console.log(`Created Spanish translation for prompt asset version ${version.id}`);
+    }
+
+    console.log(`Finished creating Spanish translations for project ${projectId}`);
+}
+
 // Definición de la función slugify (copiada de otros seeds)
 function slugify(text: string): string {
     return text
@@ -253,14 +389,16 @@ async function main() {
     const promptRagQueryV1 = await prisma.promptVersion.upsert({
         where: { promptId_versionTag: { promptId: promptRagQuery.id, versionTag: 'v1.0.0' } },
         update: {
-            promptText: `{{rag-system-instruction}}\n\n            Context Documents:\n            --- START CONTEXT ---\n            {{Retrieved Context Chunks}}\n            --- END CONTEXT ---\n\n            User Question: {{User Question}}\n\n            Answer based ONLY on the context above. Use this citation format: {{rag-citation-format}}. If the answer isn't in the context, respond with: {{rag-not-found-response}}.\n\n            Answer:`,
+            promptText: `{{rag-system-instruction}}\n\n            Context Documents:\n            --- START CONTEXT ---\n            {{Retrieved Context Chunks}}\n            --- END CONTEXT ---\n\n            User Question: {{User Question}}\n\n            Answer based ONLY on the context above. Use this citation format: {{rag-citation-format}}. If the answer isn't in the context, respond with: {{rag-not-found-response}}.\n
+            Answer:`,
             status: 'active',
             activeInEnvironments: { set: [{ id: productionEnvironment.id }, { id: stagingEnvironment.id }] },
             aiModelId: ragGpt4o.id // Assign default AI model
         },
         create: {
             promptId: promptRagQuery.id, // Use ID
-            promptText: `{{rag-system-instruction}}\n\n            Context Documents:\n            --- START CONTEXT ---\n            {{Retrieved Context Chunks}}\n            --- END CONTEXT ---\n\n            User Question: {{User Question}}\n\n            Answer based ONLY on the context above. Use this citation format: {{rag-citation-format}}. If the answer isn't in the context, respond with: {{rag-not-found-response}}.\n\n            Answer:`,
+            promptText: `{{rag-system-instruction}}\n\n            Context Documents:\n            --- START CONTEXT ---\n            {{Retrieved Context Chunks}}\n            --- END CONTEXT ---\n\n            User Question: {{User Question}}\n\n            Answer based ONLY on the context above. Use this citation format: {{rag-citation-format}}. If the answer isn't in the context, respond with: {{rag-not-found-response}}.\n
+            Answer:`,
             versionTag: 'v1.0.0',
             status: 'active',
             changeMessage: 'Initial RAG prompt using system instructions and context.',
@@ -271,7 +409,10 @@ async function main() {
     });
     console.log(`Upserted Prompt ${promptRagQuery.name} V1`);
 
-    console.log(`Internal Knowledge Base (RAG) seeding finished.`);
+    // Crear traducciones es-ES para los assets y prompts
+    await createSpanishTranslations(ragProjectId);
+
+    console.log(`RAG & Document Q&A seeding finished.`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(async () => { await prisma.$disconnect(); });
