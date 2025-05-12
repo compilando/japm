@@ -14,7 +14,7 @@ import { ExecutePromptBodyDto } from './dto/execute-prompt-body.dto';
 export class ServePromptController {
     constructor(private readonly service: ServePromptService) { }
 
-    @Post('execute/:projectId/:promptName/:versionTag')
+    @Post('execute/:projectId/:promptName/:versionTag/base')
     @UseGuards(ProjectGuard)
     @UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
     @ApiOperation({ summary: 'Assembles and prepares a specific prompt version (base language) for execution with provided variables' })
@@ -35,7 +35,7 @@ export class ServePromptController {
         return this.service.executePromptVersion(params, body);
     }
 
-    @Post('execute/:projectId/:promptName/:versionTag/:languageCode')
+    @Post('execute/:projectId/:promptName/:versionTag/lang/:languageCode')
     @UseGuards(ProjectGuard)
     @UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
     @ApiOperation({ summary: 'Assembles and prepares a specific prompt version (specific language) for execution with provided variables' })

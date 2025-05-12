@@ -69,7 +69,7 @@ export class RegionController {
     @Get(':languageCode')
     @ApiOperation({ summary: 'Gets a specific region within a project' })
     @ApiParam({ name: 'projectId', description: 'Project ID', type: String })
-    @ApiParam({ name: 'languageCode', description: 'Language code (ID) of the region', type: String })
+    @ApiParam({ name: 'languageCode', description: 'Language code (ID) of the region', type: String, required: true })
     @ApiResponse({ status: 200, description: 'Region found.', type: CreateRegionDto })
     @ApiResponse({ status: 404, description: 'Project or Region not found.' })
     findOne(@Req() req: RequestWithProject, @Param('languageCode') languageCode: string): Promise<Region> {
@@ -81,7 +81,7 @@ export class RegionController {
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, skipMissingProperties: true }))
     @ApiOperation({ summary: 'Updates a specific region within a project' })
     @ApiParam({ name: 'projectId', description: 'Project ID', type: String })
-    @ApiParam({ name: 'languageCode', description: 'Language code (ID) of the region to update', type: String })
+    @ApiParam({ name: 'languageCode', description: 'Language code (ID) of the region to update', type: String, required: true })
     @ApiBody({ type: UpdateRegionDto })
     @ApiResponse({ status: 200, description: 'Region updated.', type: CreateRegionDto })
     @ApiResponse({ status: 404, description: 'Project or Region not found.' })
@@ -105,7 +105,7 @@ export class RegionController {
     @Delete(':languageCode')
     @ApiOperation({ summary: 'Deletes a specific region within a project' })
     @ApiParam({ name: 'projectId', description: 'Project ID', type: String })
-    @ApiParam({ name: 'languageCode', description: 'Language code (ID) of the region to delete', type: String })
+    @ApiParam({ name: 'languageCode', description: 'Language code (ID) of the region to delete', type: String, required: true })
     @ApiResponse({ status: 200, description: 'Region deleted.' })
     @ApiResponse({ status: 404, description: 'Project or Region not found.' })
     async remove(@Req() req: RequestWithProject, @Param('languageCode') languageCode: string): Promise<Region> {

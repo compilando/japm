@@ -16,6 +16,11 @@ function slugify(text: string): string {
         .replace(/\-\-+/g, '-');       // Reemplazar múltiples - con uno solo
 }
 
+// Define a type for Project with Regions included
+type ProjectWithRegions = Prisma.ProjectGetPayload<{
+    include: { regions: true }
+}>;
+
 @Injectable()
 export class ProjectService {
     private readonly logger = new Logger(ProjectService.name);
@@ -79,14 +84,21 @@ export class ProjectService {
         });
     }
 
-    async findOne(id: string, tenantId: string): Promise<Project> {
-        console.log('Buscando proyecto', { id, tenantId });
-        const project = await this.prisma.project.findUnique({ where: { id }, select: { id: true, name: true, description: true, ownerUserId: true, createdAt: true, updatedAt: true, tenantId: true } });
-        console.log('Resultado proyecto:', project);
-        if (!project || project.tenantId !== tenantId) {
-            throw new NotFoundException(`Project with ID "${id}" not found for this tenant`);
+    async findOne(id: string, tenantId: string): Promise<ProjectWithRegions> {
+        const project = await this.prisma.project.findFirst({
+            where: {
+                id: id,
+                tenantId: tenantId,
+            },
+            include: {
+                regions: true,
+            },
+        });
+
+        if (!project) {
+            throw new NotFoundException(`Project with ID "${id}" not found for tenant "${tenantId}".`);
         }
-        return project as Project;
+        return project as ProjectWithRegions;
     }
 
     async update(id: string, updateProjectDto: UpdateProjectDto, tenantId: string): Promise<Project> {

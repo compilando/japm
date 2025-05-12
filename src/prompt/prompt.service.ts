@@ -1,10 +1,18 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException, Logger, InternalServerErrorException } from '@nestjs/common';
 import { CreatePromptDto } from './dto/create-prompt.dto';
 import { UpdatePromptDto } from './dto/update-prompt.dto';
 import { CreatePromptVersionDto } from './dto/create-prompt-version.dto';
 import { CreateOrUpdatePromptTranslationDto } from './dto/create-or-update-prompt-translation.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, Prompt, PromptVersion, PromptTranslation, Tag, Environment } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
+import { ProjectService } from '../project/project.service';
+import { SystemPromptService } from '../system-prompt/system-prompt.service';
+import { ChatOpenAI } from "@langchain/openai";
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+import { RawExecutionService } from '../raw-execution/raw-execution.service';
+import { ExecuteRawDto } from '../raw-execution/dto/execute-raw.dto';
 
 // Asumiendo que tenemos acceso a la función slugify (igual que en ProjectService)
 function slugify(text: string): string {
@@ -51,7 +59,24 @@ type PromptWithInitialVersionAndTags = Prisma.PromptGetPayload<{
 
 @Injectable()
 export class PromptService {
-    constructor(private prisma: PrismaService) { }
+    private readonly logger = new Logger(PromptService.name);
+
+    constructor(
+        private prisma: PrismaService,
+        private configService: ConfigService,
+        private projectService: ProjectService,
+        private systemPromptService: SystemPromptService,
+        private rawExecutionService: RawExecutionService,
+    ) { }
+
+    // Helper to substitute variables (copied from RawExecutionService for now)
+    private substituteVariables(text: string, variables?: Record<string, any>): string {
+        if (!variables) return text;
+        return text.replace(/\{\{([^}]+)\}\}/g, (match, key) => { // Use {{key}} format
+            const value = variables[key.trim()];
+            return value !== undefined ? String(value) : match; // Ensure value is string
+        });
+    }
 
     async create(createDto: CreatePromptDto, projectId: string): Promise<PromptWithInitialVersionAndTags> {
         const { name, description, promptText, initialTranslations, tags: tagNames, ...restData } = createDto;
@@ -316,5 +341,76 @@ export class PromptService {
             update: { promptText },
             create: { versionId: promptVersionIdCuid, languageCode, promptText },
         });
+    }
+
+    /**
+     * Generates a suggested prompt structure using an LLM via RawExecutionService.
+     * @param projectId The CUID of the project to get regions from.
+     * @param userPrompt The user's initial prompt text.
+     * @param tenantId The CUID of the tenant (obtained from JWT).
+     * @param aiModelId The CUID of the AIModel to use (defaults to a placeholder).
+     * @returns A JSON object representing the suggested structure.
+     */
+    async generateStructure(
+        projectId: string,
+        userPrompt: string,
+        tenantId: string,
+        aiModelId: string = 'PLEASE_REPLACE_WITH_VALID_MODEL_ID',
+    ): Promise<object> {
+        this.logger.debug(`Starting generateStructure for projectId: ${projectId}`);
+
+        // 1. Get project regions (needed for the system prompt)
+        // Ensure findOneById includes regions or fetch separately
+        const project = await this.projectService.findOne(projectId, tenantId);
+        if (!project || !project.regions) {
+            this.logger.error(`Project or project regions not found for projectId: ${projectId}`);
+            throw new NotFoundException(`Project with ID \"${projectId}\" or its regions not found.`);
+        }
+        const regionsJson = JSON.stringify(project.regions.map(r => ({ languageCode: r.languageCode, name: r.name })));
+        this.logger.debug(`Project regions for system prompt: ${regionsJson}`);
+
+        // 2. Prepare DTO for RawExecutionService
+        const systemPromptName = 'prompt-generator'; // Use the registered name
+        const executeDto: ExecuteRawDto = {
+            userText: userPrompt,
+            systemPromptName: systemPromptName,
+            aiModelId: aiModelId, // Use the provided or default model ID
+            variables: {
+                "project_regions_json": regionsJson
+                // Add any other variables your prompt-generator.md might expect
+            }
+        };
+
+        this.logger.log(`Calling RawExecutionService.executeRaw with DTO: ${JSON.stringify(executeDto, null, 2)}`);
+
+        // 3. Call RawExecutionService
+        let rawOutput: { response: string };
+        try {
+            rawOutput = await this.rawExecutionService.executeRaw(executeDto);
+            this.logger.debug(`Raw response received from RawExecutionService: ${rawOutput.response}`);
+        } catch (error) {
+            this.logger.error(`Error calling RawExecutionService: ${error.message}`, error.stack);
+            // Re-throw or handle specific errors from executeRaw (e.g., model not found, API key error)
+            if (error instanceof NotFoundException || error instanceof BadRequestException || error instanceof InternalServerErrorException) {
+                throw error; // Re-throw known error types
+            }
+            throw new InternalServerErrorException(`Failed to generate structure due to LLM execution error: ${error.message}`);
+        }
+
+        // 4. Parse the raw response as JSON
+        try {
+            // Basic cleaning attempt: remove ```json ... ``` markers if present
+            const cleanedResponse = rawOutput.response
+                .replace(/^```json\s*/, '')
+                .replace(/\s*```$/, '')
+                .trim();
+
+            const jsonStructure = JSON.parse(cleanedResponse);
+            this.logger.log(`Successfully parsed JSON structure from LLM response.`);
+            return jsonStructure;
+        } catch (parseError) {
+            this.logger.error(`Failed to parse JSON structure from LLM response: ${parseError.message}. Raw response was: ${rawOutput.response}`, parseError.stack);
+            throw new InternalServerErrorException('Failed to generate structure: LLM did not return valid JSON.');
+        }
     }
 }

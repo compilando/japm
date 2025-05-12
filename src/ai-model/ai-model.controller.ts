@@ -83,16 +83,15 @@ export class AiModelController {
         return this.aiModelService.remove(projectId, aiModelId);
     }
 
-    @Get('providers/types') // New endpoint
+    @Get('providers/types')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'List available Langchain provider types' })
+    @ApiParam({ name: 'projectId', description: 'The ID of the project (used for context/authorization, though the list is global)', required: true, type: String })
     @ApiResponse({
         status: 200,
         description: 'A list of Langchain provider types.',
         type: [String]
     })
-    // Note: ProjectGuard is applied globally. If this should be accessible without a specific project context,
-    // consider moving it to a different controller or overriding guards for this specific route.
     getProviderTypes(): string[] {
         this.logger.debug('[getProviderTypes] Received request for Langchain provider types');
         return this.aiModelService.getProviderTypes();

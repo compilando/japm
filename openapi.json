@@ -767,7 +767,6 @@
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "Project ID (slug)",
             "schema": {
               "type": "string"
             }
@@ -785,23 +784,23 @@
         },
         "responses": {
           "201": {
-            "description": "Prompt created.",
+            "description": "The prompt has been successfully created.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreatePromptDto"
+                  "$ref": "#/components/schemas/PromptDto"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid data."
+            "description": "Bad Request."
+          },
+          "401": {
+            "description": "Unauthorized."
           },
           "404": {
-            "description": "Project or Tag not found."
-          },
-          "409": {
-            "description": "Conflict, the generated slug for this prompt name already exists globally."
+            "description": "Project not found."
           }
         },
         "security": [
@@ -809,19 +808,261 @@
             "bearer": []
           }
         ],
-        "summary": "Creates a new logical prompt (with ID as slug) within a project",
+        "summary": "Create a new prompt within a project",
         "tags": [
           "Prompts"
         ]
-      },
-      "get": {
-        "operationId": "PromptController_findAll",
+      }
+    },
+    "/api/projects/{projectId}/prompts/{promptName}": {
+      "patch": {
+        "operationId": "PromptController_update",
         "parameters": [
           {
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "Project ID (slug)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptName",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePromptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The prompt has been successfully updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "404": {
+            "description": "Prompt or Project not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update an existing prompt by name",
+        "tags": [
+          "Prompts"
+        ]
+      }
+    },
+    "/api/projects/{projectId}/prompts/generate-structure": {
+      "post": {
+        "operationId": "PromptController_generateStructure",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "The ID of the project.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeneratePromptStructureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Returns the suggested JSON structure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "example": {
+                    "prompt": {
+                      "name": "Suggested Prompt Name",
+                      "description": "..."
+                    },
+                    "version": {
+                      "semanticVersion": "1.0.0"
+                    },
+                    "assets": [
+                      {
+                        "name": "Greeting Text",
+                        "description": "Main greeting text",
+                        "translations": [
+                          {
+                            "regionCode": "en-US",
+                            "text": "Hello World"
+                          },
+                          {
+                            "regionCode": "es-ES",
+                            "text": "Hola Mundo"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request (e.g., missing user prompt)."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "404": {
+            "description": "Project not found."
+          },
+          "500": {
+            "description": "Internal Server Error (LLM failure, file read error, etc.)."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Analyzes a user prompt using an LLM and suggests a structure based on project entities.",
+        "tags": [
+          "Prompts"
+        ]
+      }
+    },
+    "/api/projects/mine": {
+      "get": {
+        "operationId": "ProjectController_findMine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of user projects.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CreateProjectDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get projects accessible by the current user",
+        "tags": [
+          "Projects"
+        ]
+      }
+    },
+    "/api/projects": {
+      "post": {
+        "operationId": "ProjectController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The project has been successfully created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateProjectDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request."
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new project",
+        "tags": [
+          "Projects"
+        ]
+      },
+      "get": {
+        "operationId": "ProjectController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of projects"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get all projects for the authenticated user's tenant",
+        "tags": [
+          "Projects"
+        ]
+      }
+    },
+    "/api/projects/{id}": {
+      "get": {
+        "operationId": "ProjectController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Project CUID",
             "schema": {
               "type": "string"
             }
@@ -829,14 +1070,11 @@
         ],
         "responses": {
           "200": {
-            "description": "List of prompts.",
+            "description": "The found project record",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CreatePromptDto"
-                  }
+                  "$ref": "#/components/schemas/CreateProjectDto"
                 }
               }
             }
@@ -850,30 +1088,70 @@
             "bearer": []
           }
         ],
-        "summary": "Gets all logical prompts for a project",
+        "summary": "Get a project by ID",
         "tags": [
-          "Prompts"
+          "Projects"
         ]
-      }
-    },
-    "/api/projects/{projectId}/prompts/{promptId}": {
-      "get": {
-        "operationId": "PromptController_findOne",
+      },
+      "patch": {
+        "operationId": "ProjectController_update",
         "parameters": [
           {
-            "name": "promptId",
+            "name": "id",
             "required": true,
             "in": "path",
-            "description": "ID (slug) of the prompt",
+            "description": "Project CUID",
             "schema": {
               "type": "string"
             }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The project has been successfully updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateProjectDto"
+                }
+              }
+            }
           },
+          "400": {
+            "description": "Bad Request."
+          },
+          "404": {
+            "description": "Project not found."
+          }
+        },
+        "security": [
           {
-            "name": "projectId",
+            "bearer": []
+          }
+        ],
+        "summary": "Update a project by ID",
+        "tags": [
+          "Projects"
+        ]
+      },
+      "delete": {
+        "operationId": "ProjectController_remove",
+        "parameters": [
+          {
+            "name": "id",
             "required": true,
             "in": "path",
-            "description": "Project ID (slug)",
+            "description": "Project CUID",
             "schema": {
               "type": "string"
             }
@@ -881,17 +1159,17 @@
         ],
         "responses": {
           "200": {
-            "description": "Prompt found.",
+            "description": "The project has been successfully deleted.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreatePromptDto"
+                  "$ref": "#/components/schemas/CreateProjectDto"
                 }
               }
             }
           },
           "404": {
-            "description": "Project or Prompt not found."
+            "description": "Project not found."
           }
         },
         "security": [
@@ -899,164 +1177,38 @@
             "bearer": []
           }
         ],
-        "summary": "Gets a logical prompt by its ID (slug) within a project",
+        "summary": "Delete a project by ID",
         "tags": [
-          "Prompts"
-        ]
-      },
-      "patch": {
-        "operationId": "PromptController_update",
-        "parameters": [
-          {
-            "name": "promptId",
-            "required": true,
-            "in": "path",
-            "description": "ID (slug) of the prompt to update",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "Project ID (slug)",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "description": "Data to update the prompt",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdatePromptDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Prompt updated successfully."
-          },
-          "400": {
-            "description": "Invalid data."
-          },
-          "404": {
-            "description": "Project, Prompt, or Tag not found."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Updates an existing prompt by its ID (slug) for a specific project",
-        "tags": [
-          "Prompts"
-        ]
-      },
-      "delete": {
-        "operationId": "PromptController_remove",
-        "parameters": [
-          {
-            "name": "promptId",
-            "required": true,
-            "in": "path",
-            "description": "ID (slug) of the prompt to delete",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "Project ID (slug)",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Prompt deleted."
-          },
-          "404": {
-            "description": "Project or Prompt not found."
-          },
-          "409": {
-            "description": "Conflict on deletion (check non-cascading relations)."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Deletes a logical prompt (and its associated versions via Cascade) within a project by ID (slug)",
-        "tags": [
-          "Prompts"
+          "Projects"
         ]
       }
     },
-    "/api/projects/{projectId}/prompts/{promptId}/versions": {
+    "/api/system-prompts": {
       "post": {
-        "operationId": "PromptVersionController_create",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "Project ID",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "promptId",
-            "required": true,
-            "in": "path",
-            "description": "Prompt CUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "operationId": "SystemPromptController_create",
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreatePromptVersionDto"
+                "$ref": "#/components/schemas/CreateSystemPromptDto"
               }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Version created.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatePromptVersionDto"
-                }
-              }
-            }
+            "description": "System prompt created successfully."
           },
           "400": {
-            "description": "Invalid data (e.g., duplicate versionTag)."
+            "description": "Invalid input data."
           },
           "401": {
             "description": "Unauthorized."
           },
-          "403": {
-            "description": "Forbidden Access to Project."
-          },
           "404": {
-            "description": "Project or Prompt not found."
+            "description": "Conflict: Name already exists."
           }
         },
         "security": [
@@ -1064,28 +1216,42 @@
             "bearer": []
           }
         ],
-        "summary": "Create a new version for a specific prompt within a project",
+        "summary": "Create a new system prompt (Admin Only - conceptually)",
         "tags": [
-          "Prompt Versions (within Project/Prompt)"
+          "System Prompts"
         ]
       },
       "get": {
-        "operationId": "PromptVersionController_findAll",
+        "operationId": "SystemPromptController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of system prompts."
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all system prompts",
+        "tags": [
+          "System Prompts"
+        ]
+      }
+    },
+    "/api/system-prompts/{name}": {
+      "get": {
+        "operationId": "SystemPromptController_findOne",
         "parameters": [
           {
-            "name": "projectId",
+            "name": "name",
             "required": true,
             "in": "path",
-            "description": "Project ID",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "promptId",
-            "required": true,
-            "in": "path",
-            "description": "Prompt CUID",
+            "description": "Unique name of the system prompt",
             "schema": {
               "type": "string"
             }
@@ -1093,26 +1259,13 @@
         ],
         "responses": {
           "200": {
-            "description": "List of versions.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CreatePromptVersionDto"
-                  }
-                }
-              }
-            }
+            "description": "System prompt details."
           },
           "401": {
             "description": "Unauthorized."
           },
-          "403": {
-            "description": "Forbidden Access to Project."
-          },
           "404": {
-            "description": "Project or Prompt not found."
+            "description": "System prompt not found."
           }
         },
         "security": [
@@ -1120,30 +1273,19 @@
             "bearer": []
           }
         ],
-        "summary": "Get all versions for a specific prompt within a project",
+        "summary": "Get a specific system prompt by name",
         "tags": [
-          "Prompt Versions (within Project/Prompt)"
+          "System Prompts"
         ]
-      }
-    },
-    "/api/projects/{projectId}/prompts/versions/{versionIdCuid}/translations": {
-      "put": {
-        "operationId": "PromptController_addOrUpdateTranslation",
+      },
+      "patch": {
+        "operationId": "SystemPromptController_update",
         "parameters": [
           {
-            "name": "versionIdCuid",
+            "name": "name",
             "required": true,
             "in": "path",
-            "description": "ID of the version to translate (CUID)",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "Project ID (slug)",
+            "description": "Unique name of the system prompt to update",
             "schema": {
               "type": "string"
             }
@@ -1154,23 +1296,23 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateOrUpdatePromptTranslationDto"
+                "$ref": "#/components/schemas/UpdateSystemPromptDto"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Translation created or updated."
+            "description": "System prompt updated successfully."
           },
           "400": {
-            "description": "Invalid data."
+            "description": "Invalid input data."
           },
-          "403": {
-            "description": "Forbidden (Version not in Project)."
+          "401": {
+            "description": "Unauthorized."
           },
           "404": {
-            "description": "Project or Version not found."
+            "description": "System prompt not found or conflict with new name."
           }
         },
         "security": [
@@ -1178,9 +1320,89 @@
             "bearer": []
           }
         ],
-        "summary": "Adds or updates a translation for a specific prompt version (identified by CUID) in the project.",
+        "summary": "Update an existing system prompt (Admin Only - conceptually)",
         "tags": [
-          "Prompts"
+          "System Prompts"
+        ]
+      },
+      "delete": {
+        "operationId": "SystemPromptController_remove",
+        "parameters": [
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "description": "Unique name of the system prompt to delete",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "System prompt deleted successfully."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "404": {
+            "description": "System prompt not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a system prompt (Admin Only - conceptually)",
+        "tags": [
+          "System Prompts"
+        ]
+      }
+    },
+    "/api/execute-raw": {
+      "post": {
+        "operationId": "RawExecutionController_executeRawText",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteRawDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Execution successful, response from AI model.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data or unsupported provider."
+          },
+          "404": {
+            "description": "SystemPrompt or AIModel not found."
+          },
+          "500": {
+            "description": "Internal server error (API Key config, LLM execution failed)."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Executes raw text using a specified System Prompt and AI Model ID.",
+        "tags": [
+          "Raw Execution"
         ]
       }
     },
@@ -1816,7 +2038,7 @@
         ]
       }
     },
-    "/serve-prompt/execute/{projectId}/{promptName}/{versionTag}": {
+    "/serve-prompt/execute/{projectId}/{promptName}/{versionTag}/base": {
       "post": {
         "operationId": "ServePromptController_executePromptWithoutLanguage",
         "parameters": [
@@ -1908,7 +2130,7 @@
         ]
       }
     },
-    "/serve-prompt/execute/{projectId}/{promptName}/{versionTag}/{languageCode}": {
+    "/serve-prompt/execute/{projectId}/{promptName}/{versionTag}/lang/{languageCode}": {
       "post": {
         "operationId": "ServePromptController_executePromptWithLanguage",
         "parameters": [
@@ -1998,227 +2220,6 @@
         "summary": "Assembles and prepares a specific prompt version (specific language) for execution with provided variables",
         "tags": [
           "Serve Prompt"
-        ]
-      }
-    },
-    "/api/projects/mine": {
-      "get": {
-        "operationId": "ProjectController_findMine",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "List of user projects.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CreateProjectDto"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get projects accessible by the current user",
-        "tags": [
-          "Projects"
-        ]
-      }
-    },
-    "/api/projects": {
-      "post": {
-        "operationId": "ProjectController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateProjectDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "The project has been successfully created.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateProjectDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request."
-          },
-          "401": {
-            "description": "Unauthorized."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a new project",
-        "tags": [
-          "Projects"
-        ]
-      },
-      "get": {
-        "operationId": "ProjectController_findAll",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "List of projects"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        },
-        "summary": "Get all projects for the authenticated user's tenant",
-        "tags": [
-          "Projects"
-        ]
-      }
-    },
-    "/api/projects/{id}": {
-      "get": {
-        "operationId": "ProjectController_findOne",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Project CUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The found project record",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateProjectDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Project not found."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get a project by ID",
-        "tags": [
-          "Projects"
-        ]
-      },
-      "patch": {
-        "operationId": "ProjectController_update",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Project CUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateProjectDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "The project has been successfully updated.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateProjectDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request."
-          },
-          "404": {
-            "description": "Project not found."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Update a project by ID",
-        "tags": [
-          "Projects"
-        ]
-      },
-      "delete": {
-        "operationId": "ProjectController_remove",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Project CUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The project has been successfully deleted.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateProjectDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Project not found."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Delete a project by ID",
-        "tags": [
-          "Projects"
         ]
       }
     },
@@ -2473,7 +2474,17 @@
     "/api/projects/{projectId}/aimodels/providers/types": {
       "get": {
         "operationId": "AiModelController_getProviderTypes",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "The ID of the project (used for context/authorization, though the list is global)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "A list of Langchain provider types.",
@@ -2805,6 +2816,130 @@
         "summary": "Obtiene una etiqueta por su nombre dentro de un proyecto",
         "tags": [
           "Tags"
+        ]
+      }
+    },
+    "/api/projects/{projectId}/prompts/{promptId}/versions": {
+      "post": {
+        "operationId": "PromptVersionController_create",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePromptVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Version created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePromptVersionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid data (e.g., duplicate versionTag)."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
+          "404": {
+            "description": "Project or Prompt not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new version for a specific prompt within a project",
+        "tags": [
+          "Prompt Versions (within Project/Prompt)"
+        ]
+      },
+      "get": {
+        "operationId": "PromptVersionController_findAll",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of versions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CreatePromptVersionDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
+          "404": {
+            "description": "Project or Prompt not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all versions for a specific prompt within a project",
+        "tags": [
+          "Prompt Versions (within Project/Prompt)"
         ]
       }
     },
@@ -4412,229 +4547,6 @@
           "LLM Execution"
         ]
       }
-    },
-    "/api/system-prompts": {
-      "post": {
-        "operationId": "SystemPromptController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateSystemPromptDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "System prompt created successfully."
-          },
-          "400": {
-            "description": "Invalid input data."
-          },
-          "401": {
-            "description": "Unauthorized."
-          },
-          "404": {
-            "description": "Conflict: Name already exists."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a new system prompt (Admin Only - conceptually)",
-        "tags": [
-          "System Prompts"
-        ]
-      },
-      "get": {
-        "operationId": "SystemPromptController_findAll",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "List of system prompts."
-          },
-          "401": {
-            "description": "Unauthorized."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get all system prompts",
-        "tags": [
-          "System Prompts"
-        ]
-      }
-    },
-    "/api/system-prompts/{name}": {
-      "get": {
-        "operationId": "SystemPromptController_findOne",
-        "parameters": [
-          {
-            "name": "name",
-            "required": true,
-            "in": "path",
-            "description": "Unique name of the system prompt",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "System prompt details."
-          },
-          "401": {
-            "description": "Unauthorized."
-          },
-          "404": {
-            "description": "System prompt not found."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get a specific system prompt by name",
-        "tags": [
-          "System Prompts"
-        ]
-      },
-      "patch": {
-        "operationId": "SystemPromptController_update",
-        "parameters": [
-          {
-            "name": "name",
-            "required": true,
-            "in": "path",
-            "description": "Unique name of the system prompt to update",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateSystemPromptDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "System prompt updated successfully."
-          },
-          "400": {
-            "description": "Invalid input data."
-          },
-          "401": {
-            "description": "Unauthorized."
-          },
-          "404": {
-            "description": "System prompt not found or conflict with new name."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Update an existing system prompt (Admin Only - conceptually)",
-        "tags": [
-          "System Prompts"
-        ]
-      },
-      "delete": {
-        "operationId": "SystemPromptController_remove",
-        "parameters": [
-          {
-            "name": "name",
-            "required": true,
-            "in": "path",
-            "description": "Unique name of the system prompt to delete",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "System prompt deleted successfully."
-          },
-          "401": {
-            "description": "Unauthorized."
-          },
-          "404": {
-            "description": "System prompt not found."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Delete a system prompt (Admin Only - conceptually)",
-        "tags": [
-          "System Prompts"
-        ]
-      }
-    },
-    "/api/execute-raw": {
-      "post": {
-        "operationId": "RawExecutionController_executeRawText",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ExecuteRawDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Execution successful, response from AI model.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid input data or unsupported provider."
-          },
-          "404": {
-            "description": "SystemPrompt or AIModel not found."
-          },
-          "500": {
-            "description": "Internal server error (API Key config, LLM execution failed)."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Executes raw text using a specified System Prompt and AI Model ID.",
-        "tags": [
-          "Raw Execution"
-        ]
-      }
     }
   },
   "info": {
@@ -5015,6 +4927,36 @@
           "tenantId"
         ]
       },
+      "PromptDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The unique identifier (slug) of the prompt.",
+            "example": "welcome-message"
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the prompt.",
+            "example": "Welcome Message"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description for the prompt.",
+            "example": "Greets the user upon first login."
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The ID of the project this prompt belongs to."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "projectId"
+        ]
+      },
       "UpdatePromptDto": {
         "type": "object",
         "properties": {
@@ -5036,47 +4978,143 @@
           }
         }
       },
-      "CreatePromptVersionDto": {
+      "GeneratePromptStructureDto": {
         "type": "object",
         "properties": {
+          "userPrompt": {
+            "type": "string",
+            "description": "The user prompt text to be analyzed and structured.",
+            "example": "Create a button that says \"Hello World\" in English and \"Hola Mundo\" in Spanish."
+          }
+        },
+        "required": [
+          "userPrompt"
+        ]
+      },
+      "CreateProjectDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the project",
+            "example": "My Awesome Project"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description for the project",
+            "example": "A project to demonstrate NestJS and Prisma"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateProjectDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the project",
+            "example": "My Awesome Project"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description for the project",
+            "example": "A project to demonstrate NestJS and Prisma"
+          }
+        }
+      },
+      "CreateSystemPromptDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Unique name/identifier for the system prompt",
+            "example": "summarize_meeting_notes"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Optional description of the prompt's purpose",
+            "example": "Summarizes long meeting transcripts into key points."
+          },
           "promptText": {
             "type": "string",
-            "description": "El valor/texto del prompt para esta nueva versión"
+            "description": "The actual text content of the system prompt",
+            "example": "Summarize the following text into bullet points..."
           },
-          "changeMessage": {
+          "category": {
             "type": "string",
-            "description": "Mensaje describiendo los cambios en esta versión."
+            "maxLength": 50,
+            "description": "Optional category for grouping prompts",
+            "example": "summarization"
+          }
+        },
+        "required": [
+          "name",
+          "promptText"
+        ]
+      },
+      "UpdateSystemPromptDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Unique name/identifier for the system prompt",
+            "example": "summarize_meeting_notes"
           },
-          "initialTranslations": {
-            "description": "Optional initial translations for this new version.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/InitialTranslationDto"
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Optional description of the prompt's purpose",
+            "example": "Summarizes long meeting transcripts into key points."
+          },
+          "promptText": {
+            "type": "string",
+            "description": "The actual text content of the system prompt",
+            "example": "Summarize the following text into bullet points..."
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Optional category for grouping prompts",
+            "example": "summarization"
+          }
+        }
+      },
+      "ExecuteRawDto": {
+        "type": "object",
+        "properties": {
+          "userText": {
+            "type": "string",
+            "description": "The raw text input from the user.",
+            "example": "Explain the process of photosynthesis in simple terms."
+          },
+          "systemPromptName": {
+            "type": "string",
+            "description": "The unique name of the SystemPrompt to use.",
+            "example": "helpful_assistant_concise"
+          },
+          "aiModelId": {
+            "type": "string",
+            "description": "The unique ID (CUID) of the AIModel to use for execution.",
+            "example": "cmac24bp1000ck6x5iwgju5p1"
+          },
+          "variables": {
+            "type": "object",
+            "description": "Optional variables to substitute in the system prompt.",
+            "example": {
+              "text": "Hello world",
+              "targetLanguage": "es-ES"
             }
           }
         },
         "required": [
-          "promptText"
-        ]
-      },
-      "CreateOrUpdatePromptTranslationDto": {
-        "type": "object",
-        "properties": {
-          "languageCode": {
-            "type": "string",
-            "minLength": 2,
-            "maxLength": 10,
-            "description": "Language code for the translation (e.g., es-ES, fr-FR).",
-            "example": "fr-FR"
-          },
-          "promptText": {
-            "type": "string",
-            "description": "Translated prompt text for this version and language."
-          }
-        },
-        "required": [
-          "languageCode",
-          "promptText"
+          "userText",
+          "systemPromptName",
+          "aiModelId"
         ]
       },
       "CreatePromptAssetDto": {
@@ -5244,39 +5282,6 @@
         "required": [
           "variables"
         ]
-      },
-      "CreateProjectDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Name of the project",
-            "example": "My Awesome Project"
-          },
-          "description": {
-            "type": "string",
-            "description": "Optional description for the project",
-            "example": "A project to demonstrate NestJS and Prisma"
-          }
-        },
-        "required": [
-          "name"
-        ]
-      },
-      "UpdateProjectDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Name of the project",
-            "example": "My Awesome Project"
-          },
-          "description": {
-            "type": "string",
-            "description": "Optional description for the project",
-            "example": "A project to demonstrate NestJS and Prisma"
-          }
-        }
       },
       "CreateAiModelDto": {
         "type": "object",
@@ -5469,6 +5474,29 @@
           }
         }
       },
+      "CreatePromptVersionDto": {
+        "type": "object",
+        "properties": {
+          "promptText": {
+            "type": "string",
+            "description": "El valor/texto del prompt para esta nueva versión"
+          },
+          "changeMessage": {
+            "type": "string",
+            "description": "Mensaje describiendo los cambios en esta versión."
+          },
+          "initialTranslations": {
+            "description": "Optional initial translations for this new version.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InitialTranslationDto"
+            }
+          }
+        },
+        "required": [
+          "promptText"
+        ]
+      },
       "UpdatePromptVersionDto": {
         "type": "object",
         "properties": {
@@ -5655,99 +5683,6 @@
         "required": [
           "modelId",
           "promptText"
-        ]
-      },
-      "CreateSystemPromptDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 100,
-            "description": "Unique name/identifier for the system prompt",
-            "example": "summarize_meeting_notes"
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 500,
-            "description": "Optional description of the prompt's purpose",
-            "example": "Summarizes long meeting transcripts into key points."
-          },
-          "promptText": {
-            "type": "string",
-            "description": "The actual text content of the system prompt",
-            "example": "Summarize the following text into bullet points..."
-          },
-          "category": {
-            "type": "string",
-            "maxLength": 50,
-            "description": "Optional category for grouping prompts",
-            "example": "summarization"
-          }
-        },
-        "required": [
-          "name",
-          "promptText"
-        ]
-      },
-      "UpdateSystemPromptDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 100,
-            "description": "Unique name/identifier for the system prompt",
-            "example": "summarize_meeting_notes"
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 500,
-            "description": "Optional description of the prompt's purpose",
-            "example": "Summarizes long meeting transcripts into key points."
-          },
-          "promptText": {
-            "type": "string",
-            "description": "The actual text content of the system prompt",
-            "example": "Summarize the following text into bullet points..."
-          },
-          "category": {
-            "type": "string",
-            "maxLength": 50,
-            "description": "Optional category for grouping prompts",
-            "example": "summarization"
-          }
-        }
-      },
-      "ExecuteRawDto": {
-        "type": "object",
-        "properties": {
-          "userText": {
-            "type": "string",
-            "description": "The raw text input from the user.",
-            "example": "Explain the process of photosynthesis in simple terms."
-          },
-          "systemPromptName": {
-            "type": "string",
-            "description": "The unique name of the SystemPrompt to use.",
-            "example": "helpful_assistant_concise"
-          },
-          "aiModelId": {
-            "type": "string",
-            "description": "The unique ID (CUID) of the AIModel to use for execution.",
-            "example": "cmac24bp1000ck6x5iwgju5p1"
-          },
-          "variables": {
-            "type": "object",
-            "description": "Optional variables to substitute in the system prompt.",
-            "example": {
-              "text": "Hello world",
-              "targetLanguage": "es-ES"
-            }
-          }
-        },
-        "required": [
-          "userText",
-          "systemPromptName",
-          "aiModelId"
         ]
       }
     }

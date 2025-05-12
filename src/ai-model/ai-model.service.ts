@@ -10,11 +10,13 @@ export class AiModelService {
     constructor(private prisma: PrismaService) { }
 
     async create(projectId: string, createAiModelDto: CreateAiModelDto): Promise<AIModel> {
-        this.logger.log(`Attempting to create AIModel "${createAiModelDto.name}" for project: ${projectId}`);
+        this.logger.log(`Attempting to create AIModel \"${createAiModelDto.name}\" for project: ${projectId}`);
+        // Explicitly exclude tenantId (and any other potential extra fields) from the DTO
+        const { tenantId, ...dataToCreate } = createAiModelDto as any; // Use 'as any' to allow destructuring undeclared fields
         try {
             const newModel = await this.prisma.aIModel.create({
                 data: {
-                    ...createAiModelDto,
+                    ...dataToCreate, // Use filtered data
                     projectId: projectId,
                 },
             });
@@ -71,10 +73,15 @@ export class AiModelService {
         this.logger.log(`Attempting to update AIModel ${aiModelId} for project ${projectId}`);
         await this.findOne(projectId, aiModelId);
 
+        // Use the DTO directly. Prisma should ignore fields not in the model.
+        // If Prisma errors occur due to extra fields like tenantId (sent by frontend?), 
+        // consider more robust filtering like class-transformer or manual picking.
+        const { tenantId, ...dataToUpdate } = updateAiModelDto as any; // Exclude tenantId explicitly
+
         try {
             const updatedModel = await this.prisma.aIModel.update({
                 where: { id: aiModelId },
-                data: updateAiModelDto,
+                data: dataToUpdate,
             });
             this.logger.log(`Successfully updated AIModel ${aiModelId} for project ${projectId}`);
             return updatedModel;
