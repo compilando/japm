@@ -113,7 +113,7 @@ export class PromptAssetService {
     async update(key: string, updateDto: UpdatePromptAssetDto, projectId: string): Promise<PromptAsset> {
         const existingAsset = await this.findAndValidateAsset(key, projectId);
 
-        const { key: dtoKey, projectId: dtoProjectId, ...restData } = updateDto as any;
+        const { key: dtoKey, projectId: dtoProjectId, tenantId: _omitTenantId, ...restData } = updateDto as any;
 
         const data: Prisma.PromptAssetUpdateInput = { ...restData };
 

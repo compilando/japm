@@ -11,9 +11,10 @@ export class EnvironmentService {
 
     async create(createDto: CreateEnvironmentDto, projectId: string): Promise<Environment> {
         try {
+            const { tenantId, ...dataToCreate } = createDto as any; // Exclude tenantId explicitly
             return await this.prisma.environment.create({
                 data: {
-                    ...createDto,
+                    ...dataToCreate, // Use filtered data
                     project: { connect: { id: projectId } } // Connect to the project
                 },
             });
@@ -61,14 +62,12 @@ export class EnvironmentService {
 
 
     async update(id: string, updateDto: UpdateEnvironmentDto, projectId: string): Promise<Environment> {
-        // 1. Verify that the environment exists in this project
-        await this.findOne(id, projectId); // Reuses logic and throws NotFound if it doesn't exist
-
+        await this.findOne(id, projectId);
+        const { tenantId, ...data } = updateDto as any; // Omitir tenantId si viene
         try {
-            // 2. Update by ID (we already know it belongs to the project)
             return await this.prisma.environment.update({
-                where: { id }, // Update using the global unique ID
-                data: updateDto, // No need to include projectId here, it shouldn't change
+                where: { id },
+                data,
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError) {

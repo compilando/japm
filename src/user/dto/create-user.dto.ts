@@ -16,7 +16,9 @@ export class CreateUserDto {
     @MinLength(6)
     password: string;
 
+    /* // tenantId should come from the authenticated admin user (req.user.tenantId)
     @ApiProperty({ example: 'tenant-cuid-xxxx', description: 'ID del tenant al que pertenece este usuario' })
     @IsString()
     tenantId: string;
+    */
 } 

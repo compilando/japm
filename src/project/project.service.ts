@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { Project, Prisma } from '@prisma/client';
+import { Logger } from '@nestjs/common';
 
 // Función simple para generar slugs
 function slugify(text: string): string {
@@ -17,20 +18,21 @@ function slugify(text: string): string {
 
 @Injectable()
 export class ProjectService {
+    private readonly logger = new Logger(ProjectService.name);
+
     constructor(private prisma: PrismaService) { }
 
-    async create(createProjectDto: CreateProjectDto): Promise<Project> {
-        const { name, owner, tenantId, ...otherProjectData } = createProjectDto;
+    async create(createProjectDto: CreateProjectDto, userId: string, tenantId: string): Promise<Project> {
+        const { name, description } = createProjectDto;
 
         const slug = slugify(name);
 
-        // Verificar si ya existe un proyecto con este slug
         const existingProject = await this.prisma.project.findFirst({
-            where: { id: slug },
-            select: { id: true, tenantId: true },
+            where: { id: slug, tenantId: tenantId },
+            select: { id: true },
         });
 
-        if (existingProject && existingProject.tenantId === tenantId) {
+        if (existingProject) {
             throw new ConflictException(`A project with the generated ID (slug) '${slug}' already exists for this tenant. Please choose a different name.`);
         }
 
@@ -39,38 +41,48 @@ export class ProjectService {
                 data: {
                     id: slug,
                     name,
-                    ...otherProjectData,
+                    description,
                     tenant: { connect: { id: tenantId } },
-                    ...(owner && { owner: { connect: { id: owner } } }),
+                    owner: { connect: { id: userId } },
                 },
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
                 throw new ConflictException(`Failed to create project due to a unique constraint violation (likely on ID '${slug}').`);
             }
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+                this.logger.error(`Foreign key constraint failed creating project '${slug}'. Invalid userId '${userId}' or tenantId '${tenantId}'?`, error.meta);
+                throw new NotFoundException('Referenced owner or tenant not found.');
+            }
             console.error(`Error creating project with slug "${slug}":`, error);
             throw error;
         }
     }
 
-    async findAll(tenantId: string): Promise<Project[]> {
-        // Filtrar manualmente por tenantId
-        const projects = await this.prisma.project.findMany({ select: { id: true, name: true, tenantId: true } });
-        return projects.filter(p => p.tenantId === tenantId) as Project[];
+    async findAll(tenantId: string): Promise<Pick<Project, 'id' | 'name' | 'description' | 'tenantId'>[]> {
+        console.log(`[Service] Finding projects for tenant: ${tenantId}`); // Log de depuración
+        return this.prisma.project.findMany({
+            where: { tenantId: tenantId }, // Filtrar directamente en la query por tenantId
+            select: { id: true, name: true, description: true, tenantId: true /* Otros campos necesarios */ },
+        });
     }
 
     async findAllForUser(userId: string, tenantId: string): Promise<Pick<Project, 'id' | 'name'>[]> {
-        // Filtrar manualmente por tenantId
-        const projects = await this.prisma.project.findMany({
-            where: { ownerUserId: userId },
-            select: { id: true, name: true, tenantId: true },
+        this.logger.debug(`[Service] Finding projects for user: ${userId} in tenant: ${tenantId}`); // Log de depuración
+        return this.prisma.project.findMany({
+            where: {
+                ownerUserId: userId,
+                tenantId: tenantId, // Filtrar también por tenantId
+            },
+            select: { id: true, name: true },
             orderBy: { name: 'asc' },
         });
-        return projects.filter(p => p.tenantId === tenantId).map(({ id, name }) => ({ id, name }));
     }
 
     async findOne(id: string, tenantId: string): Promise<Project> {
+        console.log('Buscando proyecto', { id, tenantId });
         const project = await this.prisma.project.findUnique({ where: { id }, select: { id: true, name: true, description: true, ownerUserId: true, createdAt: true, updatedAt: true, tenantId: true } });
+        console.log('Resultado proyecto:', project);
         if (!project || project.tenantId !== tenantId) {
             throw new NotFoundException(`Project with ID "${id}" not found for this tenant`);
         }
@@ -78,18 +90,17 @@ export class ProjectService {
     }
 
     async update(id: string, updateProjectDto: UpdateProjectDto, tenantId: string): Promise<Project> {
-        const { owner, tenantId: _omitTenantId, ...projectData } = updateProjectDto;
+        const projectData = updateProjectDto;
+
         const project = await this.prisma.project.findUnique({ where: { id }, select: { id: true, tenantId: true } });
         if (!project || project.tenantId !== tenantId) {
             throw new NotFoundException(`Project with ID "${id}" not found for this tenant`);
         }
+
         try {
             return await this.prisma.project.update({
                 where: { id },
-                data: {
-                    ...projectData,
-                    ...(owner && { owner: { connect: { id: owner } } }),
-                },
+                data: projectData,
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {

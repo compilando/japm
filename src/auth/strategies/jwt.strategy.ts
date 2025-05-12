@@ -8,6 +8,7 @@ import { UserService } from '../../user/user.service'; // Adjust path
 export interface JwtPayload {
     sub: string; // Standard JWT field for user ID
     email: string;
+    tenantId: string;
     // You can add roles or other info if included in the payload during login
 }
 
@@ -64,7 +65,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
             // Whatever you return here will be attached to request.user
             // Return only necessary, non-sensitive information
-            const result = { userId: payload.sub, email: payload.email };
+            const result = {
+                userId: payload.sub,
+                email: payload.email,
+                tenantId: user.tenantId,
+            };
             //this.logger.debug(`Validation successful. Returning user data for request.user: ${JSON.stringify(result)}`);
             return result;
             // Or you could return the full User object (without password) if needed:

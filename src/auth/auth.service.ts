@@ -28,7 +28,7 @@ export class AuthService {
     // Used by AuthController /login after LocalAuthGuard
     async login(user: Omit<User, 'password'>): Promise<{ access_token: string }> {
         // user here is the object returned by LocalStrategy.validate (without password)
-        const payload: JwtPayload = { email: user.email, sub: user.id };
+        const payload: JwtPayload = { email: user.email, sub: user.id, tenantId: user.tenantId };
         return {
             access_token: this.jwtService.sign(payload),
         };
@@ -38,10 +38,10 @@ export class AuthService {
     async register(registerDto: RegisterDto): Promise<Omit<User, 'password'>> {
         // Reuse the UserService create method which already hashes the password
         try {
-            const newUser = await this.userService.create({
-                ...registerDto,
-                tenantId: DEFAULT_TENANT_ID
-            });
+            const newUser = await this.userService.create(
+                registerDto,
+                DEFAULT_TENANT_ID
+            );
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { password, ...result } = newUser; // Do not return password
             return result;

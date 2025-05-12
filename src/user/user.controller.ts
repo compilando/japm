@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, UseGuards, Request, UnauthorizedException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { User } from '@prisma/client'; // Import User type from Prisma
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Importar JwtAuthGuard
 import { Logger } from '@nestjs/common'; // Import Logger
 
 @ApiTags('Users') // Tag for grouping in Swagger
@@ -14,16 +15,23 @@ export class UserController {
     constructor(private readonly userService: UserService) { }
 
     @Post()
+    @UseGuards(JwtAuthGuard) // <-- Añadir Guardia
+    @ApiBearerAuth()       // <-- Añadir anotación Swagger
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) // Enable validation
-    @ApiOperation({ summary: 'Create a new user' })
+    @ApiOperation({ summary: 'Create a new user (within the authenticated admin user\'s tenant)' })
     @ApiBody({ type: CreateUserDto })
-    @ApiResponse({ status: 201, description: 'User created successfully.', type: CreateUserDto }) // Or a User DTO without password if preferred
+    @ApiResponse({ status: 201, description: 'User created successfully.' /* type: UserDto */ })
     @ApiResponse({ status: 400, description: 'Invalid input data.' })
-    create(@Body() createUserDto: CreateUserDto): Promise<User> {
+    @ApiResponse({ status: 401, description: 'Unauthorized.' })
+    create(@Request() req, @Body() createUserDto: CreateUserDto): Promise<User> {
         this.logger.debug(`[create] Received POST request. Body: ${JSON.stringify(createUserDto, null, 2)}`); // Log the received DTO (Consider masking password)
-        // Note: Returning the created user might expose the password hash.
-        // Consider returning a specific DTO or just a success message.
-        return this.userService.create(createUserDto);
+        const tenantId = req.user?.tenantId; // <-- Obtener tenantId del admin
+        if (!tenantId) {
+            this.logger.error('Tenant ID not found in authenticated admin user request for user creation');
+            throw new UnauthorizedException('Admin user tenant information is missing');
+        }
+        // TODO: Add role check? Ensure req.user is actually an admin?
+        return this.userService.create(createUserDto, tenantId); // <-- Pasar tenantId al servicio
     }
 
     @Get()

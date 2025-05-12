@@ -45,7 +45,7 @@ export class EnvironmentController {
     @HttpCode(HttpStatus.CREATED)
     async create(@Req() req: RequestWithProject, @Body() createDto: CreateEnvironmentDto): Promise<Environment> {
         const projectId = req.projectId;
-        this.logger.debug(`[create] Received request for projectId: ${projectId}. Body: ${JSON.stringify(createDto, null, 2)}`);
+        this.logger.log(`[create] Received request for projectId: ${projectId}. Body: ${JSON.stringify(createDto, null, 2)}`);
         const newEnvironment = await this.service.create(createDto, projectId);
         // Invalidate cache
         const cacheKey = this.getFindAllCacheKey(projectId);
@@ -104,7 +104,7 @@ export class EnvironmentController {
         @Body() updateDto: UpdateEnvironmentDto
     ): Promise<Environment> {
         const projectId = req.projectId;
-        this.logger.debug(`[update] Received PATCH for projectId: ${projectId}, environmentId: ${environmentId}. Body: ${JSON.stringify(updateDto, null, 2)}`);
+        this.logger.log(`[update] Received PATCH for projectId: ${projectId}, environmentId: ${environmentId}. Body: ${JSON.stringify(updateDto, null, 2)}`);
         const updatedEnvironment = await this.service.update(environmentId, updateDto, projectId);
         // Invalidate cache
         const cacheKey = this.getFindAllCacheKey(projectId);

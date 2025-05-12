@@ -9,20 +9,27 @@ import { Prisma, User } from '@prisma/client';
 export class UserService {
     constructor(private prisma: PrismaService) { }
 
-    async create(createUserDto: CreateUserDto): Promise<User> {
-        const { tenantId, ...rest } = createUserDto;
-        const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    async create(createUserDto: CreateUserDto, tenantId: string): Promise<User> {
+        const { password, ...rest } = createUserDto;
+        const hashedPassword = await bcrypt.hash(password, 10);
         try {
             return await this.prisma.user.create({
                 data: {
                     ...rest,
-                    tenant: { connect: { id: tenantId } },
                     password: hashedPassword,
+                    tenant: { connect: { id: tenantId } },
                 },
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-                throw new ConflictException('Email already exists');
+                if (error.meta?.target && Array.isArray(error.meta.target) && error.meta.target.includes('email')) {
+                    throw new ConflictException('Email already exists');
+                }
+                throw new ConflictException('User creation failed due to unique constraint violation.');
+            }
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+                console.error(`Foreign key constraint failed creating user. Invalid tenantId '${tenantId}'?`, error.meta);
+                throw new NotFoundException('Referenced tenant not found.');
             }
             console.error("Error creating user:", error);
             throw error;

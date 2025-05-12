@@ -77,6 +77,7 @@ export class CulturalDataService {
             key: dtoKey,
             regionId: dtoRegionId,
             projectId: dtoProjectId,
+            tenantId: _omitTenantId,
             ...restUpdateData
         } = updateDto as any; // Se usa 'as any' si el DTO está bien definido y no los incluye.
 

@@ -17,20 +17,21 @@
         },
         "responses": {
           "201": {
-            "description": "User created successfully.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateUserDto"
-                }
-              }
-            }
+            "description": "User created successfully."
           },
           "400": {
             "description": "Invalid input data."
+          },
+          "401": {
+            "description": "Unauthorized."
           }
         },
-        "summary": "Create a new user",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new user (within the authenticated admin user's tenant)",
         "tags": [
           "Users"
         ]
@@ -2060,8 +2061,16 @@
           },
           "400": {
             "description": "Bad Request."
+          },
+          "401": {
+            "description": "Unauthorized."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Create a new project",
         "tags": [
           "Projects"
@@ -2072,20 +2081,13 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "List of all projects.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CreateProjectDto"
-                  }
-                }
-              }
-            }
+            "description": "List of projects"
+          },
+          "401": {
+            "description": "Unauthorized"
           }
         },
-        "summary": "Get all projects",
+        "summary": "Get all projects for the authenticated user's tenant",
         "tags": [
           "Projects"
         ]
@@ -2120,6 +2122,11 @@
             "description": "Project not found."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Get a project by ID",
         "tags": [
           "Projects"
@@ -2166,6 +2173,11 @@
             "description": "Project not found."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Update a project by ID",
         "tags": [
           "Projects"
@@ -2199,6 +2211,11 @@
             "description": "Project not found."
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Delete a project by ID",
         "tags": [
           "Projects"
@@ -4659,17 +4676,11 @@
             "minLength": 6,
             "example": "password123",
             "description": "User's password"
-          },
-          "tenantId": {
-            "type": "string",
-            "example": "tenant-cuid-xxxx",
-            "description": "ID del tenant al que pertenece este usuario"
           }
         },
         "required": [
           "email",
-          "password",
-          "tenantId"
+          "password"
         ]
       },
       "UpdateUserDto": {
@@ -5246,22 +5257,10 @@
             "type": "string",
             "description": "Optional description for the project",
             "example": "A project to demonstrate NestJS and Prisma"
-          },
-          "owner": {
-            "type": "string",
-            "description": "ID (CUID) of the User who owns this project",
-            "example": "user-cuid-xxxx"
-          },
-          "tenantId": {
-            "type": "string",
-            "description": "ID del tenant al que pertenece este proyecto",
-            "example": "tenant-cuid-xxxx"
           }
         },
         "required": [
-          "name",
-          "owner",
-          "tenantId"
+          "name"
         ]
       },
       "UpdateProjectDto": {
@@ -5276,16 +5275,6 @@
             "type": "string",
             "description": "Optional description for the project",
             "example": "A project to demonstrate NestJS and Prisma"
-          },
-          "owner": {
-            "type": "string",
-            "description": "ID (CUID) of the User who owns this project",
-            "example": "user-cuid-xxxx"
-          },
-          "tenantId": {
-            "type": "string",
-            "description": "ID del tenant al que pertenece este proyecto",
-            "example": "tenant-cuid-xxxx"
           }
         }
       },
@@ -5427,16 +5416,10 @@
             "type": "string",
             "description": "Descripción opcional de la etiqueta",
             "example": "Etiquetas relacionadas con comentarios de clientes."
-          },
-          "tenantId": {
-            "type": "string",
-            "description": "ID del tenant al que pertenece este tag",
-            "example": "tenant-cuid-xxxx"
           }
         },
         "required": [
-          "name",
-          "tenantId"
+          "name"
         ]
       },
       "TagDto": {
@@ -5483,11 +5466,6 @@
             "type": "string",
             "description": "Nueva descripción opcional de la etiqueta",
             "example": "Comentarios generales de los usuarios."
-          },
-          "tenantId": {
-            "type": "string",
-            "description": "ID del tenant al que pertenece este tag",
-            "example": "tenant-cuid-xxxx"
           }
         }
       },

@@ -82,12 +82,13 @@ export class AssetTranslationService {
   async update(projectId: string, assetKey: string, versionTag: string, languageCode: string, updateDto: UpdateAssetTranslationDto): Promise<AssetTranslation> {
     const existingTranslation = await this.findOneByLanguage(projectId, assetKey, versionTag, languageCode);
     // updateDto should only contain value
+    const data = updateDto;
     try {
       return await this.prisma.assetTranslation.update({
         where: {
           id: existingTranslation.id // Use CUID
         },
-        data: updateDto,
+        data,
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {

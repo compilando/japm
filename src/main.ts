@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as fs from 'fs';
 import { PrismaClientExceptionFilter } from './common/filters/prisma-exception.filter';
+import { TenantIdInterceptor } from './common/interceptors/tenant-id.interceptor';
 // import { HttpExceptionFilter } from './common/filters/http-exception.filter'; // Optional: A generic HTTP exception filter
 
 async function bootstrap() {
@@ -15,6 +16,9 @@ async function bootstrap() {
     new PrismaClientExceptionFilter(),
     // new HttpExceptionFilter() // Uncomment if you create a generic HttpExceptionFilter
   );
+
+  // Aplica el interceptor global para tenantId
+  app.useGlobalInterceptors(new TenantIdInterceptor());
 
   const config = new DocumentBuilder()
     .setTitle('japm.app API')

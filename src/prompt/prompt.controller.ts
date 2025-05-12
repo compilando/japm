@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, NotFoundException, HttpCode, HttpStatus, Put, Query, Req, UseGuards, Inject, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, NotFoundException, HttpCode, HttpStatus, Put, Query, Req, UseGuards, Inject, Logger, UseInterceptors } from '@nestjs/common';
 import { PromptService } from './prompt.service';
 import { CreatePromptDto } from './dto/create-prompt.dto';
 import { UpdatePromptDto } from './dto/update-prompt.dto';
@@ -11,6 +11,7 @@ import { ProjectGuard } from '../common/guards/project.guard'; // Import guard
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Import JwtAuthGuard
 import { Request as ExpressRequest } from 'express';
 import { Response } from 'express';
+// import { DebugBodyInterceptor } from '../common/interceptors/debug-body.interceptor'; // Ya no se usa
 
 // Definir interfaz para el request con projectId
 interface RequestWithProject extends ExpressRequest {
@@ -69,6 +70,7 @@ export class PromptController {
     }
 
     @Patch(':promptId')
+    // @UseInterceptors(DebugBodyInterceptor) // Eliminar el interceptor de debug
     @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, skipMissingProperties: true }))
     @ApiOperation({ summary: 'Updates an existing prompt by its ID (slug) for a specific project' })
     @ApiParam({ name: 'projectId', description: 'Project ID (slug)', type: String })

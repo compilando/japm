@@ -74,17 +74,13 @@ export class RegionService {
     }
 
     async update(languageCode: string, updateRegionDto: UpdateRegionDto, projectId: string): Promise<Region> {
-        // Primero, encontrar la región para obtener su CUID id y verificar que existe en el proyecto.
         const regionToUpdate = await this.findOne(languageCode, projectId);
-
-        const { parentRegionId, ...restData } = updateRegionDto;
-
-        // Corregir el tipo de la variable para la actualización anidada de parentRegion
+        const { parentRegionId, tenantId, ...restData } = updateRegionDto as any; // Omitir tenantId si viene
         let parentRegionUpdate: Prisma.RegionUpdateOneWithoutFrom_Region_parentRegionNestedInput | undefined = undefined;
         if (parentRegionId !== undefined) {
             if (parentRegionId === null) {
                 parentRegionUpdate = { disconnect: true };
-            } else { // parentRegionId es el languageCode del nuevo padre
+            } else {
                 const parent = await this.prisma.region.findUnique({
                     where: { projectId_languageCode: { projectId, languageCode: parentRegionId } },
                     select: { id: true }
@@ -95,14 +91,11 @@ export class RegionService {
                 parentRegionUpdate = { connect: { id: parent.id } };
             }
         }
-
         const data: Prisma.RegionUpdateInput = {
-            ...restData, // Esto puede incluir un nuevo languageCode, name, timeZone, etc.
+            ...restData,
             parentRegion: parentRegionUpdate,
         };
-
         try {
-            // Actualizar usando el CUID id de la región
             return await this.prisma.region.update({
                 where: { id: regionToUpdate.id },
                 data,
