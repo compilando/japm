@@ -151,7 +151,12 @@ async function main() {
     console.log(`Start seeding for Educational Content & Tutoring...`);
     console.log('Assuming prior cleanup...');
 
-    const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS) } });
+    let defaultTenant = await prisma.tenant.findFirst({ where: { name: 'Default Tenant' } });
+    if (!defaultTenant) {
+        defaultTenant = await prisma.tenant.create({ data: { name: 'Default Tenant' } });
+    }
+
+    const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS), tenant: { connect: { id: defaultTenant.id } } } });
     // Find necessary base data
     const defaultProjectId = 'default-project'; // Assuming the default project ID
     const stagingEnvironment = await prisma.environment.findUniqueOrThrow({
@@ -164,13 +169,14 @@ async function main() {
     });
 
     const educationProject = await prisma.project.upsert({
-        where: { id: 'biology-101-project' },
-        update: { name: 'Biology 101 AI Tutor & Content Generator', description: 'AI-powered biology tutoring and content generation.', ownerUserId: testUser.id },
+        where: { id: 'education-content-project' },
+        update: { name: 'Education Content Generation', description: 'AI-powered educational content generation and management.', ownerUserId: testUser.id },
         create: {
-            id: 'biology-101-project',
-            name: 'Biology 101 AI Tutor & Content Generator',
-            description: 'AI-powered biology tutoring and content generation.',
-            owner: { connect: { id: testUser.id } }
+            id: 'education-content-project',
+            name: 'Education Content Generation',
+            description: 'AI-powered educational content generation and management.',
+            owner: { connect: { id: testUser.id } },
+            tenant: { connect: { id: testUser.tenantId } }
         },
     });
     console.log(`Upserted Project: ${educationProject.name}`);

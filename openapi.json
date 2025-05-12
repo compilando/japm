@@ -4659,11 +4659,17 @@
             "minLength": 6,
             "example": "password123",
             "description": "User's password"
+          },
+          "tenantId": {
+            "type": "string",
+            "example": "tenant-cuid-xxxx",
+            "description": "ID del tenant al que pertenece este usuario"
           }
         },
         "required": [
           "email",
-          "password"
+          "password",
+          "tenantId"
         ]
       },
       "UpdateUserDto": {
@@ -4985,11 +4991,17 @@
             "items": {
               "$ref": "#/components/schemas/InitialTranslationDto"
             }
+          },
+          "tenantId": {
+            "type": "string",
+            "description": "ID del tenant al que pertenece este prompt",
+            "example": "tenant-cuid-xxxx"
           }
         },
         "required": [
           "name",
-          "promptText"
+          "promptText",
+          "tenantId"
         ]
       },
       "UpdatePromptDto": {
@@ -5087,12 +5099,18 @@
             "minLength": 25,
             "maxLength": 25,
             "description": "ID opcional del proyecto al que pertenece el asset"
+          },
+          "tenantId": {
+            "type": "string",
+            "description": "ID del tenant al que pertenece este asset",
+            "example": "tenant-cuid-xxxx"
           }
         },
         "required": [
           "key",
           "name",
-          "initialValue"
+          "initialValue",
+          "tenantId"
         ]
       },
       "UpdatePromptAssetDto": {
@@ -5102,6 +5120,11 @@
             "type": "string",
             "description": "Categoría para organizar assets (e.g., Saludos, Despedidas)",
             "example": "Saludos"
+          },
+          "tenantId": {
+            "type": "string",
+            "description": "ID del tenant al que pertenece este asset",
+            "example": "tenant-cuid-xxxx"
           },
           "enabled": {
             "type": "boolean",
@@ -5228,11 +5251,17 @@
             "type": "string",
             "description": "ID (CUID) of the User who owns this project",
             "example": "user-cuid-xxxx"
+          },
+          "tenantId": {
+            "type": "string",
+            "description": "ID del tenant al que pertenece este proyecto",
+            "example": "tenant-cuid-xxxx"
           }
         },
         "required": [
           "name",
-          "owner"
+          "owner",
+          "tenantId"
         ]
       },
       "UpdateProjectDto": {
@@ -5252,6 +5281,11 @@
             "type": "string",
             "description": "ID (CUID) of the User who owns this project",
             "example": "user-cuid-xxxx"
+          },
+          "tenantId": {
+            "type": "string",
+            "description": "ID del tenant al que pertenece este proyecto",
+            "example": "tenant-cuid-xxxx"
           }
         }
       },
@@ -5393,10 +5427,16 @@
             "type": "string",
             "description": "Descripción opcional de la etiqueta",
             "example": "Etiquetas relacionadas con comentarios de clientes."
+          },
+          "tenantId": {
+            "type": "string",
+            "description": "ID del tenant al que pertenece este tag",
+            "example": "tenant-cuid-xxxx"
           }
         },
         "required": [
-          "name"
+          "name",
+          "tenantId"
         ]
       },
       "TagDto": {
@@ -5443,6 +5483,11 @@
             "type": "string",
             "description": "Nueva descripción opcional de la etiqueta",
             "example": "Comentarios generales de los usuarios."
+          },
+          "tenantId": {
+            "type": "string",
+            "description": "ID del tenant al que pertenece este tag",
+            "example": "tenant-cuid-xxxx"
           }
         }
       },

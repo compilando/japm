@@ -16,4 +16,9 @@ export class CreateProjectDto {
     @IsString()
     @IsNotEmpty()
     owner: string;
+
+    @ApiProperty({ description: 'ID del tenant al que pertenece este proyecto', example: 'tenant-cuid-xxxx' })
+    @IsString()
+    @IsNotEmpty()
+    tenantId: string;
 } 

@@ -21,5 +21,10 @@ export class CreateTagDto {
     @IsString()
     description?: string;
 
+    @ApiProperty({ description: 'ID del tenant al que pertenece este tag', example: 'tenant-cuid-xxxx' })
+    @IsString()
+    @IsNotEmpty()
+    tenantId: string;
+
     // Nota: La relación con Prompts se manejará por separado, no al crear el Tag directamente.
 }

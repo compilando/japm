@@ -17,57 +17,61 @@ export class ProjectController {
     @UseGuards(JwtAuthGuard)
     @Get('mine')
     @ApiOperation({ summary: 'Get projects accessible by the current user' })
-    @ApiBearerAuth() // Indicar que requiere autenticación JWT
-    @ApiResponse({ status: 200, description: 'List of user projects.', type: [CreateProjectDto] }) // Ajustar el DTO si es necesario (solo id y name)
+    @ApiBearerAuth()
+    @ApiResponse({ status: 200, description: 'List of user projects.', type: [CreateProjectDto] })
     @ApiResponse({ status: 401, description: 'Unauthorized.' })
     findMine(@Request() req): Promise<Pick<Project, 'id' | 'name'>[]> {
-        // req.user es poblado por JwtAuthGuard con el payload del token (ej: { userId: string, email: string })
         const userId = req.user.userId;
-        return this.projectService.findAllForUser(userId);
+        const tenantId = req.user.tenantId || req.body.tenantId || req.query.tenantId;
+        return this.projectService.findAllForUser(userId, tenantId);
     }
 
     @Post()
     @ApiOperation({ summary: 'Create a new project' })
-    @ApiResponse({ status: 201, description: 'The project has been successfully created.', type: CreateProjectDto }) // Use appropriate type if Project model differs
+    @ApiResponse({ status: 201, description: 'The project has been successfully created.', type: CreateProjectDto })
     @ApiResponse({ status: 400, description: 'Bad Request.' })
     create(@Body() createProjectDto: CreateProjectDto): Promise<Project> {
-        this.logger.debug(`[create] Received POST request. Body: ${JSON.stringify(createProjectDto, null, 2)}`); // Log the received DTO
+        this.logger.debug(`[create] Received POST request. Body: ${JSON.stringify(createProjectDto, null, 2)}`);
         return this.projectService.create(createProjectDto);
     }
 
     @Get()
     @ApiOperation({ summary: 'Get all projects' })
-    @ApiResponse({ status: 200, description: 'List of all projects.', type: [CreateProjectDto] }) // Use appropriate type
-    findAll(): Promise<Project[]> {
-        return this.projectService.findAll();
+    @ApiResponse({ status: 200, description: 'List of all projects.', type: [CreateProjectDto] })
+    findAll(@Request() req): Promise<Project[]> {
+        const tenantId = req.user?.tenantId || req.body?.tenantId || req.query?.tenantId;
+        return this.projectService.findAll(tenantId);
     }
 
     @Get(':id')
     @ApiOperation({ summary: 'Get a project by ID' })
     @ApiParam({ name: 'id', description: 'Project CUID', type: String })
-    @ApiResponse({ status: 200, description: 'The found project record', type: CreateProjectDto }) // Use appropriate type
+    @ApiResponse({ status: 200, description: 'The found project record', type: CreateProjectDto })
     @ApiResponse({ status: 404, description: 'Project not found.' })
-    findOne(@Param('id') id: string): Promise<Project> { // No ParseUUIDPipe as ID is CUID (string)
-        return this.projectService.findOne(id);
+    findOne(@Param('id') id: string, @Request() req): Promise<Project> {
+        const tenantId = req.user?.tenantId || req.body?.tenantId || req.query?.tenantId;
+        return this.projectService.findOne(id, tenantId);
     }
 
     @Patch(':id')
     @ApiOperation({ summary: 'Update a project by ID' })
     @ApiParam({ name: 'id', description: 'Project CUID', type: String })
-    @ApiResponse({ status: 200, description: 'The project has been successfully updated.', type: CreateProjectDto }) // Use appropriate type
+    @ApiResponse({ status: 200, description: 'The project has been successfully updated.', type: CreateProjectDto })
     @ApiResponse({ status: 404, description: 'Project not found.' })
     @ApiResponse({ status: 400, description: 'Bad Request.' })
-    update(@Param('id') id: string, @Body() updateProjectDto: UpdateProjectDto): Promise<Project> {
-        this.logger.debug(`[update] Received PATCH for projectId: ${id}. Body: ${JSON.stringify(updateProjectDto, null, 2)}`); // Log the received DTO
-        return this.projectService.update(id, updateProjectDto);
+    update(@Param('id') id: string, @Body() updateProjectDto: UpdateProjectDto, @Request() req): Promise<Project> {
+        this.logger.debug(`[update] Received PATCH for projectId: ${id}. Body: ${JSON.stringify(updateProjectDto, null, 2)}`);
+        const tenantId = req.user?.tenantId || req.body?.tenantId || req.query?.tenantId;
+        return this.projectService.update(id, updateProjectDto, tenantId);
     }
 
     @Delete(':id')
     @ApiOperation({ summary: 'Delete a project by ID' })
     @ApiParam({ name: 'id', description: 'Project CUID', type: String })
-    @ApiResponse({ status: 200, description: 'The project has been successfully deleted.', type: CreateProjectDto }) // Use appropriate type
+    @ApiResponse({ status: 200, description: 'The project has been successfully deleted.', type: CreateProjectDto })
     @ApiResponse({ status: 404, description: 'Project not found.' })
-    remove(@Param('id') id: string): Promise<Project> {
-        return this.projectService.remove(id);
+    remove(@Param('id') id: string, @Request() req): Promise<Project> {
+        const tenantId = req.user?.tenantId || req.body?.tenantId || req.query?.tenantId;
+        return this.projectService.remove(id, tenantId);
     }
 } 

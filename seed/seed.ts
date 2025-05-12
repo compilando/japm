@@ -42,7 +42,13 @@ async function main() {
 
     // --- BASE DATA --- //
 
-    // 1. Create Test User
+    // 1. Crear Tenant por defecto
+    let defaultTenant = await prisma.tenant.findFirst({ where: { name: 'Default Tenant' } });
+    if (!defaultTenant) {
+        defaultTenant = await prisma.tenant.create({ data: { name: 'Default Tenant' } });
+    }
+
+    // 2. Create Test User
     console.log('Upserting test user...');
     const hashedPassword = await bcrypt.hash('password123', SALT_ROUNDS);
     const testUser = await prisma.user.upsert({
@@ -52,15 +58,22 @@ async function main() {
             email: 'test@example.com',
             name: 'Test User',
             password: hashedPassword,
+            tenant: { connect: { id: defaultTenant.id } },
         },
     });
     console.log(`Upserted user: ${testUser.name}`);
 
-    // 2. Create Default Project
+    // 3. Create Default Project
     const defaultProject = await prisma.project.upsert({
         where: { id: 'default-project' },
         update: { name: 'Default Project', description: 'Project for base/shared entities.', owner: { connect: { id: testUser.id } } },
-        create: { id: 'default-project', name: 'Default Project', description: 'Project for base/shared entities.', owner: { connect: { id: testUser.id } } },
+        create: {
+            id: 'default-project',
+            name: 'Default Project',
+            description: 'Project for base/shared entities.',
+            owner: { connect: { id: testUser.id } },
+            tenant: { connect: { id: defaultTenant.id } },
+        },
     });
     console.log(`Upserted default project: ${defaultProject.name}`);
 

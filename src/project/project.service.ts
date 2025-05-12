@@ -20,33 +20,31 @@ export class ProjectService {
     constructor(private prisma: PrismaService) { }
 
     async create(createProjectDto: CreateProjectDto): Promise<Project> {
-        const { name, owner, ...otherProjectData } = createProjectDto;
+        const { name, owner, tenantId, ...otherProjectData } = createProjectDto;
 
         const slug = slugify(name);
 
         // Verificar si ya existe un proyecto con este slug
-        const existingProject = await this.prisma.project.findUnique({
+        const existingProject = await this.prisma.project.findFirst({
             where: { id: slug },
+            select: { id: true, tenantId: true },
         });
 
-        if (existingProject) {
-            // Podríamos implementar lógica para añadir sufijos numéricos aquí si se desea
-            // Por ahora, lanzamos un conflicto.
-            throw new ConflictException(`A project with the generated ID (slug) '${slug}' already exists. Please choose a different name.`);
+        if (existingProject && existingProject.tenantId === tenantId) {
+            throw new ConflictException(`A project with the generated ID (slug) '${slug}' already exists for this tenant. Please choose a different name.`);
         }
 
         try {
             return await this.prisma.project.create({
                 data: {
-                    id: slug, // Usar el slug generado como ID
-                    name,     // Usar el nombre original
-                    ...otherProjectData, // description
+                    id: slug,
+                    name,
+                    ...otherProjectData,
+                    tenant: { connect: { id: tenantId } },
                     ...(owner && { owner: { connect: { id: owner } } }),
                 },
             });
         } catch (error) {
-            // Manejar otros posibles errores, aunque P2002 (unique constraint) para 'id'
-            // debería ser capturado por la verificación explícita anterior.
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
                 throw new ConflictException(`Failed to create project due to a unique constraint violation (likely on ID '${slug}').`);
             }
@@ -55,64 +53,64 @@ export class ProjectService {
         }
     }
 
-    async findAll(): Promise<Project[]> {
-        return this.prisma.project.findMany();
+    async findAll(tenantId: string): Promise<Project[]> {
+        // Filtrar manualmente por tenantId
+        const projects = await this.prisma.project.findMany({ select: { id: true, name: true, tenantId: true } });
+        return projects.filter(p => p.tenantId === tenantId) as Project[];
     }
 
-    async findAllForUser(userId: string): Promise<Pick<Project, 'id' | 'name'>[]> {
-        return this.prisma.project.findMany({
+    async findAllForUser(userId: string, tenantId: string): Promise<Pick<Project, 'id' | 'name'>[]> {
+        // Filtrar manualmente por tenantId
+        const projects = await this.prisma.project.findMany({
             where: { ownerUserId: userId },
-            select: {
-                id: true,
-                name: true,
-            },
-            orderBy: {
-                name: 'asc',
-            },
+            select: { id: true, name: true, tenantId: true },
+            orderBy: { name: 'asc' },
         });
+        return projects.filter(p => p.tenantId === tenantId).map(({ id, name }) => ({ id, name }));
     }
 
-    async findOne(id: string): Promise<Project> {
-        const project = await this.prisma.project.findUnique({
-            where: { id },
-        });
-        if (!project) {
-            throw new NotFoundException(`Project with ID "${id}" not found`);
+    async findOne(id: string, tenantId: string): Promise<Project> {
+        const project = await this.prisma.project.findUnique({ where: { id }, select: { id: true, name: true, description: true, ownerUserId: true, createdAt: true, updatedAt: true, tenantId: true } });
+        if (!project || project.tenantId !== tenantId) {
+            throw new NotFoundException(`Project with ID "${id}" not found for this tenant`);
         }
-        return project;
+        return project as Project;
     }
 
-    async update(id: string, updateProjectDto: UpdateProjectDto): Promise<Project> {
-        const { owner, ...projectData } = updateProjectDto;
+    async update(id: string, updateProjectDto: UpdateProjectDto, tenantId: string): Promise<Project> {
+        const { owner, tenantId: _omitTenantId, ...projectData } = updateProjectDto;
+        const project = await this.prisma.project.findUnique({ where: { id }, select: { id: true, tenantId: true } });
+        if (!project || project.tenantId !== tenantId) {
+            throw new NotFoundException(`Project with ID "${id}" not found for this tenant`);
+        }
         try {
             return await this.prisma.project.update({
                 where: { id },
                 data: {
                     ...projectData,
                     ...(owner && { owner: { connect: { id: owner } } }),
-                    // Si se permite desconectar owner, añadir: ...(owner === null && { owner: { disconnect: true } })
-                    // Note: If owner can be explicitly set to null to disconnect, the logic might need adjustment
-                    // based on whether 'owner' in UpdateProjectDto being undefined means "no change" or "disconnect".
-                    // Current logic: if 'owner' is provided, connect it. If it's not provided (undefined), owner relationship is not touched.
                 },
             });
         } catch (error) {
-            // Podría ser PrismaClientKnownRequestError P2025 si el project no existe
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException(`Project with ID "${id}" not found`);
+                throw new NotFoundException(`Project with ID "${id}" not found for this tenant`);
             }
             throw error;
         }
     }
 
-    async remove(id: string): Promise<Project> {
+    async remove(id: string, tenantId: string): Promise<Project> {
+        const project = await this.prisma.project.findUnique({ where: { id }, select: { id: true, tenantId: true } });
+        if (!project || project.tenantId !== tenantId) {
+            throw new NotFoundException(`Project with ID "${id}" not found for this tenant`);
+        }
         try {
             return await this.prisma.project.delete({
                 where: { id },
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException(`Project with ID "${id}" not found`);
+                throw new NotFoundException(`Project with ID "${id}" not found for this tenant`);
             }
             throw error;
         }

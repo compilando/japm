@@ -6,6 +6,8 @@ import { User } from '@prisma/client';
 import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './strategies/jwt.strategy'; // Import payload interface
 
+const DEFAULT_TENANT_ID = 'default-tenant-id'; // Reemplaza por el id real si lo tienes
+
 @Injectable()
 export class AuthService {
     constructor(
@@ -36,7 +38,10 @@ export class AuthService {
     async register(registerDto: RegisterDto): Promise<Omit<User, 'password'>> {
         // Reuse the UserService create method which already hashes the password
         try {
-            const newUser = await this.userService.create(registerDto);
+            const newUser = await this.userService.create({
+                ...registerDto,
+                tenantId: DEFAULT_TENANT_ID
+            });
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const { password, ...result } = newUser; // Do not return password
             return result;

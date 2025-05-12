@@ -15,4 +15,8 @@ export class CreateUserDto {
     @IsString()
     @MinLength(6)
     password: string;
+
+    @ApiProperty({ example: 'tenant-cuid-xxxx', description: 'ID del tenant al que pertenece este usuario' })
+    @IsString()
+    tenantId: string;
 } 

@@ -158,7 +158,12 @@ async function main() {
     console.log(`Start seeding for Internal Knowledge Base (RAG)...`);
     console.log('Assuming prior cleanup...');
 
-    const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS) } });
+    let defaultTenant = await prisma.tenant.findFirst({ where: { name: 'Default Tenant' } });
+    if (!defaultTenant) {
+        defaultTenant = await prisma.tenant.create({ data: { name: 'Default Tenant' } });
+    }
+
+    const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS), tenant: { connect: { id: defaultTenant.id } } } });
     // Find necessary base data
     const defaultProjectId = 'default-project'; // Assuming the default project ID
     const stagingEnvironment = await prisma.environment.findUniqueOrThrow({
@@ -179,6 +184,7 @@ async function main() {
             name: 'Internal HR Policy Assistant',
             description: 'AI assistant to answer employee questions based on HR documents.',
             owner: { connect: { id: testUser.id } },
+            tenant: { connect: { id: defaultTenant.id } }
         },
     });
     console.log(`Upserted Project: ${ragProject.name}`);

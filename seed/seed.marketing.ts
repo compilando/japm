@@ -146,7 +146,12 @@ async function main() {
     console.log(`Start seeding for Marketing Content...`);
     console.log('Assuming prior cleanup...');
 
-    const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS) } });
+    let defaultTenant = await prisma.tenant.findFirst({ where: { name: 'Default Tenant' } });
+    if (!defaultTenant) {
+        defaultTenant = await prisma.tenant.create({ data: { name: 'Default Tenant' } });
+    }
+
+    const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS), tenant: { connect: { id: defaultTenant.id } } } });
     // Find necessary base data
     const defaultProjectId = 'default-project'; // Assuming the default project ID
     const devEnvironment = await prisma.environment.findUniqueOrThrow({
@@ -162,7 +167,8 @@ async function main() {
             id: 'marketing-content-project',
             name: 'Marketing Content Generation',
             description: 'AI-powered marketing content generation and optimization.',
-            owner: { connect: { id: testUser.id } }
+            owner: { connect: { id: testUser.id } },
+            tenant: { connect: { id: testUser.tenantId } }
         },
     });
     console.log(`Upserted Project: ${marketingProject.name}`);

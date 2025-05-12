@@ -160,8 +160,9 @@ async function main() {
     // Find test user (should exist)
     const testUser = await prisma.user.findUniqueOrThrow({
         where: { email: 'test@example.com' },
-        select: { id: true }
+        select: { id: true, tenantId: true }
     });
+    const tenantId = testUser.tenantId;
 
     // Find relevant environment (should exist from default project)
     const defaultProjectId = 'default-project'; // ID del proyecto donde buscar los entornos base
@@ -186,6 +187,7 @@ async function main() {
             name: codeGenProjectName,
             description: 'Prompts to help developers with common coding tasks.',
             owner: { connect: { id: testUser.id } },
+            tenant: { connect: { id: tenantId } },
         },
     });
     console.log(`Upserted Project: ${codeGenProject.name} (ID: ${cgProjectId})`);

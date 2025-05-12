@@ -170,10 +170,12 @@ async function main() {
     console.log(`Assuming base seed (user, envs, models, regions) already ran...`);
 
     // --- Find necessary base data ---
-    const testUser = await prisma.user.findUniqueOrThrow({
-        where: { email: 'test@example.com' },
-        select: { id: true }
-    });
+    let defaultTenant = await prisma.tenant.findFirst({ where: { name: 'Default Tenant' } });
+    if (!defaultTenant) {
+        defaultTenant = await prisma.tenant.create({ data: { name: 'Default Tenant' } });
+    }
+
+    const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS), tenant: { connect: { id: defaultTenant.id } } } });
 
     const defaultProjectId = 'default-project'; // ID del proyecto donde buscar los entornos base
     const prodEnvironment = await prisma.environment.findUniqueOrThrow({
@@ -190,12 +192,13 @@ async function main() {
     // 1. Upsert Invoice Extraction Project
     const invoiceProject = await prisma.project.upsert({
         where: { id: 'invoice-extraction-project' },
-        update: { name: 'Invoice Data Extraction', description: 'AI-powered invoice data extraction and processing.', ownerUserId: testUser.id },
+        update: { name: 'Invoice Extraction', description: 'Automated invoice data extraction and processing.', ownerUserId: testUser.id },
         create: {
             id: 'invoice-extraction-project',
-            name: 'Invoice Data Extraction',
-            description: 'AI-powered invoice data extraction and processing.',
-            owner: { connect: { id: testUser.id } }
+            name: 'Invoice Extraction',
+            description: 'Automated invoice data extraction and processing.',
+            owner: { connect: { id: testUser.id } },
+            tenant: { connect: { id: testUser.tenantId } }
         },
     });
     console.log(`Upserted Project: ${invoiceProject.name}`);

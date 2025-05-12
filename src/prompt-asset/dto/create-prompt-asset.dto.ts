@@ -47,6 +47,11 @@ export class CreatePromptAssetDto {
     @Length(25, 25) // Asumiendo que los IDs de proyecto son CUIDs
     projectId?: string;
 
+    @ApiProperty({ description: 'ID del tenant al que pertenece este asset', example: 'tenant-cuid-xxxx' })
+    @IsString()
+    @IsNotEmpty()
+    tenantId: string;
+
     // Campos obsoletos eliminados:
     // regionId?: string;
     // version?: string;

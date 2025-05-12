@@ -147,7 +147,12 @@ async function main() {
     console.log(`Start seeding for Creative Writing & Adaptation...`);
     console.log('Assuming prior cleanup...');
 
-    const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS) } });
+    let defaultTenant = await prisma.tenant.findFirst({ where: { name: 'Default Tenant' } });
+    if (!defaultTenant) {
+        defaultTenant = await prisma.tenant.create({ data: { name: 'Default Tenant' } });
+    }
+
+    const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS), tenant: { connect: { id: defaultTenant.id } } } });
     // Find necessary base data
     const defaultProjectId = 'default-project'; // Assuming the default project ID
     const devEnvironment = await prisma.environment.findUniqueOrThrow({
@@ -156,13 +161,14 @@ async function main() {
     });
 
     const creativeProject = await prisma.project.upsert({
-        where: { id: 'sci-fi-novel-project' },
-        update: { name: 'Project Chimera - Sci-Fi Novel', description: 'Developing concepts and drafts for a new science fiction novel.', ownerUserId: testUser.id },
+        where: { id: 'creative-content-project' },
+        update: { name: 'Creative Content Generation', description: 'AI-powered creative content generation and ideation.', ownerUserId: testUser.id },
         create: {
-            id: 'sci-fi-novel-project',
-            name: 'Project Chimera - Sci-Fi Novel',
-            description: 'Developing concepts and drafts for a new science fiction novel.',
-            owner: { connect: { id: testUser.id } }
+            id: 'creative-content-project',
+            name: 'Creative Content Generation',
+            description: 'AI-powered creative content generation and ideation.',
+            owner: { connect: { id: testUser.id } },
+            tenant: { connect: { id: testUser.tenantId } }
         },
     });
     console.log(`Upserted Project: ${creativeProject.name}`);
