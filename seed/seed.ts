@@ -1,5 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-import { Prisma } from '@prisma/client';
+import { PrismaClient, MarketplacePublishStatus, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createSpanishRegionAndCulturalData, createUSRegionAndCulturalData } from './helpers';
 
@@ -45,7 +44,12 @@ async function main() {
     // 1. Crear Tenant por defecto
     let defaultTenant = await prisma.tenant.findFirst({ where: { name: 'Default Tenant' } });
     if (!defaultTenant) {
-        defaultTenant = await prisma.tenant.create({ data: { name: 'Default Tenant' } });
+        defaultTenant = await prisma.tenant.create({
+            data: {
+                name: 'Default Tenant',
+                marketplaceRequiresApproval: true,
+            }
+        });
     }
 
     // 2. Create Test User
@@ -351,9 +355,35 @@ async function main() {
         console.log(`Upserted Asset: ${assetData.name} (Key: ${asset.key})`);
 
         // Crear o actualizar la PromptAssetVersion asociada
+
+        // Lógica para determinar el estado del marketplace
+        let marketplaceStatus: MarketplacePublishStatus = MarketplacePublishStatus.NOT_PUBLISHED;
+        let marketplaceRequestedAt: Date | null = null;
+        let marketplaceRequesterId: string | null = null;
+        let marketplacePublishedAt: Date | null = null;
+        // Añadimos los otros campos que podrían ser relevantes aunque los dejemos null por defecto
+        let marketplaceApprovedAt: Date | null = null;
+        let marketplaceApproverId: string | null = null;
+        let marketplaceRejectionReason: string | null = null;
+
+
+        if (assetData.key === 'standard-disclaimer') {
+            marketplaceStatus = MarketplacePublishStatus.PENDING_APPROVAL;
+            marketplaceRequestedAt = new Date();
+            marketplaceRequesterId = testUser.id;
+        } else if (assetData.key === 'product-feature-list-alpha') {
+            marketplaceStatus = MarketplacePublishStatus.PUBLISHED;
+            marketplaceRequestedAt = new Date();
+            marketplaceRequesterId = testUser.id;
+            marketplacePublishedAt = new Date();
+            // Simulamos que también fue aprobada por el mismo usuario para este ejemplo
+            marketplaceApprovedAt = new Date();
+            marketplaceApproverId = testUser.id;
+        }
+
         await prisma.promptAssetVersion.upsert({
             where: {
-                assetId_versionTag: { // Asumiendo este nombre para el constraint @@unique([assetId, versionTag])
+                assetId_versionTag: {
                     assetId: asset.id,
                     versionTag: 'v1.0.0'
                 }
@@ -361,17 +391,33 @@ async function main() {
             update: {
                 value: assetData.versionValue,
                 changeMessage: assetData.name, // Usar el 'name' del asset como 'changeMessage' de la versión
-                status: 'active'
+                status: 'active',
+                // Campos del Marketplace
+                marketplaceStatus: marketplaceStatus,
+                marketplaceRequestedAt: marketplaceRequestedAt,
+                marketplaceRequesterId: marketplaceRequesterId,
+                marketplacePublishedAt: marketplacePublishedAt,
+                marketplaceApprovedAt: marketplaceApprovedAt,
+                marketplaceApproverId: marketplaceApproverId,
+                marketplaceRejectionReason: marketplaceRejectionReason,
             },
             create: {
                 assetId: asset.id,
                 value: assetData.versionValue,
                 versionTag: 'v1.0.0',
                 changeMessage: assetData.name, // Usar el 'name' del asset como 'changeMessage' de la versión
-                status: 'active'
+                status: 'active',
+                // Campos del Marketplace
+                marketplaceStatus: marketplaceStatus,
+                marketplaceRequestedAt: marketplaceRequestedAt,
+                marketplaceRequesterId: marketplaceRequesterId,
+                marketplacePublishedAt: marketplacePublishedAt,
+                marketplaceApprovedAt: marketplaceApprovedAt,
+                marketplaceApproverId: marketplaceApproverId,
+                marketplaceRejectionReason: marketplaceRejectionReason,
             }
         });
-        console.log(`Upserted AssetVersion for ${assetData.name} (Key: ${asset.key}, Version: v1.0.0)`);
+        console.log(`Upserted AssetVersion for ${assetData.name} (Key: ${asset.key}, Version: v1.0.0, Marketplace: ${marketplaceStatus})`);
     }
 
     // --- END BASE DATA --- //

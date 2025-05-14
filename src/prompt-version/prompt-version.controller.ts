@@ -105,4 +105,46 @@ export class PromptVersionController {
   ): Promise<PromptVersion> {
     return this.service.remove(projectId, promptId, versionTag);
   }
+
+  // --- Marketplace Endpoints ---
+
+  @Post(':versionTag/request-publish')
+  @ApiOperation({ summary: 'Request to publish a prompt version to the marketplace' })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiParam({ name: 'promptId', description: 'Prompt ID (slug)' })
+  @ApiParam({ name: 'versionTag', description: 'Version tag' })
+  @ApiResponse({ status: 200, description: 'Publish request processed.', type: CreatePromptVersionDto }) // Type podría ser PromptVersion DTO completo
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
+  @ApiResponse({ status: 404, description: 'Resource not found.' })
+  @HttpCode(HttpStatus.OK)
+  requestPublish(
+    @Param('projectId') projectId: string,
+    @Param('promptId') promptId: string, // Usando promptId consistentemente con el resto del controlador
+    @Param('versionTag') versionTag: string,
+    @Request() req: any, // Para obtener req.user.userId
+  ): Promise<PromptVersion> {
+    const requesterId = req.user.userId;
+    return this.service.requestPublish(projectId, promptId, versionTag, requesterId);
+  }
+
+  @Post(':versionTag/unpublish')
+  @ApiOperation({ summary: 'Unpublish a prompt version from the marketplace' })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiParam({ name: 'promptId', description: 'Prompt ID (slug)' })
+  @ApiParam({ name: 'versionTag', description: 'Version tag' })
+  @ApiResponse({ status: 200, description: 'Version unpublished.', type: CreatePromptVersionDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
+  @ApiResponse({ status: 404, description: 'Resource not found.' })
+  @HttpCode(HttpStatus.OK)
+  unpublish(
+    @Param('projectId') projectId: string,
+    @Param('promptId') promptId: string, // Usando promptId consistentemente
+    @Param('versionTag') versionTag: string,
+    @Request() req: any, // Aunque userId no se usa en el servicio todavía, es bueno tenerlo para permisos futuros
+  ): Promise<PromptVersion> {
+    // const userId = req.user.userId; // Para futura lógica de permisos
+    return this.service.unpublish(projectId, promptId, versionTag /*, userId */);
+  }
 }

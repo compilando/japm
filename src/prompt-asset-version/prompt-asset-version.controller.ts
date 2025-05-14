@@ -111,4 +111,46 @@ export class PromptAssetVersionController {
   ): Promise<PromptAssetVersion> {
     return this.service.remove(projectId, assetKey, versionTag);
   }
+
+  // --- Marketplace Endpoints ---
+
+  @Post(':versionTag/request-publish')
+  @ApiOperation({ summary: 'Request to publish an asset version to the marketplace' })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiParam({ name: 'assetKey', description: 'Asset Key' })
+  @ApiParam({ name: 'versionTag', description: 'Version tag' })
+  @ApiResponse({ status: 200, description: 'Publish request processed.', type: CreatePromptAssetVersionDto }) // Type podría ser DTO completo
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
+  @ApiResponse({ status: 404, description: 'Resource not found.' })
+  @HttpCode(HttpStatus.OK)
+  requestPublish(
+    @Param('projectId') projectId: string,
+    @Param('assetKey') assetKey: string,
+    @Param('versionTag') versionTag: string,
+    @Request() req: any, // Para obtener req.user.userId
+  ): Promise<PromptAssetVersion> {
+    const requesterId = req.user.userId;
+    return this.service.requestPublish(projectId, assetKey, versionTag, requesterId);
+  }
+
+  @Post(':versionTag/unpublish')
+  @ApiOperation({ summary: 'Unpublish an asset version from the marketplace' })
+  @ApiParam({ name: 'projectId', description: 'Project ID' })
+  @ApiParam({ name: 'assetKey', description: 'Asset Key' })
+  @ApiParam({ name: 'versionTag', description: 'Version tag' })
+  @ApiResponse({ status: 200, description: 'Version unpublished.', type: CreatePromptAssetVersionDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
+  @ApiResponse({ status: 404, description: 'Resource not found.' })
+  @HttpCode(HttpStatus.OK)
+  unpublish(
+    @Param('projectId') projectId: string,
+    @Param('assetKey') assetKey: string,
+    @Param('versionTag') versionTag: string,
+    @Request() req: any, // Para futura lógica de permisos
+  ): Promise<PromptAssetVersion> {
+    // const userId = req.user.userId; // Para futura lógica de permisos
+    return this.service.unpublish(projectId, assetKey, versionTag /*, userId */);
+  }
 }

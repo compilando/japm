@@ -26,6 +26,8 @@ import { AppService } from './app.service';
 import { LlmExecutionModule } from './llm-execution/llm-execution.module';
 import { SystemPromptModule } from './system-prompt/system-prompt.module';
 import { RawExecutionModule } from './raw-execution/raw-execution.module';
+import { TenantModule } from './tenant/tenant.module';
+import { MarketplaceModule } from './marketplace/marketplace.module';
 
 @Module({
   imports: [
@@ -56,6 +58,8 @@ import { RawExecutionModule } from './raw-execution/raw-execution.module';
     LlmExecutionModule,
     SystemPromptModule,
     RawExecutionModule,
+    TenantModule,
+    MarketplaceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

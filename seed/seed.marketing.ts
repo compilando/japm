@@ -1,5 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-import { Prisma } from '@prisma/client';
+import { PrismaClient, MarketplacePublishStatus, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createSpanishRegionAndCulturalData, createUSRegionAndCulturalData } from './helpers';
 
@@ -240,60 +239,140 @@ async function main() {
             }
         },
         update: {
-            value: `Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]
-- Pain Points: [Challenges, Needs]`,
+            value: `Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]\n- Pain Points: [Challenges, Needs]`,
             status: 'active',
-            changeMessage: audienceAssetName
+            changeMessage: audienceAssetName,
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.PENDING_APPROVAL,
+            marketplaceRequestedAt: new Date(),
+            marketplaceRequesterId: testUser.id,
+            marketplacePublishedAt: null,
+            marketplaceApprovedAt: null,
+            marketplaceApproverId: null,
+            marketplaceRejectionReason: null,
         },
         create: {
             assetId: assetAudience.id,
-            value: `Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]
-- Pain Points: [Challenges, Needs]`,
+            value: `Describe the target audience:\n- Demographics: [Age, Location, Income]\n- Interests: [Hobbies, Media Consumption]\n- Pain Points: [Challenges, Needs]`,
             versionTag: 'v1.0.0',
             status: 'active',
-            changeMessage: audienceAssetName
+            changeMessage: audienceAssetName,
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.PENDING_APPROVAL,
+            marketplaceRequestedAt: new Date(),
+            marketplaceRequesterId: testUser.id,
+            marketplacePublishedAt: null,
+            marketplaceApprovedAt: null,
+            marketplaceApproverId: null,
+            marketplaceRejectionReason: null,
         },
         select: { id: true }
     });
+    console.log(`Upserted AssetVersion ${assetAudience.key} v1.0.0 with Marketplace Status: PENDING_APPROVAL`);
 
-    const ctaAssetName = 'Call to Action Phrases';
-    const assetCTA = await prisma.promptAsset.upsert({
+    const brandVoiceAssetName = 'Brand Voice Eco';
+    const assetBrandVoice = await prisma.promptAsset.upsert({
         where: {
             project_asset_key_unique: {
                 projectId: marketingProject.id,
-                key: 'call-to-action-phrases'
+                key: 'brand-voice-eco'
             }
         },
         update: {},
         create: {
-            key: 'call-to-action-phrases',
+            key: 'brand-voice-eco',
             projectId: marketingProject.id
         }
     });
-    const assetCTAV1 = await prisma.promptAssetVersion.upsert({
+    const assetBrandVoiceV1 = await prisma.promptAssetVersion.upsert({
         where: {
             assetId_versionTag: {
-                assetId: assetCTA.id,
+                assetId: assetBrandVoice.id,
                 versionTag: 'v1.0.0'
             }
         },
         update: {
-            value: `Learn More\nShop Now\nSign Up Today
-Download Free Guide`,
+            value: `Comunicación auténtica y transparente. Enfócate en la sostenibilidad y el impacto ambiental. Usa un tono optimista pero realista. Evita el greenwashing y las exageraciones.`,
             status: 'active',
-            changeMessage: ctaAssetName
+            changeMessage: brandVoiceAssetName,
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.PUBLISHED,
+            marketplaceRequestedAt: new Date(),
+            marketplaceRequesterId: testUser.id,
+            marketplaceApprovedAt: new Date(), // Simulate approval
+            marketplaceApproverId: testUser.id, // Simulate self-approval or admin
+            marketplacePublishedAt: new Date(),
+            marketplaceRejectionReason: null,
         },
         create: {
-            assetId: assetCTA.id,
-            value: `Learn More\nShop Now\nSign Up Today
-Download Free Guide`,
+            assetId: assetBrandVoice.id,
+            value: `Comunicación auténtica y transparente. Enfócate en la sostenibilidad y el impacto ambiental. Usa un tono optimista pero realista. Evita el greenwashing y las exageraciones.`,
             versionTag: 'v1.0.0',
             status: 'active',
-            changeMessage: ctaAssetName
-        },
-        select: { id: true }
+            changeMessage: brandVoiceAssetName,
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.PUBLISHED,
+            marketplaceRequestedAt: new Date(),
+            marketplaceRequesterId: testUser.id,
+            marketplaceApprovedAt: new Date(), // Simulate approval
+            marketplaceApproverId: testUser.id, // Simulate self-approval or admin
+            marketplacePublishedAt: new Date(),
+            marketplaceRejectionReason: null,
+        }
     });
-    console.log('Upserted Marketing Assets and V1 Versions');
+    console.log(`Upserted AssetVersion ${assetBrandVoice.key} v1.0.0 with Marketplace Status: PUBLISHED`);
+
+    const smToneAssetName = 'Social Media Tone & CTAs'; // Nombre corregido/aclarado
+    const assetSMTone = await prisma.promptAsset.upsert({
+        where: {
+            project_asset_key_unique: {
+                projectId: marketingProject.id,
+                key: 'social-media-tone'
+            }
+        },
+        update: {},
+        create: {
+            key: 'social-media-tone',
+            projectId: marketingProject.id
+        }
+    });
+    const assetSMToneV1 = await prisma.promptAssetVersion.upsert({
+        where: {
+            assetId_versionTag: {
+                assetId: assetSMTone.id,
+                versionTag: 'v1.0.0'
+            }
+        },
+        update: {
+            value: `Learn More\nShop Now\nSign Up Today\nDownload Free Guide`,
+            status: 'active',
+            changeMessage: smToneAssetName,
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.NOT_PUBLISHED,
+            marketplaceRequestedAt: null,
+            marketplaceRequesterId: null,
+            marketplacePublishedAt: null,
+            marketplaceApprovedAt: null,
+            marketplaceApproverId: null,
+            marketplaceRejectionReason: null,
+        },
+        create: {
+            assetId: assetSMTone.id,
+            value: `Learn More\nShop Now\nSign Up Today\nDownload Free Guide`,
+            versionTag: 'v1.0.0',
+            status: 'active',
+            changeMessage: smToneAssetName,
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.NOT_PUBLISHED,
+            marketplaceRequestedAt: null,
+            marketplaceRequesterId: null,
+            marketplacePublishedAt: null,
+            marketplaceApprovedAt: null,
+            marketplaceApproverId: null,
+            marketplaceRejectionReason: null,
+        }
+    });
+    console.log(`Upserted AssetVersion ${assetSMTone.key} v1.0.0 with Marketplace Status: NOT_PUBLISHED`);
 
     // --- Upsert Marketing Prompt: Generate Blog Post Idea --- 
     const promptBlogPostIdeaName = 'generate-blog-post-idea';
@@ -339,6 +418,183 @@ Download Free Guide`,
         select: { id: true }
     });
     console.log(`Upserted Prompt ${promptBlogPostIdea.name} V1`);
+
+    // --- Upsert Marketing Prompt: Generate Social Media Post --- 
+    const socialPostName = 'Generate Social Media Post';
+    const promptSocialPost = await prisma.prompt.upsert({
+        where: {
+            prompt_id_project_unique: {
+                id: slugify(socialPostName),
+                projectId: marketingProject.id
+            }
+        },
+        update: {
+            name: socialPostName,
+            description: 'Generate social media posts for a target audience.',
+            tags: { set: getMktTagIds(['marketing', 'social-media']) }
+        },
+        create: {
+            id: slugify(socialPostName),
+            name: socialPostName,
+            description: 'Generate social media posts for a target audience.',
+            projectId: marketingProject.id,
+            tags: { connect: getMktTagIds(['marketing', 'social-media']) }
+        },
+        select: { id: true, name: true }
+    });
+
+    const promptSocialPostV1 = await prisma.promptVersion.upsert({
+        where: { promptId_versionTag: { promptId: promptSocialPost.id, versionTag: 'v1.0.0' } },
+        update: {
+            promptText: `Generate 5 blog post ideas relevant to the following target audience:\n{{target-audience-persona}}\n\nFocus on topics related to: {{Topic Focus}}\n\nEnsure the ideas are engaging and SEO-friendly.`,
+            aiModelId: mktGpt4oMini.id, // Corregido de modelId a aiModelId
+            status: 'active',
+            changeMessage: 'Initial version for social media post generation',
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.PENDING_APPROVAL,
+            marketplaceRequestedAt: new Date(),
+            marketplaceRequesterId: testUser.id,
+            marketplacePublishedAt: null,
+            marketplaceApprovedAt: null,
+            marketplaceApproverId: null,
+            marketplaceRejectionReason: null,
+        },
+        create: {
+            promptId: promptSocialPost.id,
+            versionTag: 'v1.0.0',
+            promptText: `Generate 5 blog post ideas relevant to the following target audience:\n{{target-audience-persona}}\n\nFocus on topics related to: {{Topic Focus}}\n\nEnsure the ideas are engaging and SEO-friendly.`,
+            aiModelId: mktGpt4oMini.id, // Corregido de modelId a aiModelId
+            status: 'active',
+            changeMessage: 'Initial version for social media post generation',
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.PENDING_APPROVAL,
+            marketplaceRequestedAt: new Date(),
+            marketplaceRequesterId: testUser.id,
+            marketplacePublishedAt: null,
+            marketplaceApprovedAt: null,
+            marketplaceApproverId: null,
+            marketplaceRejectionReason: null,
+        }
+    });
+    console.log(`Upserted PromptVersion ${promptSocialPost.id} v1.0.0 with Marketplace Status: PENDING_APPROVAL`);
+
+    // --- Upsert Marketing Prompt: Create Email Campaign --- 
+    const emailCampaignName = 'Create Email Campaign';
+    const promptEmailCampaign = await prisma.prompt.upsert({
+        where: {
+            prompt_id_project_unique: {
+                id: slugify(emailCampaignName),
+                projectId: marketingProject.id
+            }
+        },
+        update: {
+            name: emailCampaignName,
+            description: 'Create an email marketing campaign for a target audience.',
+            tags: { set: getMktTagIds(['marketing', 'email-campaign']) }
+        },
+        create: {
+            id: slugify(emailCampaignName),
+            name: emailCampaignName,
+            description: 'Create an email marketing campaign for a target audience.',
+            projectId: marketingProject.id,
+            tags: { connect: getMktTagIds(['marketing', 'email-campaign']) }
+        },
+        select: { id: true, name: true }
+    });
+
+    const promptEmailCampaignV1 = await prisma.promptVersion.upsert({
+        where: { promptId_versionTag: { promptId: promptEmailCampaign.id, versionTag: 'v1.0.0' } },
+        update: {
+            promptText: `Create an email marketing campaign with the following characteristics:\n\nAudience: {audience}\nObjective: {objective}\nTopic: {topic}\n\nThe campaign should include:\n- Email subject\n- Subject line\n- Email body\n- Call to action\n- Suggested segmentation\n\nOptimize for engagement and conversion.`,
+            aiModelId: mktGpt4o.id, // Corregido de modelId a aiModelId
+            status: 'active',
+            changeMessage: 'Initial version for email campaign creation',
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.PUBLISHED,
+            marketplaceRequestedAt: new Date(),
+            marketplaceRequesterId: testUser.id,
+            marketplaceApprovedAt: new Date(),
+            marketplaceApproverId: testUser.id,
+            marketplacePublishedAt: new Date(),
+            marketplaceRejectionReason: null,
+        },
+        create: {
+            promptId: promptEmailCampaign.id,
+            versionTag: 'v1.0.0',
+            promptText: `Create an email marketing campaign with the following characteristics:\n\nAudience: {audience}\nObjective: {objective}\nTopic: {topic}\n\nThe campaign should include:\n- Email subject\n- Subject line\n- Email body\n- Call to action\n- Suggested segmentation\n\nOptimize for engagement and conversion.`,
+            aiModelId: mktGpt4o.id, // Corregido de modelId a aiModelId
+            status: 'active',
+            changeMessage: 'Initial version for email campaign creation',
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.PUBLISHED,
+            marketplaceRequestedAt: new Date(),
+            marketplaceRequesterId: testUser.id,
+            marketplaceApprovedAt: new Date(),
+            marketplaceApproverId: testUser.id,
+            marketplacePublishedAt: new Date(),
+            marketplaceRejectionReason: null,
+        }
+    });
+    console.log(`Upserted PromptVersion ${promptEmailCampaign.id} v1.0.0 with Marketplace Status: PUBLISHED`);
+
+    // --- Upsert Marketing Prompt: Develop Brand Messaging --- 
+    const brandMessagingName = 'Develop Brand Messaging';
+    const promptBrandMessaging = await prisma.prompt.upsert({
+        where: {
+            prompt_id_project_unique: {
+                id: slugify(brandMessagingName),
+                projectId: marketingProject.id
+            }
+        },
+        update: {
+            name: brandMessagingName,
+            description: 'Develop brand messages for a specific initiative.',
+            tags: { set: getMktTagIds(['marketing', 'brand-messaging']) }
+        },
+        create: {
+            id: slugify(brandMessagingName),
+            name: brandMessagingName,
+            description: 'Develop brand messages for a specific initiative.',
+            projectId: marketingProject.id,
+            tags: { connect: getMktTagIds(['marketing', 'brand-messaging']) }
+        },
+        select: { id: true, name: true }
+    });
+
+    const promptBrandMessagingV1 = await prisma.promptVersion.upsert({
+        where: { promptId_versionTag: { promptId: promptBrandMessaging.id, versionTag: 'v1.0.0' } },
+        update: {
+            promptText: `Develop brand messages for the following initiative:\n\nInitiative: {initiative}\nAudience: {audience}\nChannel: {channel}\n\nThe messages should include:\n- Value proposition\n- Key benefits\n- Call to action\n- Tone of voice\n\nAlign with brand strategy.`,
+            aiModelId: mktGpt4o.id, // Corregido de modelId a aiModelId
+            status: 'active',
+            changeMessage: 'Initial version for brand messaging development',
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.NOT_PUBLISHED,
+            marketplaceRequestedAt: null,
+            marketplaceRequesterId: null,
+            marketplacePublishedAt: null,
+            marketplaceApprovedAt: null,
+            marketplaceApproverId: null,
+            marketplaceRejectionReason: null,
+        },
+        create: {
+            promptId: promptBrandMessaging.id,
+            versionTag: 'v1.0.0',
+            promptText: `Develop brand messages for the following initiative:\n\nInitiative: {initiative}\nAudience: {audience}\nChannel: {channel}\n\nThe messages should include:\n- Value proposition\n- Key benefits\n- Call to action\n- Tone of voice\n\nAlign with brand strategy.`,
+            aiModelId: mktGpt4o.id, // Corregido de modelId a aiModelId
+            status: 'active',
+            changeMessage: 'Initial version for brand messaging development',
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.NOT_PUBLISHED,
+            marketplaceRequestedAt: null,
+            marketplaceRequesterId: null,
+            marketplacePublishedAt: null,
+            marketplaceApprovedAt: null,
+            marketplaceApproverId: null,
+            marketplaceRejectionReason: null,
+        }
+    });
+    console.log(`Upserted PromptVersion ${promptBrandMessaging.id} v1.0.0 with Marketplace Status: NOT_PUBLISHED`);
 
     // Crear traducciones es-ES para los assets y prompts
     await createSpanishTranslations(marketingProject.id);

@@ -2,9 +2,13 @@ import { Module } from '@nestjs/common';
 import { PromptVersionService } from './prompt-version.service';
 import { PromptVersionController } from './prompt-version.controller';
 import { PrismaModule } from '../prisma/prisma.module';
+import { TenantModule } from '../tenant/tenant.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [
+    PrismaModule,
+    TenantModule,
+  ],
   controllers: [PromptVersionController],
   providers: [PromptVersionService],
   exports: [PromptVersionService]

@@ -3,10 +3,15 @@ import { CreatePromptAssetVersionDto } from './dto/create-prompt-asset-version.d
 import { UpdatePromptAssetVersionDto } from './dto/update-prompt-asset-version.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, PromptAssetVersion, PromptAsset } from '@prisma/client';
+import { TenantService } from '../tenant/tenant.service';
+import { MarketplacePublishStatus } from '@prisma/client';
 
 @Injectable()
 export class PromptAssetVersionService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private tenantService: TenantService,
+  ) { }
 
   // Helper para obtener el PromptAsset padre y verificar pertenencia al proyecto.
   // Devuelve el PromptAsset con su ID CUID.
@@ -133,4 +138,75 @@ export class PromptAssetVersionService {
       }
     });
   }
+
+  // --- Marketplace Methods ---
+
+  async requestPublish(projectId: string, assetKey: string, versionTag: string, requesterId: string): Promise<PromptAssetVersion> {
+    // findOneByTag ya incluye el asset. El asset tiene projectId.
+    const assetVersion = await this.findOneByTag(projectId, assetKey, versionTag);
+
+    // Para obtener tenantId, necesitamos cargar el proyecto asociado al asset.
+    // El parentAsset ya tiene el projectId correcto debido a getParentAsset dentro de findOneByTag.
+    const parentAssetWithProject = await this.prisma.promptAsset.findUnique({
+      where: { id: assetVersion.assetId }, // assetVersion.assetId es el CUID del PromptAsset
+      include: { project: { select: { tenantId: true } } },
+    });
+
+    if (!parentAssetWithProject || !parentAssetWithProject.project) {
+      throw new NotFoundException(`Project not found for asset "${assetKey}" to determine tenant configuration.`);
+    }
+    const tenantId = parentAssetWithProject.project.tenantId;
+
+    const requiresApproval = await this.tenantService.getMarketplaceRequiresApproval(tenantId);
+
+    if (requiresApproval) {
+      return this.prisma.promptAssetVersion.update({
+        where: { id: assetVersion.id },
+        data: {
+          marketplaceStatus: MarketplacePublishStatus.PENDING_APPROVAL,
+          marketplaceRequestedAt: new Date(),
+          marketplaceRequesterId: requesterId,
+          marketplaceApprovedAt: null,
+          marketplaceApproverId: null,
+          marketplacePublishedAt: null,
+          marketplaceRejectionReason: null,
+        },
+      });
+    } else {
+      return this.prisma.promptAssetVersion.update({
+        where: { id: assetVersion.id },
+        data: {
+          marketplaceStatus: MarketplacePublishStatus.PUBLISHED,
+          marketplacePublishedAt: new Date(),
+          marketplaceRequestedAt: new Date(),
+          marketplaceRequesterId: requesterId,
+          marketplaceApprovedAt: null,
+          marketplaceApproverId: null,
+          marketplaceRejectionReason: null,
+        },
+      });
+    }
+  }
+
+  async unpublish(projectId: string, assetKey: string, versionTag: string, /* userId: string */): Promise<PromptAssetVersion> {
+    const assetVersion = await this.findOneByTag(projectId, assetKey, versionTag);
+
+    if (assetVersion.marketplaceStatus === MarketplacePublishStatus.NOT_PUBLISHED) {
+      return assetVersion;
+    }
+
+    return this.prisma.promptAssetVersion.update({
+      where: { id: assetVersion.id },
+      data: {
+        marketplaceStatus: MarketplacePublishStatus.NOT_PUBLISHED,
+        marketplacePublishedAt: null,
+        marketplaceApprovedAt: null,
+        marketplaceApproverId: null,
+        marketplaceRequestedAt: null,
+        marketplaceRequesterId: null,
+        marketplaceRejectionReason: null,
+      },
+    });
+  }
+  // TODO: Métodos para approve, reject, cancel (Fase 2)
 }

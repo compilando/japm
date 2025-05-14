@@ -3,10 +3,15 @@ import { UpdatePromptVersionDto } from './dto/update-prompt-version.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, PromptVersion, Prompt } from '@prisma/client';
 import { CreatePromptVersionDto } from 'src/prompt/dto/create-prompt-version.dto';
+import { TenantService } from '../tenant/tenant.service';
+import { MarketplacePublishStatus } from '@prisma/client';
 
 @Injectable()
 export class PromptVersionService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private tenantService: TenantService,
+  ) { }
 
   // Helper to verify prompt access
   private async verifyPromptAccess(projectId: string, promptId: string): Promise<Prompt> {
@@ -134,4 +139,82 @@ export class PromptVersionService {
   // findAll(): Promise<PromptVersion[]> { ... }
   // findOne(id: string): Promise<PromptVersion> { ... }
   // findByPromptId(promptId: string): Promise<PromptVersion[]> { ... }
+
+  // --- Marketplace Methods ---
+
+  async requestPublish(projectId: string, promptSlug: string, versionTag: string, requesterId: string): Promise<PromptVersion> {
+    const promptVersion = await this.findOneByTag(projectId, promptSlug, versionTag);
+    // findOneByTag ya incluye el prompt, y el prompt incluye el projectId.
+    // Para obtener tenantId, necesitamos cargar el proyecto asociado al prompt.
+    const promptWithProject = await this.prisma.prompt.findUnique({
+      where: { id: promptSlug, projectId: projectId }, // projectId es el del path, promptSlug es el id del prompt
+      include: { project: { select: { tenantId: true } } },
+    });
+
+    if (!promptWithProject || !promptWithProject.project) {
+      throw new NotFoundException(`Project not found for prompt "${promptSlug}" to determine tenant configuration.`);
+    }
+    const tenantId = promptWithProject.project.tenantId;
+
+    const requiresApproval = await this.tenantService.getMarketplaceRequiresApproval(tenantId);
+
+    if (requiresApproval) {
+      return this.prisma.promptVersion.update({
+        where: { id: promptVersion.id },
+        data: {
+          marketplaceStatus: MarketplacePublishStatus.PENDING_APPROVAL,
+          marketplaceRequestedAt: new Date(),
+          marketplaceRequesterId: requesterId,
+          // Limpiar campos de aprobación/publicación por si se solicita de nuevo
+          marketplaceApprovedAt: null,
+          marketplaceApproverId: null,
+          marketplacePublishedAt: null,
+          marketplaceRejectionReason: null,
+        },
+      });
+    } else {
+      return this.prisma.promptVersion.update({
+        where: { id: promptVersion.id },
+        data: {
+          marketplaceStatus: MarketplacePublishStatus.PUBLISHED,
+          marketplacePublishedAt: new Date(),
+          marketplaceRequestedAt: new Date(), // Se solicita y publica al mismo tiempo
+          marketplaceRequesterId: requesterId,
+          // Limpiar campos de aprobación/rechazo
+          marketplaceApprovedAt: null,
+          marketplaceApproverId: null,
+          marketplaceRejectionReason: null,
+        },
+      });
+    }
+  }
+
+  async unpublish(projectId: string, promptSlug: string, versionTag: string, /* userId: string */): Promise<PromptVersion> {
+    // TODO: Añadir lógica de permisos: ¿Quién puede retirar una versión?
+    // Por ahora, cualquiera que pueda acceder a la versión a través de findOneByTag podría hacerlo.
+    const promptVersion = await this.findOneByTag(projectId, promptSlug, versionTag);
+
+    if (promptVersion.marketplaceStatus === MarketplacePublishStatus.NOT_PUBLISHED) {
+      // Ya no está publicada, no hacer nada o devolver error/mensaje
+      return promptVersion; // o lanzar new ConflictException('Version is not published.');
+    }
+
+    return this.prisma.promptVersion.update({
+      where: { id: promptVersion.id },
+      data: {
+        marketplaceStatus: MarketplacePublishStatus.NOT_PUBLISHED,
+        marketplacePublishedAt: null,
+        marketplaceApprovedAt: null,
+        marketplaceApproverId: null,
+        // Considerar si marketplaceRequestedAt y marketplaceRequesterId deben limpiarse también
+        // o si se quiere mantener el historial de quién lo solicitó originalmente.
+        // Por simplicidad inicial, los limpiamos:
+        marketplaceRequestedAt: null,
+        marketplaceRequesterId: null,
+        marketplaceRejectionReason: null,
+      },
+    });
+  }
+
+  // TODO: Métodos para approve, reject, cancel (Fase 2)
 }
