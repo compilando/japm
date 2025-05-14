@@ -14,7 +14,7 @@ interface RequestWithProject extends ExpressRequest {
 @ApiTags('Raw Execution')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('/api/execute-raw')
+@Controller('execute-raw')
 export class RawExecutionController {
     private readonly logger = new Logger(RawExecutionController.name);
 

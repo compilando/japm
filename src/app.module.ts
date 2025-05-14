@@ -28,6 +28,7 @@ import { SystemPromptModule } from './system-prompt/system-prompt.module';
 import { RawExecutionModule } from './raw-execution/raw-execution.module';
 import { TenantModule } from './tenant/tenant.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -62,7 +63,9 @@ import { MarketplaceModule } from './marketplace/marketplace.module';
     MarketplaceModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

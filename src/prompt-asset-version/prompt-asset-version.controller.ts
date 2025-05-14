@@ -13,7 +13,7 @@ import { Logger } from '@nestjs/common';
 @ApiTags('Prompt Asset Versions (within Project/Asset)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
-@Controller('api/projects/:projectId/assets/:assetKey/versions')
+@Controller('projects/:projectId/assets/:assetKey/versions')
 export class PromptAssetVersionController {
   private readonly logger = new Logger(PromptAssetVersionController.name);
 

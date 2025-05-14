@@ -1,6 +1,62 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/api/admin-check": {
+      "get": {
+        "operationId": "AppController_adminCheck",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/api/tenant-admin-check": {
+      "get": {
+        "operationId": "AppController_tenantAdminCheck",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/api/user-check": {
+      "get": {
+        "operationId": "AppController_userCheck",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/api/any-authenticated-check": {
+      "get": {
+        "operationId": "AppController_anyAuthenticatedCheck",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "App"
+        ]
+      }
+    },
     "/api/users": {
       "post": {
         "operationId": "UserController_create",
@@ -2138,7 +2194,7 @@
         ]
       }
     },
-    "/serve-prompt/execute/{projectId}/{promptName}/{versionTag}/base": {
+    "/api/serve-prompt/execute/{projectId}/{promptName}/{versionTag}/base": {
       "post": {
         "operationId": "ServePromptController_executePromptWithoutLanguage",
         "parameters": [
@@ -2230,7 +2286,7 @@
         ]
       }
     },
-    "/serve-prompt/execute/{projectId}/{promptName}/{versionTag}/lang/{languageCode}": {
+    "/api/serve-prompt/execute/{projectId}/{promptName}/{versionTag}/lang/{languageCode}": {
       "post": {
         "operationId": "ServePromptController_executePromptWithLanguage",
         "parameters": [
@@ -4848,7 +4904,7 @@
         ]
       }
     },
-    "/llm-execution/execute": {
+    "/api/llm-execution/execute": {
       "post": {
         "operationId": "LlmExecutionController_executeLlm",
         "parameters": [],

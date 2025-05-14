@@ -20,7 +20,7 @@ interface RequestWithProject extends ExpressRequest {
 @ApiTags('Regions')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
-@Controller('/api/projects/:projectId/regions')
+@Controller('projects/:projectId/regions')
 export class RegionController {
     private readonly logger = new Logger(RegionController.name);
 

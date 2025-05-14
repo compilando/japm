@@ -16,7 +16,7 @@ interface RequestWithProject extends ExpressRequest {
 @ApiTags('Prompt Assets')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
-@Controller('/api/projects/:projectId/prompt-assets')
+@Controller('projects/:projectId/prompt-assets')
 export class PromptAssetController {
     private readonly logger = new Logger(PromptAssetController.name);
 

@@ -21,7 +21,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Assuming genera
 
 @ApiTags('System Prompts')
 @ApiBearerAuth() // Indicate that endpoints generally require Bearer token
-@Controller('api/system-prompts') // Base path for system prompts
+@Controller('system-prompts') // Base path for system prompts
 export class SystemPromptController {
     private readonly logger = new Logger(SystemPromptController.name);
 

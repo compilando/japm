@@ -1,4 +1,4 @@
-import { PrismaClient, MarketplacePublishStatus, Prisma } from '@prisma/client';
+import { PrismaClient, MarketplacePublishStatus, Role, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createSpanishRegionAndCulturalData, createUSRegionAndCulturalData } from './helpers';
 
@@ -57,12 +57,13 @@ async function main() {
     const hashedPassword = await bcrypt.hash('password123', SALT_ROUNDS);
     const testUser = await prisma.user.upsert({
         where: { email: 'test@example.com' },
-        update: { name: 'Test User', password: hashedPassword },
+        update: { name: 'Test User', password: hashedPassword, role: Role.ADMIN },
         create: {
             email: 'test@example.com',
             name: 'Test User',
             password: hashedPassword,
             tenant: { connect: { id: defaultTenant.id } },
+            role: Role.ADMIN
         },
     });
     console.log(`Upserted user: ${testUser.name}`);

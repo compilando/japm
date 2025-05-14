@@ -28,7 +28,7 @@ class CulturalDataResponse extends CreateCulturalDataDto {
 @ApiTags('Cultural Data')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
-@Controller('/api/projects/:projectId/cultural-data')
+@Controller('projects/:projectId/cultural-data')
 export class CulturalDataController {
     private readonly logger = new Logger(CulturalDataController.name);
 

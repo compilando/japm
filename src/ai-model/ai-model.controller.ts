@@ -13,7 +13,7 @@ import { Logger } from '@nestjs/common'; // Import Logger
 @ApiTags('AI Models (Project Specific)')
 @ApiBearerAuth() // Add if endpoints require authentication
 @UseGuards(JwtAuthGuard, ProjectGuard) // Apply guards globally to this controller
-@Controller('api/projects/:projectId/aimodels') // Changed base route
+@Controller('projects/:projectId/aimodels') // Changed base route
 export class AiModelController {
     private readonly logger = new Logger(AiModelController.name); // Add Logger instance
 

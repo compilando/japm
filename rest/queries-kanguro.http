@@ -1,8 +1,0 @@
-# VS Code REST Client Test Suite - QUERY OPERATIONS ONLY (using Seed Data)
-
-# Variables (ajusta la base URL si es necesario)
-@baseUrl = http://localhost:3000
-
-@versionTagV1 = v1.0.0
-
-GET {{baseUrl}}/serve-prompt?promptId=guillermo-llamada-captacion-comercio&languageCode=es-ES

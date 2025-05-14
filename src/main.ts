@@ -10,6 +10,8 @@ import { Logger } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.setGlobalPrefix('api');
+
   // Apply Global Filters (Prisma specific first, then generic HTTP)
   // HttpAdapterHost is needed for filters that might handle non-HttpException errors
   // const { httpAdapter } = app.get(HttpAdapterHost); // HttpAdapterHost might not be needed if only handling known exceptions
@@ -48,7 +50,7 @@ async function bootstrap() {
     Logger.error('Error writing OpenAPI specification:', err.stack, 'Bootstrap');
   }
 
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api-docs', app, document);
 
   // Enable CORS
   app.enableCors();
@@ -56,7 +58,6 @@ async function bootstrap() {
   const port = process.env.PORT ?? 3001;
   await app.listen(port);
 
-  // Mensaje divertido al iniciar
   const appUrl = await app.getUrl();
   const funnyArt = `
   SERVER IS UP AND RUNNING! LET'S GOOOO!
@@ -64,7 +65,7 @@ async function bootstrap() {
   #####                                                      #####
   #####   JAPM - Just Another Prompt Manager                 #####
   #####   Backend escuchando en: ${appUrl}           #####
-  #####   Swagger UI en:        ${appUrl}/api        #####
+  #####   Swagger UI en:        ${appUrl}/api-docs        #####
   #####                                                      #####
   ################################################################
   MAY THE PROMPTS BE WITH YOU! (^_^)b

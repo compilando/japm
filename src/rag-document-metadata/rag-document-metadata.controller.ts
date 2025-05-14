@@ -30,7 +30,7 @@ class RagDocumentMetadataResponse extends CreateRagDocumentMetadataDto {
 @ApiTags('RAG Document Metadata')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
-@Controller('/api/projects/:projectId/rag-document-metadata') // Nueva ruta base
+@Controller('projects/:projectId/rag-document-metadata') // Nueva ruta base
 export class RagDocumentMetadataController {
     private readonly logger = new Logger(RagDocumentMetadataController.name); // Add Logger instance
 

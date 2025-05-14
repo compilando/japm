@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -17,7 +17,7 @@ async function main() {
             email: 'admin@default.com',
             password: 'admin', // ¡En producción usa hash!
             tenantId: tenant.id,
-            role: 'admin',
+            role: Role.ADMIN,
         },
     });
 

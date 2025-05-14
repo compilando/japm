@@ -1,4 +1,4 @@
-import { PrismaClient, MarketplacePublishStatus, Prisma } from '@prisma/client';
+import { PrismaClient, MarketplacePublishStatus, Role, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createSpanishRegionAndCulturalData, createUSRegionAndCulturalData } from './helpers';
 
@@ -150,7 +150,7 @@ async function main() {
         defaultTenant = await prisma.tenant.create({ data: { name: 'Default Tenant' } });
     }
 
-    const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS), tenant: { connect: { id: defaultTenant.id } } } });
+    const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: { role: Role.TENANT_ADMIN }, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS), tenant: { connect: { id: defaultTenant.id } }, role: Role.TENANT_ADMIN } });
     // Find necessary base data
     const defaultProjectId = 'default-project'; // Assuming the default project ID
     const devEnvironment = await prisma.environment.findUniqueOrThrow({

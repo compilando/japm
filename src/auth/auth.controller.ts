@@ -26,7 +26,7 @@ class UserProfileResponse {
 }
 
 @ApiTags('Authentication')
-@Controller('api/auth')
+@Controller('auth')
 export class AuthController {
     constructor(private authService: AuthService) { }
 

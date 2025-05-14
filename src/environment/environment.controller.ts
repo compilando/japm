@@ -19,7 +19,7 @@ interface RequestWithProject extends ExpressRequest {
 @ApiTags('Environments')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
-@Controller('/api/projects/:projectId/environments')
+@Controller('projects/:projectId/environments')
 export class EnvironmentController {
     private readonly logger = new Logger(EnvironmentController.name);
 

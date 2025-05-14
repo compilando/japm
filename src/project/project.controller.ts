@@ -8,7 +8,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Importar JwtAut
 import { Logger } from '@nestjs/common'; // Import Logger
 
 @ApiTags('Projects')
-@Controller('api/projects')
+@Controller('projects')
 export class ProjectController {
     private readonly logger = new Logger(ProjectController.name); // Add Logger instance
 

@@ -1,0 +1,31 @@
+@baseUrl = http://localhost:3001
+
+###
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "test@example.com",
+    "password": "password123"
+}
+
+###
+# Obtener el token de la respuesta de login
+@token = {{login.response.body.access_token}}
+
+### Test Admin Check
+GET {{baseUrl}}/api/admin-check
+Authorization: Bearer {{token}}
+
+### Test Tenant Admin Check
+GET {{baseUrl}}/api/tenant-admin-check
+Authorization: Bearer {{token}}
+
+### Test User Check
+GET {{baseUrl}}/api/user-check
+Authorization: Bearer {{token}}
+
+### Test Any Authenticated Check
+GET {{baseUrl}}/api/any-authenticated-check
+Authorization: Bearer {{token}} 

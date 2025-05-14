@@ -36,7 +36,7 @@ import { LoadPromptStructureDto } from './dto/load-prompt-structure.dto';
 @ApiTags('Prompts')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('api/projects/:projectId/prompts')
+@Controller('projects/:projectId/prompts')
 export class PromptController {
     private readonly logger = new Logger(PromptController.name);
 
@@ -201,7 +201,7 @@ export class PromptController {
     @ApiResponse({ status: 400, description: 'Bad Request - Invalid JSON structure or data.' })
     @ApiResponse({ status: 401, description: 'Unauthorized.' })
     @ApiResponse({ status: 404, description: 'Project not found.' })
-    @ApiResponse({ status: 409, description: 'Conflict - A prompt with the same identifier already exists or an asset key conflict.'})
+    @ApiResponse({ status: 409, description: 'Conflict - A prompt with the same identifier already exists or an asset key conflict.' })
     async loadStructure(
         @Param('projectId') projectId: string,
         @Body() loadPromptDto: LoadPromptStructureDto,
@@ -211,13 +211,13 @@ export class PromptController {
             `REQ ${req.method} ${req.url} projectId=${projectId} - Loading prompt structure: ${JSON.stringify(loadPromptDto)}`,
         );
         const tenantId = req.user?.tenantId;
-        
+
         const createdPrompt = await this.promptService.loadStructure(
             projectId,
-            tenantId, 
+            tenantId,
             loadPromptDto,
         );
-        
+
         this.logger.log(
             `RES ${HttpStatus.CREATED} ${req.method} ${req.url} - Prompt structure loaded successfully for project ${projectId}`,
         );

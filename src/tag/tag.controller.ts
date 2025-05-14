@@ -20,7 +20,7 @@ interface RequestWithProject extends ExpressRequest {
 @ApiTags('Tags')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
-@Controller('/api/projects/:projectId/tags')
+@Controller('projects/:projectId/tags')
 export class TagController {
   private readonly logger = new Logger(TagController.name);
 

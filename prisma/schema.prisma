@@ -29,6 +29,12 @@ enum MarketplacePublishStatus {
   REJECTED
 }
 
+enum Role {
+  USER
+  ADMIN
+  TENANT_ADMIN
+}
+
 // MODELS (alphabetical order)
 model User {
   id        String    @id @default(cuid())
@@ -40,7 +46,7 @@ model User {
 
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  role     String @default("user") // Puede ser 'admin', 'user', etc.
+  role     Role @default(USER) // Puede ser 'admin', 'user', etc.
 
   projects            Project[]            @relation("OwnedProjects")
   promptExecutionLogs PromptExecutionLog[] // Relación inversa añadida

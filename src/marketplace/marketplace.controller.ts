@@ -12,7 +12,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @ApiTags('Marketplace')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('api/marketplace')
+@Controller('marketplace')
 export class MarketplaceController {
     constructor(private readonly marketplaceService: MarketplaceService) { }
 

@@ -8,7 +8,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Importar JwtAut
 import { Logger } from '@nestjs/common'; // Import Logger
 
 @ApiTags('Users') // Tag for grouping in Swagger
-@Controller('api/users') // Base path for this controller
+@Controller('users') // Base path for this controller
 export class UserController {
     private readonly logger = new Logger(UserController.name); // Add Logger instance
 
