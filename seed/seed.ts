@@ -248,12 +248,15 @@ async function main() {
             description: 'Improves a given prompt based on best practices.',
             promptText: "${file('resources/system-prompts/prompt-improver.md')}", // Asegúrate que esta ruta sea correcta
             category: 'Prompt Engineering',
+            // projectId: defaultProject.id, // System prompts are global, not project-specific for now
         },
         create: {
             name: 'prompt-improver',
             description: 'Improves a given prompt based on best practices.',
-            promptText: "${file('resources/system-prompts/prompt-improver.md')}", // Asegúrate que esta ruta sea correcta
+            promptText: "${file('resources/system-prompts/prompt-improver.md')}",
             category: 'Prompt Engineering',
+            // tenantId: defaultTenant.id, // System prompts are global for now
+            // createdById: testUser.id,
         },
     });
     console.log('Upserted System Prompt: prompt-improver');
@@ -272,6 +275,27 @@ async function main() {
             category: 'Translation',
         },
     });
+
+    // Añadir nuevo System Prompt: prompt-generator
+    await prisma.systemPrompt.upsert({
+        where: { name: 'prompt-generator' },
+        update: {
+            description: 'Generates content or structures based on user input and project context.',
+            promptText: "${file('resources/system-prompts/prompt-generator.md')}",
+            category: 'Content Generation',
+            // createdById: testUser.id, // Opcional: si quieres asociarlo a un usuario
+            // updatedById: testUser.id  // Opcional
+        },
+        create: {
+            name: 'prompt-generator',
+            description: 'Generates content or structures based on user input and project context.',
+            promptText: "${file('resources/system-prompts/prompt-generator.md')}",
+            category: 'Content Generation',
+            // createdById: testUser.id, // Opcional
+            // tenantId: defaultTenant.id // Si los system prompts son tenant-specific (parece que no por "Global")
+        },
+    });
+    console.log('Upserted System Prompt: prompt-generator');
 
     // --- Default Project Assets ---
     console.log('Upserting Default Project Assets...');

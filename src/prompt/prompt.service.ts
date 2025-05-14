@@ -13,6 +13,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { RawExecutionService } from '../raw-execution/raw-execution.service';
 import { ExecuteRawDto } from '../raw-execution/dto/execute-raw.dto';
+import { LoadPromptStructureDto } from './dto/load-prompt-structure.dto';
 
 // Asumiendo que tenemos acceso a la función slugify (igual que en ProjectService)
 function slugify(text: string): string {
@@ -346,71 +347,269 @@ export class PromptService {
     /**
      * Generates a suggested prompt structure using an LLM via RawExecutionService.
      * @param projectId The CUID of the project to get regions from.
-     * @param userPrompt The user's initial prompt text.
+     * @param userOriginalPrompt The user's initial prompt text.
      * @param tenantId The CUID of the tenant (obtained from JWT).
-     * @param aiModelId The CUID of the AIModel to use (defaults to a placeholder).
+     * @param targetAiModelApiIdentifier The CUID of the AIModel to use (defaults to a placeholder).
      * @returns A JSON object representing the suggested structure.
      */
     async generateStructure(
         projectId: string,
-        userPrompt: string,
+        userOriginalPrompt: string,
         tenantId: string,
-        aiModelId: string = 'PLEASE_REPLACE_WITH_VALID_MODEL_ID',
+        targetAiModelApiIdentifier: string = 'gpt-4o',
     ): Promise<object> {
-        this.logger.debug(`Starting generateStructure for projectId: ${projectId}`);
+        this.logger.debug(
+            `Starting generateStructure for projectId: ${projectId}, tenantId: ${tenantId}, targetModel: ${targetAiModelApiIdentifier}`,
+        );
 
-        // 1. Get project regions (needed for the system prompt)
-        // Ensure findOneById includes regions or fetch separately
+        // 1. Obtener información del proyecto actual y sus regiones para el contexto
         const project = await this.projectService.findOne(projectId, tenantId);
         if (!project || !project.regions) {
             this.logger.error(`Project or project regions not found for projectId: ${projectId}`);
-            throw new NotFoundException(`Project with ID \"${projectId}\" or its regions not found.`);
+            throw new NotFoundException(`Project with ID "${projectId}" or its regions not found.`);
         }
-        const regionsJson = JSON.stringify(project.regions.map(r => ({ languageCode: r.languageCode, name: r.name })));
-        this.logger.debug(`Project regions for system prompt: ${regionsJson}`);
+        const projectRegionsJson = JSON.stringify(
+            project.regions.map(r => ({ languageCode: r.languageCode, name: r.name }))
+        );
+        this.logger.debug(`Project regions for system prompt: ${projectRegionsJson}`);
 
-        // 2. Prepare DTO for RawExecutionService
-        const systemPromptName = 'prompt-generator'; // Use the registered name
-        const executeDto: ExecuteRawDto = {
-            userText: userPrompt,
-            systemPromptName: systemPromptName,
-            aiModelId: aiModelId, // Use the provided or default model ID
+        // 2. Buscar el AIModel por su apiIdentifier (o nombre) DENTRO DE 'default-project'
+        const defaultProjectId = 'default-project'; // ID del proyecto donde residen los modelos globales
+        const aiModel = await this.prisma.aIModel.findFirst({
+            where: {
+                projectId: defaultProjectId, // Siempre buscar en 'default-project'
+                OR: [
+                    { apiIdentifier: targetAiModelApiIdentifier },
+                    { name: targetAiModelApiIdentifier }
+                ]
+            },
+        });
+
+        if (!aiModel) {
+            this.logger.error(`AI Model with identifier "${targetAiModelApiIdentifier}" not found in project "${defaultProjectId}".`);
+            throw new NotFoundException(
+                `AI Model with identifier "${targetAiModelApiIdentifier}" not found in the default project context.`,
+            );
+        }
+        this.logger.log(`Found AI Model: ${aiModel.name} (ID: ${aiModel.id} from project ${defaultProjectId}) to be used.`);
+
+        // 3. Definir el userText para RawExecutionService
+        const instructionForLLM = `Analyze the following user's request and propose a structured JSON output for a new prompt. The user's original request is: "${userOriginalPrompt}"`;
+
+        const dto: ExecuteRawDto = {
+            userText: instructionForLLM,
+            systemPromptName: 'prompt-generator',
+            aiModelId: aiModel.id,
             variables: {
-                "project_regions_json": regionsJson
-                // Add any other variables your prompt-generator.md might expect
-            }
+                project_regions_json: projectRegionsJson,
+                user_original_prompt: userOriginalPrompt
+            },
         };
 
-        this.logger.log(`Calling RawExecutionService.executeRaw with DTO: ${JSON.stringify(executeDto, null, 2)}`);
+        this.logger.log(`Calling RawExecutionService.executeRaw with DTO: ${JSON.stringify(dto)}`);
 
-        // 3. Call RawExecutionService
-        let rawOutput: { response: string };
         try {
-            rawOutput = await this.rawExecutionService.executeRaw(executeDto);
-            this.logger.debug(`Raw response received from RawExecutionService: ${rawOutput.response}`);
-        } catch (error) {
-            this.logger.error(`Error calling RawExecutionService: ${error.message}`, error.stack);
-            // Re-throw or handle specific errors from executeRaw (e.g., model not found, API key error)
-            if (error instanceof NotFoundException || error instanceof BadRequestException || error instanceof InternalServerErrorException) {
-                throw error; // Re-throw known error types
+            const rawResponse = await this.rawExecutionService.executeRaw(dto);
+            this.logger.debug(`Raw response from RawExecutionService: ${JSON.stringify(rawResponse)}`);
+
+            // Intentar parsear la respuesta como JSON.
+            try {
+                // Limpiar el string de respuesta de posibles marcadores de bloque de código Markdown
+                const cleanedResponseString = rawResponse.response
+                    .replace(/^\s*```json\s*/im, '') // Elimina ```json al inicio (case-insensitive, multiline)
+                    .replace(/\s*```\s*$/im, '')    // Elimina ``` al final (case-insensitive, multiline)
+                    .trim();                        // Elimina espacios en blanco al inicio/final
+
+                if (!cleanedResponseString) {
+                    this.logger.error('LLM response was empty after cleaning Markdown markers.');
+                    throw new InternalServerErrorException('AI response was empty or contained only Markdown markers.');
+                }
+                
+                this.logger.debug(`Cleaned response string for JSON parsing: ${cleanedResponseString}`);
+                const structuredResponse = JSON.parse(cleanedResponseString);
+                this.logger.log('Successfully parsed LLM response as JSON.');
+                return structuredResponse;
+            } catch (parseError) {
+                this.logger.error(
+                    `Failed to parse response from LLM as JSON. Raw response: ${rawResponse.response}`,
+                    parseError.stack,
+                );
+                throw new InternalServerErrorException(
+                    'Failed to parse the structure generated by the AI. The response was not valid JSON.',
+                );
             }
-            throw new InternalServerErrorException(`Failed to generate structure due to LLM execution error: ${error.message}`);
+        } catch (error) {
+            if (error.status && error.response) {
+                 this.logger.error(`Error from RawExecutionService: ${error.message}`, error.stack);
+                 throw error;
+            }
+            this.logger.error(`Error calling RawExecutionService: ${error.message}`, error.stack);
+            throw new InternalServerErrorException(
+                `An unexpected error occurred while generating the prompt structure: ${error.message}`,
+            );
         }
+    }
 
-        // 4. Parse the raw response as JSON
-        try {
-            // Basic cleaning attempt: remove ```json ... ``` markers if present
-            const cleanedResponse = rawOutput.response
-                .replace(/^```json\s*/, '')
-                .replace(/\s*```$/, '')
-                .trim();
+    async loadStructure(
+        projectId: string,
+        tenantId: string, // Asegúrate de que este tenantId se use si es necesario para validar el proyecto, o si las entidades lo requieren.
+        dto: LoadPromptStructureDto,
+    ): Promise<Prompt> { // Considera devolver un DTO más específico si es necesario, o el Prompt con ciertas relaciones.
+        this.logger.log(`Attempting to load prompt structure for project: ${projectId} with DTO: ${JSON.stringify(dto)}`);
 
-            const jsonStructure = JSON.parse(cleanedResponse);
-            this.logger.log(`Successfully parsed JSON structure from LLM response.`);
-            return jsonStructure;
-        } catch (parseError) {
-            this.logger.error(`Failed to parse JSON structure from LLM response: ${parseError.message}. Raw response was: ${rawOutput.response}`, parseError.stack);
-            throw new InternalServerErrorException('Failed to generate structure: LLM did not return valid JSON.');
-        }
+        const { prompt: promptMeta, version: versionData, assets: assetEntries, tags: tagNames } = dto;
+
+        const promptSlug = slugify(promptMeta.name);
+
+        return this.prisma.$transaction(async (tx) => {
+            // 1. Opcional: Verificar que el proyecto existe y pertenece al tenant si es necesario.
+            // Por ahora, asumimos que projectId es válido y accesible.
+            // const project = await this.projectService.findOne(projectId, tenantId); // Podría lanzar NotFoundException
+            // if (!project) throw new NotFoundException(`Project with ID "${projectId}" not found.`);
+
+            // 2. Crear Prompt
+            let prompt = await tx.prompt.findUnique({
+                where: { prompt_id_project_unique: { id: promptSlug, projectId } },
+            });
+
+            if (prompt) {
+                throw new ConflictException(
+                    `Prompt with name (slug: "${promptSlug}") already exists in project "${projectId}".`,
+                );
+            }
+
+            prompt = await tx.prompt.create({
+                data: {
+                    id: promptSlug,
+                    name: promptMeta.name,
+                    description: promptMeta.description,
+                    projectId: projectId,
+                },
+            });
+            this.logger.debug(`Created Prompt: ${prompt.name} (ID: ${prompt.id})`);
+
+            // 3. Crear Assets, sus Versiones y Traducciones de Assets
+            const createdAssetsData = new Map<string, { cuid: string; name: string; value: string }>();
+
+            if (assetEntries && assetEntries.length > 0) {
+                for (const assetEntry of assetEntries) {
+                    const existingAsset = await tx.promptAsset.findUnique({
+                        where: { project_asset_key_unique: { projectId, key: assetEntry.key } }
+                    });
+                    if (existingAsset) {
+                        throw new ConflictException(`Asset with key "${assetEntry.key}" already exists in project "${projectId}".`);
+                    }
+
+                    const newDbAsset = await tx.promptAsset.create({
+                        data: {
+                            projectId: projectId,
+                            key: assetEntry.key,
+                            // name: assetEntry.name, // Asegúrate que tu schema.prisma.PromptAsset tenga 'name' si lo quieres guardar.
+                                                    // El schema actual no lo tiene, así que lo omito por ahora.
+                                                    // Si lo añades al schema, descomenta esta línea.
+                        },
+                    });
+                    this.logger.debug(`Created PromptAsset: ${newDbAsset.key} (ID: ${newDbAsset.id})`);
+
+                    const newDbAssetVersion = await tx.promptAssetVersion.create({
+                        data: {
+                            assetId: newDbAsset.id,
+                            value: assetEntry.value,
+                            changeMessage: assetEntry.changeMessage || 'Initial version from loaded structure.',
+                            status: 'active',
+                            versionTag: 'v1.0.0', // O una lógica para el tag de versión
+                        },
+                    });
+                    this.logger.debug(`Created PromptAssetVersion for asset: ${newDbAsset.key}`);
+
+                    if (assetEntry.translations && assetEntry.translations.length > 0) {
+                        await tx.assetTranslation.createMany({
+                            data: assetEntry.translations.map(t => ({
+                                versionId: newDbAssetVersion.id,
+                                languageCode: t.languageCode,
+                                value: t.value,
+                            })),
+                        });
+                        this.logger.debug(`Created ${assetEntry.translations.length} translations for asset version: ${newDbAsset.key}`);
+                    }
+                    createdAssetsData.set(newDbAsset.key, { cuid: newDbAsset.id, name: assetEntry.name, value: assetEntry.value });
+                }
+            }
+            
+            // Validar que todos los assets en versionData.assets fueron definidos en assetEntries
+            if (versionData.assets && versionData.assets.length > 0) {
+                for (const assetKey of versionData.assets) {
+                    if (!createdAssetsData.has(assetKey)) {
+                        throw new BadRequestException(`Asset with key "${assetKey}" was listed in version.assets but not defined in the main assets list.`);
+                    }
+                }
+            }
+
+            // 4. Crear PromptVersion
+            const newDbPromptVersion = await tx.promptVersion.create({
+                data: {
+                    promptId: prompt.id, // slug del prompt padre
+                    promptText: versionData.promptText,
+                    changeMessage: versionData.changeMessage || 'Initial version from loaded structure.',
+                    versionTag: 'v1.0.0',
+                    status: 'active',
+                    // No hay conexión directa a PromptAsset en PromptVersion según el schema actual
+                },
+            });
+            this.logger.debug(`Created PromptVersion (ID: ${newDbPromptVersion.id}) for prompt: ${prompt.name}`);
+
+            // 5. Crear PromptTranslations para la PromptVersion
+            if (versionData.translations && versionData.translations.length > 0) {
+                await tx.promptTranslation.createMany({
+                    data: versionData.translations.map(t => ({
+                        versionId: newDbPromptVersion.id,
+                        languageCode: t.languageCode,
+                        promptText: t.promptText,
+                    })),
+                });
+                this.logger.debug(`Created ${versionData.translations.length} translations for prompt version: ${newDbPromptVersion.id}`);
+            }
+            
+            // 6. Manejar Tags
+            if (tagNames && tagNames.length > 0) {
+                const tagObjectsToConnect: { id: string }[] = [];
+                for (const tagName of tagNames) {
+                    let tag = await tx.tag.findUnique({ 
+                        where: { projectId_name: { projectId, name: tagName } } 
+                    });
+                    if (!tag) {
+                        tag = await tx.tag.create({ 
+                            data: { projectId, name: tagName, description: `Tag: ${tagName}` } 
+                        });
+                        this.logger.debug(`Created Tag: ${tag.name}`);
+                    }
+                    tagObjectsToConnect.push({ id: tag.id });
+                }
+                if (tagObjectsToConnect.length > 0) {
+                    await tx.prompt.update({
+                        where: { id: prompt.id },
+                        data: { tags: { connect: tagObjectsToConnect } },
+                    });
+                    this.logger.debug(`Connected ${tagObjectsToConnect.length} tags to prompt: ${prompt.name}`);
+                }
+            }
+
+            // 7. Devolver el prompt principal creado con algunas relaciones para la respuesta
+            const resultPrompt = await tx.prompt.findUniqueOrThrow({
+                where: { prompt_id_project_unique: { id: promptSlug, projectId } },
+                include: {
+                    versions: {
+                        orderBy: { createdAt: 'desc' },
+                        take: 1, // Solo la versión que acabamos de crear
+                        include: {
+                            translations: true,
+                        }
+                    },
+                    tags: true,
+                }
+            });
+            this.logger.log(`Successfully loaded structure for prompt: ${resultPrompt.name}`);
+            return resultPrompt;
+        });
     }
 }

@@ -30,6 +30,7 @@ import { ProjectService } from '../project/project.service';
 import { GeneratePromptStructureDto } from './dto/generate-prompt-structure.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { PromptDto } from './dto/prompt.dto';
+import { LoadPromptStructureDto } from './dto/load-prompt-structure.dto';
 
 
 @ApiTags('Prompts')
@@ -55,7 +56,7 @@ export class PromptController {
     @ApiResponse({ status: 401, description: 'Unauthorized.' })
     @ApiResponse({ status: 404, description: 'Project not found.' })
     async create(
-        @Param('projectId', ParseUUIDPipe) projectId: string,
+        @Param('projectId') projectId: string,
         @Body() createPromptDto: CreatePromptDto,
         @Req() req: any,
     ): Promise<Prompt> {
@@ -72,6 +73,29 @@ export class PromptController {
         return createdPrompt;
     }
 
+    @Get()
+    @ApiOperation({ summary: 'Get all prompts for a project' })
+    @ApiResponse({
+        status: 200,
+        description: 'Array of prompts for the project.',
+        type: [PromptDto],
+    })
+    @ApiResponse({ status: 401, description: 'Unauthorized.' })
+    @ApiResponse({ status: 404, description: 'Project not found.' })
+    async findAllByProject(
+        @Param('projectId') projectId: string,
+        @Req() req: any,
+    ): Promise<Prompt[]> {
+        this.logger.log(
+            `REQ ${req.method} ${req.url} - Fetching all prompts for project ${projectId}`,
+        );
+        const prompts = await this.promptService.findAll(projectId);
+        this.logger.log(
+            `RES ${HttpStatus.OK} ${req.method} ${req.url} - Found ${prompts.length} prompts for project ${projectId}`,
+        );
+        return prompts;
+    }
+
     @Patch(':promptName')
     @ApiOperation({ summary: 'Update an existing prompt by name' })
     @ApiResponse({
@@ -83,7 +107,7 @@ export class PromptController {
     @ApiResponse({ status: 401, description: 'Unauthorized.' })
     @ApiResponse({ status: 404, description: 'Prompt or Project not found.' })
     async update(
-        @Param('projectId', ParseUUIDPipe) projectId: string,
+        @Param('projectId') projectId: string,
         @Param('promptName') promptName: string,
         @Body() updatePromptDto: UpdatePromptDto,
         @Req() req: any,
@@ -112,7 +136,6 @@ export class PromptController {
         name: 'projectId',
         type: String,
         description: 'The ID of the project.',
-        format: 'uuid',
     })
     @ApiResponse({
         status: 200,
@@ -170,5 +193,34 @@ export class PromptController {
             );
             throw error;
         }
+    }
+
+    @Post('load-structure')
+    @ApiOperation({ summary: 'Load a generated prompt structure and create all related entities in the database.' })
+    @ApiResponse({ status: 201, description: 'Prompt structure successfully loaded and entities created.', type: PromptDto })
+    @ApiResponse({ status: 400, description: 'Bad Request - Invalid JSON structure or data.' })
+    @ApiResponse({ status: 401, description: 'Unauthorized.' })
+    @ApiResponse({ status: 404, description: 'Project not found.' })
+    @ApiResponse({ status: 409, description: 'Conflict - A prompt with the same identifier already exists or an asset key conflict.'})
+    async loadStructure(
+        @Param('projectId') projectId: string,
+        @Body() loadPromptDto: LoadPromptStructureDto,
+        @Req() req: any,
+    ): Promise<Prompt> {
+        this.logger.log(
+            `REQ ${req.method} ${req.url} projectId=${projectId} - Loading prompt structure: ${JSON.stringify(loadPromptDto)}`,
+        );
+        const tenantId = req.user?.tenantId;
+        
+        const createdPrompt = await this.promptService.loadStructure(
+            projectId,
+            tenantId, 
+            loadPromptDto,
+        );
+        
+        this.logger.log(
+            `RES ${HttpStatus.CREATED} ${req.method} ${req.url} - Prompt structure loaded successfully for project ${projectId}`,
+        );
+        return createdPrompt;
     }
 }

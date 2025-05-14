@@ -812,6 +812,49 @@
         "tags": [
           "Prompts"
         ]
+      },
+      "get": {
+        "operationId": "PromptController_findAllByProject",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of prompts for the project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PromptDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "404": {
+            "description": "Project not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all prompts for a project",
+        "tags": [
+          "Prompts"
+        ]
       }
     },
     "/api/projects/{projectId}/prompts/{promptName}": {
@@ -887,7 +930,6 @@
             "in": "path",
             "description": "The ID of the project.",
             "schema": {
-              "format": "uuid",
               "type": "string"
             }
           }
@@ -957,6 +999,64 @@
           }
         ],
         "summary": "Analyzes a user prompt using an LLM and suggests a structure based on project entities.",
+        "tags": [
+          "Prompts"
+        ]
+      }
+    },
+    "/api/projects/{projectId}/prompts/load-structure": {
+      "post": {
+        "operationId": "PromptController_loadStructure",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoadPromptStructureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Prompt structure successfully loaded and entities created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid JSON structure or data."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "404": {
+            "description": "Project not found."
+          },
+          "409": {
+            "description": "Conflict - A prompt with the same identifier already exists or an asset key conflict."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Load a generated prompt structure and create all related entities in the database.",
         "tags": [
           "Prompts"
         ]
@@ -4989,6 +5089,185 @@
         },
         "required": [
           "userPrompt"
+        ]
+      },
+      "PromptMetaDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Suggested name for the prompt.",
+            "example": "Invoice Details Extractor"
+          },
+          "description": {
+            "type": "string",
+            "description": "Suggested description for the prompt.",
+            "example": "Extracts invoice number, date, and total amount from invoice documents."
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ]
+      },
+      "PromptVersionTranslationDto": {
+        "type": "object",
+        "properties": {
+          "languageCode": {
+            "type": "string",
+            "description": "Language code for the translation.",
+            "example": "en-US"
+          },
+          "promptText": {
+            "type": "string",
+            "description": "Translated prompt text, potentially including {{asset_key}} placeholders.",
+            "example": "Review this invoice and extract the {{invoice_number_field}}."
+          }
+        },
+        "required": [
+          "languageCode",
+          "promptText"
+        ]
+      },
+      "PromptVersionStructureDto": {
+        "type": "object",
+        "properties": {
+          "promptText": {
+            "type": "string",
+            "description": "Core prompt text, potentially including {{asset_key}} placeholders.",
+            "example": "Extract the {{invoice_number_field}} and the {{total_amount_field}} from the attached invoice."
+          },
+          "changeMessage": {
+            "type": "string",
+            "description": "Change message for this version.",
+            "example": "Initial structure generated from user prompt."
+          },
+          "assets": {
+            "description": "Array of asset keys (slug-case) used in this prompt version. These keys must correspond to assets defined in the main \"assets\" list.",
+            "example": [
+              "invoice_number_field",
+              "total_amount_field"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "translations": {
+            "description": "Translations for the prompt text.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptVersionTranslationDto"
+            }
+          }
+        },
+        "required": [
+          "promptText",
+          "changeMessage",
+          "assets",
+          "translations"
+        ]
+      },
+      "AssetTranslationStructureDto": {
+        "type": "object",
+        "properties": {
+          "languageCode": {
+            "type": "string",
+            "description": "Language code for the asset value translation.",
+            "example": "en-US"
+          },
+          "value": {
+            "type": "string",
+            "description": "Translated value of the asset.",
+            "example": "Invoice Number"
+          }
+        },
+        "required": [
+          "languageCode",
+          "value"
+        ]
+      },
+      "PromptAssetStructureDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Unique key for the asset in slug-case format. This key is used in {{placeholders}}.",
+            "example": "invoice-number-field"
+          },
+          "name": {
+            "type": "string",
+            "description": "Descriptive name for the asset.",
+            "example": "Invoice Number Field"
+          },
+          "value": {
+            "type": "string",
+            "description": "The original extracted value for the asset.",
+            "example": "invoice number"
+          },
+          "changeMessage": {
+            "type": "string",
+            "description": "Change message for this asset version.",
+            "example": "Initial asset version from user prompt."
+          },
+          "translations": {
+            "description": "Translations for the asset value.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetTranslationStructureDto"
+            }
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "value",
+          "changeMessage",
+          "translations"
+        ]
+      },
+      "LoadPromptStructureDto": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "description": "Metadata for the prompt to be created.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PromptMetaDto"
+              }
+            ]
+          },
+          "version": {
+            "description": "Structure for the initial prompt version.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PromptVersionStructureDto"
+              }
+            ]
+          },
+          "assets": {
+            "description": "List of assets to be created and associated with the prompt (conceptually via placeholders).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptAssetStructureDto"
+            }
+          },
+          "tags": {
+            "description": "Optional list of tag names to associate with the prompt.",
+            "example": [
+              "invoicing",
+              "extraction"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "prompt",
+          "version",
+          "assets"
         ]
       },
       "CreateProjectDto": {

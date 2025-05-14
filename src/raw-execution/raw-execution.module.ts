@@ -15,6 +15,7 @@ import { SystemPromptModule } from '../system-prompt/system-prompt.module'; // <
         SystemPromptModule // <-- Añadir para poder inyectar SystemPromptService
     ],
     controllers: [RawExecutionController],
-    providers: [RawExecutionService]
+    providers: [RawExecutionService],
+    exports: [RawExecutionService]
 })
 export class RawExecutionModule { } 
