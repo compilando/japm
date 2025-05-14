@@ -4,6 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as fs from 'fs';
 import { PrismaClientExceptionFilter } from './common/filters/prisma-exception.filter';
 import { TenantIdInterceptor } from './common/interceptors/tenant-id.interceptor';
+import { Logger } from '@nestjs/common';
 // import { HttpExceptionFilter } from './common/filters/http-exception.filter'; // Optional: A generic HTTP exception filter
 
 async function bootstrap() {
@@ -42,9 +43,9 @@ async function bootstrap() {
   // Write the Swagger document to a JSON file
   try {
     fs.writeFileSync('./openapi.json', JSON.stringify(document, null, 2));
-    console.log('OpenAPI specification written to openapi.json');
+    Logger.log('OpenAPI specification written to openapi.json', 'Bootstrap');
   } catch (err) {
-    console.error('Error writing OpenAPI specification:', err);
+    Logger.error('Error writing OpenAPI specification:', err.stack, 'Bootstrap');
   }
 
   SwaggerModule.setup('api', app, document);
@@ -52,6 +53,22 @@ async function bootstrap() {
   // Enable CORS
   app.enableCors();
 
-  await app.listen(process.env.PORT ?? 3001);
+  const port = process.env.PORT ?? 3001;
+  await app.listen(port);
+
+  // Mensaje divertido al iniciar
+  const appUrl = await app.getUrl();
+  const funnyArt = `
+  SERVER IS UP AND RUNNING! LET'S GOOOO!
+  ################################################################
+  #####                                                      #####
+  #####   JAPM - Just Another Prompt Manager                 #####
+  #####   Backend escuchando en: ${appUrl}           #####
+  #####   Swagger UI en:        ${appUrl}/api        #####
+  #####                                                      #####
+  ################################################################
+  MAY THE PROMPTS BE WITH YOU! (^_^)b
+  `;
+  Logger.log(funnyArt, 'Bootstrap');
 }
 bootstrap();

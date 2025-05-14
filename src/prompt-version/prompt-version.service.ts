@@ -1,13 +1,14 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, Logger } from '@nestjs/common';
 import { UpdatePromptVersionDto } from './dto/update-prompt-version.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, PromptVersion, Prompt } from '@prisma/client';
+import { Prisma, PromptVersion, Prompt, MarketplacePublishStatus } from '@prisma/client';
 import { CreatePromptVersionDto } from 'src/prompt/dto/create-prompt-version.dto';
 import { TenantService } from '../tenant/tenant.service';
-import { MarketplacePublishStatus } from '@prisma/client';
 
 @Injectable()
 export class PromptVersionService {
+  private readonly logger = new Logger(PromptVersionService.name);
+
   constructor(
     private prisma: PrismaService,
     private tenantService: TenantService,
@@ -143,23 +144,28 @@ export class PromptVersionService {
   // --- Marketplace Methods ---
 
   async requestPublish(projectId: string, promptSlug: string, versionTag: string, requesterId: string): Promise<PromptVersion> {
+    this.logger.log(`[User: ${requesterId}] Requesting to publish PromptVersion: project ${projectId}, slug ${promptSlug}, tag ${versionTag}`);
+
     const promptVersion = await this.findOneByTag(projectId, promptSlug, versionTag);
-    // findOneByTag ya incluye el prompt, y el prompt incluye el projectId.
-    // Para obtener tenantId, necesitamos cargar el proyecto asociado al prompt.
+
     const promptWithProject = await this.prisma.prompt.findUnique({
       where: { id: promptSlug, projectId: projectId }, // projectId es el del path, promptSlug es el id del prompt
       include: { project: { select: { tenantId: true } } },
     });
 
     if (!promptWithProject || !promptWithProject.project) {
+      this.logger.warn(`Project not found for prompt "${promptSlug}" (Project ID: ${projectId}) during publish request by User: ${requesterId}.`);
       throw new NotFoundException(`Project not found for prompt "${promptSlug}" to determine tenant configuration.`);
     }
     const tenantId = promptWithProject.project.tenantId;
+    this.logger.debug(`Tenant ID ${tenantId} identified for publish request of PromptVersion ${promptVersion.id} by User: ${requesterId}`);
 
     const requiresApproval = await this.tenantService.getMarketplaceRequiresApproval(tenantId);
+    this.logger.log(`Marketplace requires approval for tenant ${tenantId}: ${requiresApproval}. PromptVersion ID: ${promptVersion.id}, User: ${requesterId}`);
 
+    let updatedPromptVersion: PromptVersion;
     if (requiresApproval) {
-      return this.prisma.promptVersion.update({
+      updatedPromptVersion = await this.prisma.promptVersion.update({
         where: { id: promptVersion.id },
         data: {
           marketplaceStatus: MarketplacePublishStatus.PENDING_APPROVAL,
@@ -172,8 +178,9 @@ export class PromptVersionService {
           marketplaceRejectionReason: null,
         },
       });
+      this.logger.log(`[User: ${requesterId}] PromptVersion ID ${updatedPromptVersion.id} status set to PENDING_APPROVAL.`);
     } else {
-      return this.prisma.promptVersion.update({
+      updatedPromptVersion = await this.prisma.promptVersion.update({
         where: { id: promptVersion.id },
         data: {
           marketplaceStatus: MarketplacePublishStatus.PUBLISHED,
@@ -181,25 +188,29 @@ export class PromptVersionService {
           marketplaceRequestedAt: new Date(), // Se solicita y publica al mismo tiempo
           marketplaceRequesterId: requesterId,
           // Limpiar campos de aprobación/rechazo
-          marketplaceApprovedAt: null,
+          marketplaceApprovedAt: null, // Asumimos que no hay aprobador si se publica directo
           marketplaceApproverId: null,
           marketplaceRejectionReason: null,
         },
       });
+      this.logger.log(`[User: ${requesterId}] PromptVersion ID ${updatedPromptVersion.id} status set to PUBLISHED directly.`);
     }
+    return updatedPromptVersion;
   }
 
-  async unpublish(projectId: string, promptSlug: string, versionTag: string, /* userId: string */): Promise<PromptVersion> {
-    // TODO: Añadir lógica de permisos: ¿Quién puede retirar una versión?
-    // Por ahora, cualquiera que pueda acceder a la versión a través de findOneByTag podría hacerlo.
+  async unpublish(projectId: string, promptSlug: string, versionTag: string, userId?: string): Promise<PromptVersion> {
+    // userId es opcional aquí, pero útil para logging si se pasa desde el controlador
+    const loggerCtx = `[User: ${userId || 'unknown'}]`;
+    this.logger.log(`${loggerCtx} Requesting to unpublish PromptVersion: project ${projectId}, slug ${promptSlug}, tag ${versionTag}`);
+
     const promptVersion = await this.findOneByTag(projectId, promptSlug, versionTag);
 
     if (promptVersion.marketplaceStatus === MarketplacePublishStatus.NOT_PUBLISHED) {
-      // Ya no está publicada, no hacer nada o devolver error/mensaje
-      return promptVersion; // o lanzar new ConflictException('Version is not published.');
+      this.logger.warn(`${loggerCtx} PromptVersion ID ${promptVersion.id} is already NOT_PUBLISHED. No action taken.`);
+      return promptVersion;
     }
 
-    return this.prisma.promptVersion.update({
+    const updatedPromptVersion = await this.prisma.promptVersion.update({
       where: { id: promptVersion.id },
       data: {
         marketplaceStatus: MarketplacePublishStatus.NOT_PUBLISHED,
@@ -211,9 +222,11 @@ export class PromptVersionService {
         // Por simplicidad inicial, los limpiamos:
         marketplaceRequestedAt: null,
         marketplaceRequesterId: null,
-        marketplaceRejectionReason: null,
+        marketplaceRejectionReason: null, // Limpiar razón de rechazo si la hubo antes
       },
     });
+    this.logger.log(`${loggerCtx} PromptVersion ID ${updatedPromptVersion.id} status set to NOT_PUBLISHED.`);
+    return updatedPromptVersion;
   }
 
   // TODO: Métodos para approve, reject, cancel (Fase 2)

@@ -1,26 +1,28 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service'; // Asegúrate que la ruta a PrismaService sea correcta
 import { Tenant } from '@prisma/client';
 
 @Injectable()
 export class TenantService {
+    private readonly logger = new Logger(TenantService.name);
+
     constructor(private prisma: PrismaService) { }
 
     async getMarketplaceRequiresApproval(tenantId: string): Promise<boolean> {
+        this.logger.log(`Fetching marketplace approval requirement for Tenant ID: ${tenantId}`);
         const tenant = await this.prisma.tenant.findUnique({
             where: { id: tenantId },
             select: { marketplaceRequiresApproval: true },
         });
 
         if (!tenant) {
-            // Esto no debería ocurrir si el tenantId viene de un usuario autenticado
-            // pero es bueno tener la validación.
+            this.logger.warn(`Tenant not found for ID: ${tenantId} when checking marketplace approval`);
             throw new NotFoundException(`Tenant with ID "${tenantId}" not found.`);
         }
-        // El campo es Booleano pero puede ser null si no se ha establecido un default en BD
-        // o si es un campo nuevo en un registro existente. Prisma devuelve null en ese caso.
-        // Nuestro schema tiene @default(true), así que esto es más una salvaguarda.
-        return tenant.marketplaceRequiresApproval ?? true;
+
+        const requiresApproval = tenant.marketplaceRequiresApproval ?? true;
+        this.logger.debug(`Marketplace approval for Tenant ID ${tenantId}: ${requiresApproval}`);
+        return requiresApproval;
     }
 
     // Podríamos añadir un método para actualizar esta configuración más adelante si es necesario
