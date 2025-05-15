@@ -4239,7 +4239,7 @@
         ]
       }
     },
-    "/api/projects/{projectId}/prompts/{promptId}/prompt-assets/{assetKey}/versions": {
+    "/api/projects/{projectId}/prompts/{promptId}/assets/{assetKey}/versions": {
       "post": {
         "operationId": "PromptAssetVersionController_create",
         "parameters": [
@@ -4381,7 +4381,7 @@
         ]
       }
     },
-    "/api/projects/{projectId}/prompts/{promptId}/prompt-assets/{assetKey}/versions/{versionTag}": {
+    "/api/projects/{projectId}/prompts/{promptId}/assets/{assetKey}/versions/{versionTag}": {
       "get": {
         "operationId": "PromptAssetVersionController_findOneByTag",
         "parameters": [
@@ -4602,7 +4602,7 @@
         ]
       }
     },
-    "/api/projects/{projectId}/prompts/{promptId}/prompt-assets/{assetKey}/versions/{versionTag}/request-publish": {
+    "/api/projects/{projectId}/prompts/{promptId}/assets/{assetKey}/versions/{versionTag}/request-publish": {
       "post": {
         "operationId": "PromptAssetVersionController_requestPublish",
         "parameters": [
@@ -4675,7 +4675,7 @@
         ]
       }
     },
-    "/api/projects/{projectId}/prompts/{promptId}/prompt-assets/{assetKey}/versions/{versionTag}/unpublish": {
+    "/api/projects/{projectId}/prompts/{promptId}/assets/{assetKey}/versions/{versionTag}/unpublish": {
       "post": {
         "operationId": "PromptAssetVersionController_unpublish",
         "parameters": [
@@ -4748,7 +4748,201 @@
         ]
       }
     },
-    "/api/projects/{projectId}/prompts/{promptId}/prompt-assets/{assetKey}/versions/{versionTag}/translations": {
+    "/api/projects/{projectId}/prompts/{promptId}/assets/{assetKey}/versions/{versionTag}/translations/debug-catch-all": {
+      "get": {
+        "operationId": "AssetTranslationController_catchAllHandler_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Asset Translations (Project > Prompt > Asset > Version > Translation)"
+        ]
+      },
+      "post": {
+        "operationId": "AssetTranslationController_catchAllHandler_post",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Asset Translations (Project > Prompt > Asset > Version > Translation)"
+        ]
+      },
+      "put": {
+        "operationId": "AssetTranslationController_catchAllHandler_put",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Asset Translations (Project > Prompt > Asset > Version > Translation)"
+        ]
+      },
+      "delete": {
+        "operationId": "AssetTranslationController_catchAllHandler_delete",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Asset Translations (Project > Prompt > Asset > Version > Translation)"
+        ]
+      },
+      "patch": {
+        "operationId": "AssetTranslationController_catchAllHandler_patch",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Asset Translations (Project > Prompt > Asset > Version > Translation)"
+        ]
+      },
+      "options": {
+        "operationId": "AssetTranslationController_catchAllHandler_options",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Asset Translations (Project > Prompt > Asset > Version > Translation)"
+        ]
+      },
+      "head": {
+        "operationId": "AssetTranslationController_catchAllHandler_head",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Asset Translations (Project > Prompt > Asset > Version > Translation)"
+        ]
+      },
+      "search": {
+        "operationId": "AssetTranslationController_catchAllHandler_search",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Asset Translations (Project > Prompt > Asset > Version > Translation)"
+        ]
+      }
+    },
+    "/api/projects/{projectId}/prompts/{promptId}/assets/{assetKey}/versions/{versionTag}/translations": {
       "post": {
         "operationId": "AssetTranslationController_create",
         "parameters": [
@@ -4911,7 +5105,7 @@
         ]
       }
     },
-    "/api/projects/{projectId}/prompts/{promptId}/prompt-assets/{assetKey}/versions/{versionTag}/translations/{languageCode}": {
+    "/api/projects/{projectId}/prompts/{promptId}/assets/{assetKey}/versions/{versionTag}/translations/{languageCode}": {
       "get": {
         "operationId": "AssetTranslationController_findOneByLanguage",
         "parameters": [

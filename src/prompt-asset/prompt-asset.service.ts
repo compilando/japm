@@ -139,21 +139,18 @@ export class PromptAssetService {
     async update(key: string, updateDto: UpdatePromptAssetDto, promptIdInput: string, projectIdInput: string): Promise<PromptAsset> {
         const existingAsset = await this.findAndValidateAsset(key, promptIdInput, projectIdInput);
 
-        // Ensure that key, promptId, and projectId are not part of the updateDto itself if they define the asset's identity
-        const { key: dtoKey, promptId: dtoPromptId, projectId: dtoprojectId, projectId: dtoLegacyProjectId, tenantId: _omitTenantId, ...restData } = updateDto as any;
+        // Explicitly pick only allowed and existing fields for the update
+        const dataToUpdate: Prisma.PromptAssetUpdateInput = {};
 
-        // Prevent changing the key or prompt linkage via this method if key/promptId/projectId define the asset
-        if (dtoKey !== undefined && dtoKey !== key) {
-            throw new BadRequestException('Changing the asset key via update is not allowed. Delete and recreate if necessary.');
+        if (updateDto.enabled !== undefined) {
+            dataToUpdate.enabled = updateDto.enabled;
         }
-        // Similar checks for promptId/projectId could be added if they were in DTO and meant to be immutable here
 
-        const data: Prisma.PromptAssetUpdateInput = { ...restData };
+        // Add other fields from UpdatePromptAssetDto here if they existed and were valid for PromptAsset model
+        // e.g., if (updateDto.description !== undefined) dataToUpdate.description = updateDto.description;
 
-        if (Object.keys(data).length === 0) {
+        if (Object.keys(dataToUpdate).length === 0) {
             // Nothing to update, return the asset as is.
-            // Fetch it again with full details if existingAsset from findAndValidateAsset isn't detailed enough
-            // For now, assuming existingAsset (which is just PromptAsset) is acceptable for this return path.
             return existingAsset;
         }
 
@@ -162,7 +159,7 @@ export class PromptAssetService {
                 where: {
                     id: existingAsset.id // Assets are updated by their CUID (id)
                 },
-                data,
+                data: dataToUpdate, // Use the explicitly constructed dataToUpdate object
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {

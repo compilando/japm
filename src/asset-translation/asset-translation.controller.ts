@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, Logger, SetMetadata, UseGuards
+  Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, Logger, SetMetadata, UseGuards, All, Request
 } from '@nestjs/common';
 import { AssetTranslationService } from './asset-translation.service';
 import { CreateAssetTranslationDto } from './dto/create-asset-translation.dto';
@@ -11,15 +11,24 @@ import { ProjectGuard, PROJECT_ID_PARAM_KEY } from '../common/guards/project.gua
 
 @ApiTags('Asset Translations (Project > Prompt > Asset > Version > Translation)')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, ProjectGuard)
-@SetMetadata(PROJECT_ID_PARAM_KEY, 'projectId')
-@Controller('projects/:projectId/prompts/:promptId/prompt-assets/:assetKey/versions/:versionTag/translations')
+@Controller('projects/:projectId/prompts/:promptId/assets/:assetKey/versions/:versionTag/translations')
 export class AssetTranslationController {
   private readonly logger = new Logger(AssetTranslationController.name);
 
-  constructor(private readonly service: AssetTranslationService) { }
+  constructor(private readonly service: AssetTranslationService) {
+    this.logger.log('[AssetTranslationController] Constructor called');
+  }
+
+  @All('debug-catch-all')
+  catchAllHandler(@Param() params: any, @Request() req: any): string {
+    const routeParams = JSON.stringify(params);
+    this.logger.log(`[AssetTranslationController] CATCH-ALL HANDLER (debug-catch-all) invoked. Params: ${routeParams}. Request path: ${req.path}. Method: ${req.method}`);
+    return `AssetTranslationController CATCH-ALL (debug-catch-all) reached. Path: ${req.path}. Params: ${routeParams}`;
+  }
 
   @Post()
+  @UseGuards(JwtAuthGuard, ProjectGuard)
+  @SetMetadata(PROJECT_ID_PARAM_KEY, 'projectId')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   @ApiOperation({ summary: 'Create a translation for a specific asset version' })
   @ApiParam({ name: 'projectId', description: 'ID of the Project the Prompt belongs to' })
@@ -45,6 +54,8 @@ export class AssetTranslationController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard, ProjectGuard)
+  @SetMetadata(PROJECT_ID_PARAM_KEY, 'projectId')
   @ApiOperation({ summary: 'Get all translations for a specific asset version' })
   @ApiParam({ name: 'projectId', description: 'ID of the Project the Prompt belongs to' })
   @ApiParam({ name: 'promptId', description: 'ID (slug) of the Prompt' })
@@ -54,16 +65,20 @@ export class AssetTranslationController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
   @ApiResponse({ status: 404, description: 'Project, Asset, or Version not found.' })
-  findAll(
+  async findAll(
     @Param('projectId') projectId: string,
     @Param('promptId') promptId: string,
     @Param('assetKey') assetKey: string,
-    @Param('versionTag') versionTag: string
+    @Param('versionTag') versionTag: string,
+    @Request() req: any
   ): Promise<AssetTranslation[]> {
+    this.logger.log(`[AssetTranslationController] findAll ENTRY (GUARDS RESTORED). User from req: ${JSON.stringify(req.user)}. Params: projectId=${projectId}, promptId=${promptId}, assetKey=${assetKey}, versionTag=${versionTag}`);
     return this.service.findAllForVersion(projectId, promptId, assetKey, versionTag);
   }
 
   @Get(':languageCode')
+  @UseGuards(JwtAuthGuard, ProjectGuard)
+  @SetMetadata(PROJECT_ID_PARAM_KEY, 'projectId')
   @ApiOperation({ summary: 'Get a specific translation by language code for an asset version' })
   @ApiParam({ name: 'projectId', description: 'ID of the Project the Prompt belongs to' })
   @ApiParam({ name: 'promptId', description: 'ID (slug) of the Prompt' })
@@ -85,6 +100,8 @@ export class AssetTranslationController {
   }
 
   @Patch(':languageCode')
+  @UseGuards(JwtAuthGuard, ProjectGuard)
+  @SetMetadata(PROJECT_ID_PARAM_KEY, 'projectId')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, skipMissingProperties: true }))
   @ApiOperation({ summary: 'Update a specific translation by language code for an asset version' })
   @ApiParam({ name: 'projectId', description: 'ID of the Project the Prompt belongs to' })
@@ -111,6 +128,8 @@ export class AssetTranslationController {
   }
 
   @Delete(':languageCode')
+  @UseGuards(JwtAuthGuard, ProjectGuard)
+  @SetMetadata(PROJECT_ID_PARAM_KEY, 'projectId')
   @ApiOperation({ summary: 'Delete a specific translation by language code for an asset version' })
   @ApiParam({ name: 'projectId', description: 'ID of the Project the Prompt belongs to' })
   @ApiParam({ name: 'promptId', description: 'ID (slug) of the Prompt' })

@@ -14,7 +14,7 @@ import { Logger } from '@nestjs/common';
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
 @SetMetadata(PROJECT_ID_PARAM_KEY, 'projectId')
-@Controller('projects/:projectId/prompts/:promptId/prompt-assets/:assetKey/versions')
+@Controller('projects/:projectId/prompts/:promptId/assets/:assetKey/versions')
 export class PromptAssetVersionController {
   private readonly logger = new Logger(PromptAssetVersionController.name);
 
