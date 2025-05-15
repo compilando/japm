@@ -1,0 +1,65 @@
+# Git
+.git
+.gitignore
+
+# Node modules
+node_modules
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Lock files (npm uses package-lock.json, which should be versioned)
+pnpm-lock.yaml
+yarn.lock
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.yaml
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDEs and editors
+.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Compiled output (will be handled in Dockerfile)
+# /dist
+# /build
+
+# Logs
+logs
+*.log
+
+# Coverage
+/coverage
+/.nyc_output
+
+# Other
+.temp
+.tmp
+pids
+*.pid
+*.seed
+*.pid.lock
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json 

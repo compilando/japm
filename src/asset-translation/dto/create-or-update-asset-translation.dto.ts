@@ -2,16 +2,16 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, Length } from 'class-validator';
 
 export class CreateOrUpdateAssetTranslationDto {
-    @ApiProperty({ description: 'Código de idioma ISO para la traducción (e.g., es, fr, de).', example: 'es' })
+    @ApiProperty({ description: 'ISO language code for the translation (e.g., es, fr, de).', example: 'es' })
     @IsString()
     @IsNotEmpty()
-    // @Length(2, 10) // Podría usarse si se sigue un estándar específico como BCP 47
+    // @Length(2, 10) // Could be used if following a specific standard like BCP 47
     languageCode: string;
 
-    @ApiProperty({ description: 'El valor traducido del asset para este idioma.', example: 'Hola Mundo Traducido' })
+    @ApiProperty({ description: 'The translated value of the asset for this language.', example: 'Translated Hello World' })
     @IsString()
     @IsNotEmpty()
     value: string;
 
-    // versionId se obtiene del parámetro de la ruta, no del body
+    // versionId is obtained from the route parameter, not from the body
 } 

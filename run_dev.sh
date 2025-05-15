@@ -1,10 +1,13 @@
 #!/bin/bash
 
-# Script para iniciar la aplicación NestJS en modo desarrollo con watch
+echo "Starting JAPM API in development mode (Linux/macOS)..."
 
-# Detener el script si ocurre algún error
+# Script to start the NestJS application in development mode with watch
+
+# Stop the script if an error occurs
 set -e
 
 # Ejecutar el comando de inicio de desarrollo definido en package.json
-echo "Iniciando la aplicación en modo desarrollo (con pnpm)..."
+# Execute the development start command defined in package.json
+echo "Starting the application in development mode (with pnpm)..."
 pnpm run start:dev 

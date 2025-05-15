@@ -6409,19 +6409,21 @@
         "properties": {
           "modelId": {
             "type": "string",
-            "description": "ID del AIModel a utilizar (de la tabla AIModel)",
+            "description": "ID of the AIModel to use (from the AIModel table)",
             "example": "clxyz..."
           },
           "promptText": {
             "type": "string",
-            "description": "El texto completo del prompt ya procesado y listo para enviar al LLM",
-            "example": "Traduce este texto a español: Hello world."
+            "description": "The complete prompt text already processed and ready to send to the LLM",
+            "example": "Translate this text to Spanish: Hello world."
           },
           "variables": {
             "type": "object",
-            "description": "Variables originales usadas para ensamblar el prompt (opcional, para logging/contexto)",
+            "description": "Original variables used to assemble the prompt (optional, for logging/context)",
             "example": {
-              "cliente": "ACME Corp"
+              "userLocale": "en-US",
+              "productName": "AwesomeProduct",
+              "maxItems": 5
             }
           }
         },

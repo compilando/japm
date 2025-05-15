@@ -11,7 +11,7 @@ export class AssetTranslationService {
 
   // Helper to verify access to the parent asset version
   private async verifyVersionAccess(projectId: string, assetKey: string, versionTag: string): Promise<PromptAssetVersion> {
-    // Primero encontrar el asset por su key y projectId
+    // First find the asset by its key and projectId
     const asset = await this.prisma.promptAsset.findUnique({
       where: {
         project_asset_key_unique: { projectId, key: assetKey }
@@ -22,7 +22,7 @@ export class AssetTranslationService {
       throw new NotFoundException(`PromptAsset with key "${assetKey}" not found in project "${projectId}".`);
     }
 
-    // Luego encontrar la versión usando el ID del asset
+    // Then find the version using the asset ID
     const version = await this.prisma.promptAssetVersion.findUnique({
       where: {
         assetId_versionTag: { assetId: asset.id, versionTag: versionTag }
@@ -118,7 +118,7 @@ export class AssetTranslationService {
     return this.prisma.assetTranslation.findMany({ include: { version: true } });
   }
 
-  // Método útil para buscar traducciones de una versión específica
+  // Useful method to find translations for a specific version
   findByVersionId(versionId: string): Promise<AssetTranslation[]> {
     return this.prisma.assetTranslation.findMany({
       where: { versionId },
@@ -129,7 +129,7 @@ export class AssetTranslationService {
   async findOne(id: string): Promise<AssetTranslation> {
     const translation = await this.prisma.assetTranslation.findUnique({
       where: { id },
-      include: { version: { include: { asset: true } } } // Incluir versión y asset lógico
+      include: { version: { include: { asset: true } } } // Include version and logical asset
     });
     if (!translation) {
       throw new NotFoundException(`AssetTranslation with ID "${id}" not found`);
@@ -170,7 +170,8 @@ export class AssetTranslationService {
       });
     } catch (error) {
       // Prisma debería lanzar P2003 si versionId no existe, pero ya lo comprobamos.
-      // Otros errores podrían ocurrir.
+      // Prisma should throw P2003 if versionId does not exist, but we already checked it.
+      // Other errors could occur.
       console.error(`Failed to upsert translation for version ${versionId} and language ${languageCode}:`, error);
       throw new Error('Could not save asset translation.');
     }
@@ -178,6 +179,7 @@ export class AssetTranslationService {
 
   async findByVersion(versionId: string): Promise<AssetTranslation[]> {
     // Verificar si la versión existe podría ser útil aquí también
+    // Checking if the version exists could also be useful here
     return this.prisma.assetTranslation.findMany({
       where: { versionId },
     });

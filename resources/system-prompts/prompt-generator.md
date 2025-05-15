@@ -58,7 +58,7 @@ Example JSON Output Structure:
     ],
     "translations": [
       { "languageCode": "en-US", "promptText": "Core prompt text in English, WITH {{asset_key_1}} and {{asset_key_2}} SUBSTITUTED." },
-      { "languageCode": "es-ES", "promptText": "Texto del prompt principal en Español, CON {{asset_key_1}} y {{asset_key_2}} SUSTITUIDOS." }
+      { "languageCode": "es-ES", "promptText": "Main prompt text in Spanish, WITH {{asset_key_1}} AND {{asset_key_2}} SUBSTITUTED." }
     ]
   },
   "assets": [ // This is the detailed list of assets
@@ -68,7 +68,7 @@ Example JSON Output Structure:
       "changeMessage": "Initial asset version from user prompt.",
       "translations": [
         { "languageCode": "en-US", "value": "Asset value in English..." },
-        { "languageCode": "es-ES", "value": "Valor del asset en Español..." }
+        { "languageCode": "es-ES", "value": "Asset value in Spanish..." }
       ]
     },
     {
@@ -77,7 +77,7 @@ Example JSON Output Structure:
       "changeMessage": "Initial asset version from user prompt.",
       "translations": [
         { "languageCode": "en-US", "value": "Second asset value in English..." },
-        { "languageCode": "es-ES", "value": "Valor del segundo asset en Español..." }
+        { "languageCode": "es-ES", "value": "Value of the second asset in Spanish..." }
       ]
     }
     // Add more assets here if identified
