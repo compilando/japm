@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, UseGuards, Request, HttpCode, HttpStatus
+  Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, UseGuards, Request, HttpCode, HttpStatus, Query
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { PromptVersionService } from './prompt-version.service';
@@ -8,6 +8,7 @@ import { PromptVersion } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ProjectGuard } from '../common/guards/project.guard';
 import { CreatePromptVersionDto } from 'src/prompt/dto/create-prompt-version.dto';
+import { ResolveAssetsQueryDto } from '../serve-prompt/dto/resolve-assets-query.dto';
 
 @ApiTags('Prompt Versions (within Project/Prompt)')
 @ApiBearerAuth()
@@ -51,10 +52,14 @@ export class PromptVersionController {
   }
 
   @Get(':versionTag')
-  @ApiOperation({ summary: 'Get a specific prompt version by its tag within a project/prompt' })
+  @ApiOperation({ summary: 'Get a specific prompt version by its tag within a project/prompt. Allows resolving assets.' })
   @ApiParam({ name: 'projectId', description: 'Project ID' })
   @ApiParam({ name: 'promptId', description: 'Prompt CUID' })
   @ApiParam({ name: 'versionTag', description: 'Version tag (e.g., v1.0.0)' })
+  @ApiQuery({ name: 'resolveAssets', description: 'Whether to resolve asset placeholders. Defaults to false.', type: Boolean, required: false, example: 'true' })
+  @ApiQuery({ name: 'environmentId', description: 'Environment ID for context.', type: String, required: false, example: 'dev-env-123' })
+  @ApiQuery({ name: 'regionCode', description: 'Region code for context (e.g., for asset translations).', type: String, required: false, example: 'us-east-1' })
+  @ApiQuery({ name: 'variables', description: 'JSON stringified object of variables for substitution.', type: String, required: false, example: '{"varName": "value"}' })
   @ApiResponse({ status: 200, description: 'Version found.', type: CreatePromptVersionDto })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
@@ -62,9 +67,10 @@ export class PromptVersionController {
   findOneByTag(
     @Param('projectId') projectId: string,
     @Param('promptId') promptId: string,
-    @Param('versionTag') versionTag: string
+    @Param('versionTag') versionTag: string,
+    @Query() query: ResolveAssetsQueryDto
   ): Promise<PromptVersion> {
-    return this.service.findOneByTag(projectId, promptId, versionTag);
+    return this.service.findOneByTag(projectId, promptId, versionTag, query);
   }
 
   @Patch(':versionTag')

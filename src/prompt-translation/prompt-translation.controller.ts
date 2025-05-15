@@ -8,6 +8,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery, ApiBea
 import { PromptTranslation } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ProjectGuard } from '../common/guards/project.guard';
+import { ResolveAssetsQueryDto } from '../serve-prompt/dto/resolve-assets-query.dto';
 
 @ApiTags('Prompt Translations (within Project/Prompt/Version)')
 @ApiBearerAuth()
@@ -56,11 +57,15 @@ export class PromptTranslationController {
   }
 
   @Get(':languageCode')
-  @ApiOperation({ summary: 'Get a specific translation by language code for a prompt version' })
+  @ApiOperation({ summary: 'Get a specific translation by language code for a prompt version. Allows resolving assets.' })
   @ApiParam({ name: 'projectId', description: 'Project ID' })
   @ApiParam({ name: 'promptId', description: 'Prompt CUID' })
   @ApiParam({ name: 'versionTag', description: 'Version Tag' })
   @ApiParam({ name: 'languageCode', description: 'Language code (e.g., es-ES)', required: true })
+  @ApiQuery({ name: 'resolveAssets', description: 'Whether to resolve asset placeholders. Defaults to false.', type: Boolean, required: false, example: 'true' })
+  @ApiQuery({ name: 'environmentId', description: 'Environment ID for context.', type: String, required: false, example: 'dev-env-123' })
+  @ApiQuery({ name: 'regionCode', description: 'Region code for context (e.g., for asset translations - overrides languageCode for assets if provided).', type: String, required: false, example: 'us-east-1' })
+  @ApiQuery({ name: 'variables', description: 'JSON stringified object of variables for substitution.', type: String, required: false, example: '{"varName": "value"}' })
   @ApiResponse({ status: 200, description: 'Translation found.', type: CreatePromptTranslationDto })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
@@ -69,9 +74,10 @@ export class PromptTranslationController {
     @Param('projectId') projectId: string,
     @Param('promptId') promptId: string,
     @Param('versionTag') versionTag: string,
-    @Param('languageCode') languageCode: string
+    @Param('languageCode') languageCode: string,
+    @Query() query: ResolveAssetsQueryDto
   ): Promise<PromptTranslation> {
-    return this.service.findOneByLanguage(projectId, promptId, versionTag, languageCode);
+    return this.service.findOneByLanguage(projectId, promptId, versionTag, languageCode, query);
   }
 
   @Patch(':languageCode')

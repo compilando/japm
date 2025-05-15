@@ -1,13 +1,20 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, Logger } from '@nestjs/common';
 import { CreatePromptTranslationDto } from './dto/create-prompt-translation.dto';
 import { UpdatePromptTranslationDto } from './dto/update-prompt-translation.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, PromptTranslation, PromptVersion } from '@prisma/client';
 import { CreateOrUpdatePromptTranslationDto } from './dto/create-or-update-prompt-translation.dto';
+import { ServePromptService } from '../serve-prompt/serve-prompt.service';
+import { ResolveAssetsQueryDto } from '../serve-prompt/dto/resolve-assets-query.dto';
 
 @Injectable()
 export class PromptTranslationService {
-  constructor(private prisma: PrismaService) { }
+  private readonly logger = new Logger(PromptTranslationService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private servePromptService: ServePromptService,
+  ) { }
 
   // Helper to verify access to the parent prompt version
   private async verifyVersionAccess(projectId: string, promptId: string, versionTag: string): Promise<PromptVersion> {
@@ -55,7 +62,7 @@ export class PromptTranslationService {
     });
   }
 
-  async findOneByLanguage(projectId: string, promptId: string, versionTag: string, languageCode: string): Promise<PromptTranslation> {
+  async findOneByLanguage(projectId: string, promptId: string, versionTag: string, languageCode: string, query?: ResolveAssetsQueryDto): Promise<PromptTranslation> {
     const version = await this.verifyVersionAccess(projectId, promptId, versionTag);
     const translation = await this.prisma.promptTranslation.findUnique({
       where: {
@@ -66,12 +73,42 @@ export class PromptTranslationService {
     if (!translation) {
       throw new NotFoundException(`Translation for language "${languageCode}" not found for version "${versionTag}" of prompt "${promptId}".`);
     }
+
+    if (query && query.resolveAssets === 'true') {
+      let inputVariables: Record<string, any> = {};
+      if (query.variables) {
+        try {
+          inputVariables = JSON.parse(query.variables);
+        } catch (e) {
+          this.logger.warn(`Failed to parse variables JSON string: ${query.variables}. Proceeding without variables for translation ${translation.id}.`);
+        }
+      }
+
+      // For asset translations, prioritize the language of the translation itself (languageCode).
+      // If query.regionCode is also provided, it could represent a more specific dialect or context for assets.
+      // Current asset logic in servePromptService.resolveAssets takes one languageCode.
+      // We will pass the main translation's languageCode. query.regionCode could be used if asset resolution becomes more granular.
+      const assetLanguageToUse = query.regionCode || languageCode; // Prefer regionCode if specified, else the translation's language
+
+      const { processedText, resolvedAssetsMetadata } = await this.servePromptService.resolveAssets(
+        translation.promptText,
+        projectId,
+        assetLanguageToUse, // Use the determined language for asset resolution
+        inputVariables,
+        { id: promptId } // Pass prompt context (promptId is the CUID of the prompt model)
+      );
+      translation.promptText = processedText;
+      // Optionally, attach resolvedAssetsMetadata
+      // (translation as any).resolvedAssetsMetadata = resolvedAssetsMetadata;
+    }
+
     return translation;
   }
 
   async update(projectId: string, promptId: string, versionTag: string, languageCode: string, updateDto: UpdatePromptTranslationDto): Promise<PromptTranslation> {
     // Verify access and find the specific translation first
-    const existingTranslation = await this.findOneByLanguage(projectId, promptId, versionTag, languageCode);
+    // Pass undefined for query to avoid asset resolution during this specific find operation
+    const existingTranslation = await this.findOneByLanguage(projectId, promptId, versionTag, languageCode, undefined);
 
     // updateDto should only contain promptText
     try {

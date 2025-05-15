@@ -6,6 +6,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 @Module({
   imports: [PrismaModule],
   controllers: [ServePromptController],
-  providers: [ServePromptService]
+  providers: [ServePromptService],
+  exports: [ServePromptService]
 })
 export class ServePromptModule { }

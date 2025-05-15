@@ -3181,6 +3181,46 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "resolveAssets",
+            "required": false,
+            "in": "query",
+            "description": "Whether to resolve asset placeholders. Defaults to false.",
+            "schema": {
+              "example": "true",
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "environmentId",
+            "required": false,
+            "in": "query",
+            "description": "Environment ID for context.",
+            "schema": {
+              "example": "dev-env-123",
+              "type": "string"
+            }
+          },
+          {
+            "name": "regionCode",
+            "required": false,
+            "in": "query",
+            "description": "Region code for context (e.g., for asset translations).",
+            "schema": {
+              "example": "us-east-1",
+              "type": "string"
+            }
+          },
+          {
+            "name": "variables",
+            "required": false,
+            "in": "query",
+            "description": "JSON stringified object of variables for substitution.",
+            "schema": {
+              "example": "{\"varName\": \"value\"}",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3209,7 +3249,7 @@
             "bearer": []
           }
         ],
-        "summary": "Get a specific prompt version by its tag within a project/prompt",
+        "summary": "Get a specific prompt version by its tag within a project/prompt. Allows resolving assets.",
         "tags": [
           "Prompt Versions (within Project/Prompt)"
         ]
@@ -3886,6 +3926,46 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "resolveAssets",
+            "required": false,
+            "in": "query",
+            "description": "Whether to resolve asset placeholders. Defaults to false.",
+            "schema": {
+              "example": "true",
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "environmentId",
+            "required": false,
+            "in": "query",
+            "description": "Environment ID for context.",
+            "schema": {
+              "example": "dev-env-123",
+              "type": "string"
+            }
+          },
+          {
+            "name": "regionCode",
+            "required": false,
+            "in": "query",
+            "description": "Region code for context (e.g., for asset translations - overrides languageCode for assets if provided).",
+            "schema": {
+              "example": "us-east-1",
+              "type": "string"
+            }
+          },
+          {
+            "name": "variables",
+            "required": false,
+            "in": "query",
+            "description": "JSON stringified object of variables for substitution.",
+            "schema": {
+              "example": "{\"varName\": \"value\"}",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3914,7 +3994,7 @@
             "bearer": []
           }
         ],
-        "summary": "Get a specific translation by language code for a prompt version",
+        "summary": "Get a specific translation by language code for a prompt version. Allows resolving assets.",
         "tags": [
           "Prompt Translations (within Project/Prompt/Version)"
         ]

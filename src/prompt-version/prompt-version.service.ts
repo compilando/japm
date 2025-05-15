@@ -4,6 +4,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, PromptVersion, Prompt, MarketplacePublishStatus } from '@prisma/client';
 import { CreatePromptVersionDto } from 'src/prompt/dto/create-prompt-version.dto';
 import { TenantService } from '../tenant/tenant.service';
+import { ServePromptService } from '../serve-prompt/serve-prompt.service';
+import { ResolveAssetsQueryDto } from '../serve-prompt/dto/resolve-assets-query.dto';
 
 @Injectable()
 export class PromptVersionService {
@@ -12,6 +14,7 @@ export class PromptVersionService {
   constructor(
     private prisma: PrismaService,
     private tenantService: TenantService,
+    private servePromptService: ServePromptService,
   ) { }
 
   // Helper to verify prompt access
@@ -67,30 +70,58 @@ export class PromptVersionService {
     });
   }
 
-  async findOneByTag(projectId: string, promptId: string, versionTag: string): Promise<PromptVersion> {
+  async findOneByTag(projectId: string, promptId: string, versionTag: string, query?: ResolveAssetsQueryDto): Promise<PromptVersion> {
     await this.verifyPromptAccess(projectId, promptId);
 
     const version = await this.prisma.promptVersion.findUnique({
       where: {
-        promptId_versionTag: { promptId: promptId, versionTag: versionTag }, // Use composite key
+        promptId_versionTag: { promptId: promptId, versionTag: versionTag },
       },
       include: {
         prompt: true,
         translations: true,
-        // assets: { include: { assetVersion: { include: { asset: true } } } } // ELIMINADO: ya no existe la relación assets
       },
     });
 
     if (!version) {
       throw new NotFoundException(`PromptVersion with tag "${versionTag}" not found for prompt "${promptId}".`);
     }
-    // No need for extra projectId check here as verifyPromptAccess and the query ensure it
+
+    if (query && query.resolveAssets === 'true') {
+      let inputVariables: Record<string, any> = {};
+      if (query.variables) {
+        try {
+          inputVariables = JSON.parse(query.variables);
+        } catch (e) {
+          this.logger.warn(`Failed to parse variables JSON string: ${query.variables}. Proceeding without variables.`);
+        }
+      }
+
+      // The languageCode for asset translation should be query.regionCode if provided, 
+      // otherwise, if we are fetching a specific prompt translation later, that languageCode would be used.
+      // For a base prompt version, query.regionCode is the primary source for asset language.
+      // If not resolving for a specific translation, query.regionCode is used for assets.
+      const assetLanguageCode = query.regionCode;
+
+      const { processedText, resolvedAssetsMetadata } = await this.servePromptService.resolveAssets(
+        version.promptText,
+        projectId,
+        assetLanguageCode, // Use regionCode from query for asset translations
+        inputVariables,
+        { id: promptId } // Pass prompt context (promptId is the CUID of the prompt model)
+      );
+      version.promptText = processedText;
+      // Optionally, attach resolvedAssetsMetadata to the version object if the return type is adjusted
+      // (version as any).resolvedAssetsMetadata = resolvedAssetsMetadata; 
+    }
+
     return version;
   }
 
   async update(projectId: string, promptId: string, versionTag: string, updateDto: UpdatePromptVersionDto): Promise<PromptVersion> {
     // Verify access and find the specific version by tag first
-    const existingVersion = await this.findOneByTag(projectId, promptId, versionTag);
+    // Pass undefined for query to avoid asset resolution during this specific find operation
+    const existingVersion = await this.findOneByTag(projectId, promptId, versionTag, undefined);
 
     // Use updateDto directly
 
