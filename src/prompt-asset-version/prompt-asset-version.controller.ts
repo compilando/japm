@@ -10,7 +10,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ProjectGuard, PROJECT_ID_PARAM_KEY } from '../common/guards/project.guard';
 import { Logger } from '@nestjs/common';
 
-@ApiTags('Prompt Asset Versions (Project > Prompt > Asset > Version)')
+@ApiTags('PromptAssetVersions')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ProjectGuard)
 @SetMetadata(PROJECT_ID_PARAM_KEY, 'projectId')

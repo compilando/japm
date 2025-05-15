@@ -125,7 +125,7 @@ model Prompt {
 
 model PromptVersion {
   id                   String               @id @default(cuid())
-  prompt               Prompt               @relation("PromptVersion_prompt", fields: [promptId], references: [id])
+  prompt               Prompt               @relation(fields: [promptId], references: [id], onDelete: Cascade)
   promptId             String               @map("prompt")
   promptText           String               @default("")
   versionTag           String               @default("v1.0.0")

@@ -350,29 +350,22 @@ export class PromptService {
      * Generates a suggested prompt structure using an LLM via RawExecutionService.
      * @param projectId The CUID of the project to get regions from.
      * @param userOriginalPrompt The user's initial prompt text.
-     * @param tenantId The CUID of the tenant (obtained from JWT).
+     * @param projectRegions The project regions to be used for the system prompt.
      * @param targetAiModelApiIdentifier The CUID of the AIModel to use (defaults to a placeholder).
      * @returns A JSON object representing the suggested structure.
      */
     async generateStructure(
         projectId: string,
         userOriginalPrompt: string,
-        tenantId: string,
+        projectRegions: { languageCode: string; name: string }[],
         targetAiModelApiIdentifier: string = 'gpt-4o',
     ): Promise<object> {
         this.logger.debug(
-            `Starting generateStructure for projectId: ${projectId}, tenantId: ${tenantId}, targetModel: ${targetAiModelApiIdentifier}`,
+            `Starting generateStructure for projectId: ${projectId}, targetModel: ${targetAiModelApiIdentifier}`,
         );
 
-        // 1. Obtener información del proyecto actual y sus regiones para el contexto
-        const project = await this.projectService.findOne(projectId, tenantId);
-        if (!project || !project.regions) {
-            this.logger.error(`Project or project regions not found for projectId: ${projectId}`);
-            throw new NotFoundException(`Project with ID "${projectId}" or its regions not found.`);
-        }
-        const projectRegionsJson = JSON.stringify(
-            project.regions.map(r => ({ languageCode: r.languageCode, name: r.name }))
-        );
+        // 1. projectRegions are now passed directly
+        const projectRegionsJson = JSON.stringify(projectRegions);
         this.logger.debug(`Project regions for system prompt: ${projectRegionsJson}`);
 
         // 2. Buscar el AIModel por su apiIdentifier (o nombre) DENTRO DE 'default-project'
@@ -454,9 +447,8 @@ export class PromptService {
 
     async loadStructure(
         projectId: string,
-        tenantId: string, // Asegúrate de que este tenantId se use si es necesario para validar el proyecto, o si las entidades lo requieren.
         dto: LoadPromptStructureDto,
-    ): Promise<Prompt> { // Considera devolver un DTO más específico si es necesario, o el Prompt con ciertas relaciones.
+    ): Promise<Prompt> {
         this.logger.log(`Attempting to load prompt structure for project: ${projectId} with DTO: ${JSON.stringify(dto)}`);
 
         const { prompt: promptMeta, version: versionData, assets: assetEntries, tags: tagNames } = dto;
@@ -495,12 +487,12 @@ export class PromptService {
 
             if (assetEntries && assetEntries.length > 0) {
                 for (const assetEntry of assetEntries) {
-                    const existingAsset = await tx.promptAsset.findUnique({
+                    const existingAsset = await tx.promptAsset.findFirst({
                         where: {
-                            prompt_asset_key_unique: {
-                                promptId: prompt.id,
-                                projectId: projectId,
-                                key: assetEntry.key
+                            key: assetEntry.key,
+                            promptId: prompt.id,
+                            prompt: {
+                                projectId: projectId
                             }
                         }
                     });
@@ -511,9 +503,14 @@ export class PromptService {
                     const newDbAsset = await tx.promptAsset.create({
                         data: {
                             key: assetEntry.key,
-                            promptId: prompt.id,
-                            projectId: projectId,
-                            // name: assetEntry.name, // Schema actual no tiene 'name' en PromptAsset.
+                            prompt: {
+                                connect: {
+                                    prompt_id_project_unique: {
+                                        id: prompt.id,
+                                        projectId: projectId
+                                    }
+                                }
+                            }
                         },
                     });
                     this.logger.debug(`Created PromptAsset: ${newDbAsset.key} (ID: ${newDbAsset.id}) for prompt ${prompt.id}`);

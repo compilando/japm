@@ -965,7 +965,7 @@
         ]
       }
     },
-    "/api/projects/{projectId}/prompts/{promptName}": {
+    "/api/projects/{projectId}/prompts/{promptIdSlug}": {
       "patch": {
         "operationId": "PromptController_update",
         "parameters": [
@@ -973,14 +973,16 @@
             "name": "projectId",
             "required": true,
             "in": "path",
+            "description": "The ID of the project.",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "promptName",
+            "name": "promptIdSlug",
             "required": true,
             "in": "path",
+            "description": "The ID (slug) of the prompt to update.",
             "schema": {
               "type": "string"
             }
@@ -1022,7 +1024,51 @@
             "bearer": []
           }
         ],
-        "summary": "Update an existing prompt by name",
+        "summary": "Update an existing prompt by its ID (slug)",
+        "tags": [
+          "Prompts"
+        ]
+      },
+      "delete": {
+        "operationId": "PromptController_remove",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptIdSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The prompt has been successfully deleted."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden. Project does not belong to tenant or prompt does not belong to project."
+          },
+          "404": {
+            "description": "Project or Prompt not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a prompt by its slug within a project",
         "tags": [
           "Prompts"
         ]
@@ -4266,7 +4312,7 @@
         ],
         "summary": "Create a new version for a specific prompt asset",
         "tags": [
-          "Prompt Asset Versions (Project > Prompt > Asset > Version)"
+          "PromptAssetVersions"
         ]
       },
       "get": {
@@ -4331,7 +4377,7 @@
         ],
         "summary": "Get all versions for a specific prompt asset",
         "tags": [
-          "Prompt Asset Versions (Project > Prompt > Asset > Version)"
+          "PromptAssetVersions"
         ]
       }
     },
@@ -4404,7 +4450,7 @@
         ],
         "summary": "Get a specific prompt asset version by its tag",
         "tags": [
-          "Prompt Asset Versions (Project > Prompt > Asset > Version)"
+          "PromptAssetVersions"
         ]
       },
       "patch": {
@@ -4488,7 +4534,7 @@
         ],
         "summary": "Update a specific prompt asset version by its tag",
         "tags": [
-          "Prompt Asset Versions (Project > Prompt > Asset > Version)"
+          "PromptAssetVersions"
         ]
       },
       "delete": {
@@ -4552,7 +4598,7 @@
         ],
         "summary": "Delete a specific prompt asset version by its tag",
         "tags": [
-          "Prompt Asset Versions (Project > Prompt > Asset > Version)"
+          "PromptAssetVersions"
         ]
       }
     },
@@ -4625,7 +4671,7 @@
         ],
         "summary": "Request to publish an asset version to the marketplace",
         "tags": [
-          "Prompt Asset Versions (Project > Prompt > Asset > Version)"
+          "PromptAssetVersions"
         ]
       }
     },
@@ -4698,7 +4744,7 @@
         ],
         "summary": "Unpublish an asset version from the marketplace",
         "tags": [
-          "Prompt Asset Versions (Project > Prompt > Asset > Version)"
+          "PromptAssetVersions"
         ]
       }
     },
@@ -6004,17 +6050,11 @@
             "items": {
               "$ref": "#/components/schemas/InitialTranslationDto"
             }
-          },
-          "tenantId": {
-            "type": "string",
-            "description": "ID del tenant al que pertenece este prompt",
-            "example": "tenant-cuid-xxxx"
           }
         },
         "required": [
           "name",
-          "promptText",
-          "tenantId"
+          "promptText"
         ]
       },
       "PromptDto": {

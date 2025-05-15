@@ -58,10 +58,10 @@ export class CreatePromptDto {
     @Type(() => InitialTranslationDto)
     initialTranslations?: InitialTranslationDto[];
 
-    @ApiProperty({ description: 'ID del tenant al que pertenece este prompt', example: 'tenant-cuid-xxxx' })
-    @IsString()
-    @IsNotEmpty()
-    tenantId: string;
+    // @ApiProperty({ description: 'ID del tenant al que pertenece este prompt', example: 'tenant-cuid-xxxx' })
+    // @IsString()
+    // @IsNotEmpty()
+    // tenantId: string; // REMOVED as per new rule: tenantId comes from authenticated user context
 
     // activeVersionId is not set on creation, handled separately or when creating the 1st version.
     // versions are handled via their own endpoint/service.

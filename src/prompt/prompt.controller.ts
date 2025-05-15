@@ -13,6 +13,7 @@ import {
     HttpCode,
     HttpStatus,
     ParseUUIDPipe,
+    NotFoundException,
 } from '@nestjs/common';
 import { PromptService } from './prompt.service';
 import { CreatePromptDto } from './dto/create-prompt.dto';
@@ -63,6 +64,9 @@ export class PromptController {
         this.logger.log(
             `REQ ${req.method} ${req.url} ${JSON.stringify(req.body)}`,
         );
+        const tenantId = req.user.tenantId;
+        await this.projectService.findOne(projectId, tenantId);
+
         const createdPrompt = await this.promptService.create(
             createPromptDto,
             projectId,
@@ -89,6 +93,9 @@ export class PromptController {
         this.logger.log(
             `REQ ${req.method} ${req.url} - Fetching all prompts for project ${projectId}`,
         );
+        const tenantId = req.user.tenantId;
+        await this.projectService.findOne(projectId, tenantId);
+
         const prompts = await this.promptService.findAll(projectId);
         this.logger.log(
             `RES ${HttpStatus.OK} ${req.method} ${req.url} - Found ${prompts.length} prompts for project ${projectId}`,
@@ -115,6 +122,9 @@ export class PromptController {
         this.logger.log(
             `REQ ${req.method} ${req.url} - Fetching prompt ${promptId} for project ${projectId}`,
         );
+        const tenantId = req.user.tenantId;
+        await this.projectService.findOne(projectId, tenantId);
+
         const prompt = await this.promptService.findOne(promptId, projectId);
         this.logger.log(
             `RES ${HttpStatus.OK} ${req.method} ${req.url} - Found prompt ${promptId} for project ${projectId}`,
@@ -122,8 +132,8 @@ export class PromptController {
         return prompt;
     }
 
-    @Patch(':promptName')
-    @ApiOperation({ summary: 'Update an existing prompt by name' })
+    @Patch(':promptIdSlug')
+    @ApiOperation({ summary: 'Update an existing prompt by its ID (slug)' })
     @ApiResponse({
         status: 200,
         description: 'The prompt has been successfully updated.',
@@ -132,17 +142,22 @@ export class PromptController {
     @ApiResponse({ status: 400, description: 'Bad Request.' })
     @ApiResponse({ status: 401, description: 'Unauthorized.' })
     @ApiResponse({ status: 404, description: 'Prompt or Project not found.' })
+    @ApiParam({ name: 'projectId', type: String, description: 'The ID of the project.' })
+    @ApiParam({ name: 'promptIdSlug', type: String, description: 'The ID (slug) of the prompt to update.' })
     async update(
         @Param('projectId') projectId: string,
-        @Param('promptName') promptName: string,
+        @Param('promptIdSlug') promptIdSlug: string,
         @Body() updatePromptDto: UpdatePromptDto,
         @Req() req: any,
     ): Promise<Prompt> {
         this.logger.log(
             `REQ ${req.method} ${req.url} ${JSON.stringify(req.body)}`,
         );
+        const tenantId = req.user.tenantId;
+        await this.projectService.findOne(projectId, tenantId);
+
         const updatedPrompt = await this.promptService.update(
-            promptName,
+            promptIdSlug,
             updatePromptDto,
             projectId,
         );
@@ -198,6 +213,13 @@ export class PromptController {
         @Req() req: any,
     ): Promise<object> {
         this.logger.debug(`==> ENTERED generateStructure Controller Method - ProjectID: ${projectId}, TenantID: ${req.user?.tenantId}, Body: ${JSON.stringify(generatePromptStructureDto)}`);
+        const tenantId = req.user.tenantId;
+
+        const project = await this.projectService.findOne(projectId, tenantId);
+        if (!project || !project.regions) {
+            this.logger.error(`Project or project regions not found for projectId: ${projectId} and tenantId: ${tenantId}`);
+            throw new NotFoundException(`Project with ID "${projectId}" or its regions not found for your tenant.`);
+        }
 
         this.logger.log(
             `REQ ${req.method} ${req.url} projectId=${projectId} ${JSON.stringify(req.body)}`,
@@ -206,7 +228,7 @@ export class PromptController {
             const structure = await this.promptService.generateStructure(
                 projectId,
                 generatePromptStructureDto.userPrompt,
-                req.user.tenantId,
+                project.regions.map(r => ({ languageCode: r.languageCode, name: r.name })),
             );
             this.logger.log(
                 `RES ${HttpStatus.OK} ${req.method} ${req.url} ${JSON.stringify(structure)}`,
@@ -236,11 +258,12 @@ export class PromptController {
         this.logger.log(
             `REQ ${req.method} ${req.url} projectId=${projectId} - Loading prompt structure: ${JSON.stringify(loadPromptDto)}`,
         );
-        const tenantId = req.user?.tenantId;
+        const tenantId = req.user.tenantId;
+
+        await this.projectService.findOne(projectId, tenantId);
 
         const createdPrompt = await this.promptService.loadStructure(
             projectId,
-            tenantId,
             loadPromptDto,
         );
 
@@ -248,5 +271,31 @@ export class PromptController {
             `RES ${HttpStatus.CREATED} ${req.method} ${req.url} - Prompt structure loaded successfully for project ${projectId}`,
         );
         return createdPrompt;
+    }
+
+    @Delete(':promptIdSlug')
+    @ApiOperation({ summary: 'Delete a prompt by its slug within a project' })
+    @ApiResponse({ status: 204, description: 'The prompt has been successfully deleted.' })
+    @ApiResponse({ status: 401, description: 'Unauthorized.' })
+    @ApiResponse({ status: 403, description: 'Forbidden. Project does not belong to tenant or prompt does not belong to project.' })
+    @ApiResponse({ status: 404, description: 'Project or Prompt not found.' })
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async remove(
+        @Param('projectId') projectId: string,
+        @Param('promptIdSlug') promptIdSlug: string,
+        @Req() req: any,
+    ): Promise<void> {
+        this.logger.log(
+            `REQ ${req.method} ${req.url} - Deleting prompt ${promptIdSlug} from project ${projectId}`,
+        );
+        const tenantId = req.user.tenantId;
+
+        await this.projectService.findOne(projectId, tenantId);
+
+        await this.promptService.remove(promptIdSlug, projectId);
+
+        this.logger.log(
+            `RES ${HttpStatus.NO_CONTENT} ${req.method} ${req.url} - Prompt ${promptIdSlug} deleted from project ${projectId}`,
+        );
     }
 }
