@@ -34,6 +34,14 @@ export class CreatePromptVersionDto {
   @IsString()
   promptText: string;
 
+  @ApiProperty({
+    description: 'Tag de versión para esta nueva versión (e.g., v1.0.0, v1.0.0-beta.1). Debe ser único por prompt.',
+    example: 'v1.0.0',
+  })
+  @IsString()
+  @Length(1, 50)
+  versionTag: string;
+
   @ApiPropertyOptional({
     description: 'Mensaje describiendo los cambios en esta versión.',
   })

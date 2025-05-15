@@ -1216,6 +1216,130 @@
         ]
       }
     },
+    "/api/projects/{projectId}/prompts/{promptId}/versions": {
+      "post": {
+        "operationId": "PromptVersionController_create",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePromptVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Version created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePromptVersionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid data (e.g., duplicate versionTag)."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
+          "404": {
+            "description": "Project or Prompt not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new version for a specific prompt within a project",
+        "tags": [
+          "Prompt Versions (within Project/Prompt)"
+        ]
+      },
+      "get": {
+        "operationId": "PromptVersionController_findAll",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of versions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CreatePromptVersionDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
+          "404": {
+            "description": "Project or Prompt not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all versions for a specific prompt within a project",
+        "tags": [
+          "Prompt Versions (within Project/Prompt)"
+        ]
+      }
+    },
     "/api/projects/mine": {
       "get": {
         "operationId": "ProjectController_findMine",
@@ -3115,130 +3239,6 @@
         "summary": "Obtiene una etiqueta por su nombre dentro de un proyecto",
         "tags": [
           "Tags"
-        ]
-      }
-    },
-    "/api/projects/{projectId}/prompts/{promptId}/versions": {
-      "post": {
-        "operationId": "PromptVersionController_create",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "Project ID",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "promptId",
-            "required": true,
-            "in": "path",
-            "description": "Prompt CUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePromptVersionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Version created.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatePromptVersionDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid data (e.g., duplicate versionTag)."
-          },
-          "401": {
-            "description": "Unauthorized."
-          },
-          "403": {
-            "description": "Forbidden Access to Project."
-          },
-          "404": {
-            "description": "Project or Prompt not found."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a new version for a specific prompt within a project",
-        "tags": [
-          "Prompt Versions (within Project/Prompt)"
-        ]
-      },
-      "get": {
-        "operationId": "PromptVersionController_findAll",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "Project ID",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "promptId",
-            "required": true,
-            "in": "path",
-            "description": "Prompt CUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of versions.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CreatePromptVersionDto"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized."
-          },
-          "403": {
-            "description": "Forbidden Access to Project."
-          },
-          "404": {
-            "description": "Project or Prompt not found."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get all versions for a specific prompt within a project",
-        "tags": [
-          "Prompt Versions (within Project/Prompt)"
         ]
       }
     },
@@ -6494,6 +6494,37 @@
           "assets"
         ]
       },
+      "CreatePromptVersionDto": {
+        "type": "object",
+        "properties": {
+          "promptText": {
+            "type": "string",
+            "description": "El valor/texto del prompt para esta nueva versión"
+          },
+          "versionTag": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "description": "Tag de versión para esta nueva versión (e.g., v1.0.0, v1.0.0-beta.1). Debe ser único por prompt.",
+            "example": "v1.0.0"
+          },
+          "changeMessage": {
+            "type": "string",
+            "description": "Mensaje describiendo los cambios en esta versión."
+          },
+          "initialTranslations": {
+            "description": "Optional initial translations for this new version.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InitialTranslationDto"
+            }
+          }
+        },
+        "required": [
+          "promptText",
+          "versionTag"
+        ]
+      },
       "CreateProjectDto": {
         "type": "object",
         "properties": {
@@ -6971,35 +7002,19 @@
           }
         }
       },
-      "CreatePromptVersionDto": {
-        "type": "object",
-        "properties": {
-          "promptText": {
-            "type": "string",
-            "description": "El valor/texto del prompt para esta nueva versión"
-          },
-          "changeMessage": {
-            "type": "string",
-            "description": "Mensaje describiendo los cambios en esta versión."
-          },
-          "initialTranslations": {
-            "description": "Optional initial translations for this new version.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/InitialTranslationDto"
-            }
-          }
-        },
-        "required": [
-          "promptText"
-        ]
-      },
       "UpdatePromptVersionDto": {
         "type": "object",
         "properties": {
           "promptText": {
             "type": "string",
             "description": "El valor/texto del prompt para esta nueva versión"
+          },
+          "versionTag": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "description": "Tag de versión para esta nueva versión (e.g., v1.0.0, v1.0.0-beta.1). Debe ser único por prompt.",
+            "example": "v1.0.0"
           },
           "changeMessage": {
             "type": "string",

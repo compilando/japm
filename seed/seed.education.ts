@@ -431,14 +431,14 @@ async function main() {
                     versionTag: versionSeed.versionTag,
                     promptText: versionSeed.promptText || promptSeed.promptContent,
                     aiModelId: versionSeed.aiModelId || eduGpt4oMini.id,
-                    assetVersions: {
-                        connect: connectAssetVersionIds.length > 0 ? connectAssetVersionIds : undefined
-                    },
-                    environments: { connect: [{ id: stagingEnvironment.id }, { id: testingEnvironment.id }] },
+                    activeInEnvironments: { connect: [{ id: stagingEnvironment.id }, { id: testingEnvironment.id }] },
                 },
                 select: { id: true }
             });
             console.log(`Created PromptVersion ${newPromptVersion.id} (Tag: ${versionSeed.versionTag}) for Prompt ${prompt.id}`);
+            if (connectAssetVersionIds.length > 0) {
+                console.warn(`PromptVersion ${newPromptVersion.id} created, but associated asset versions ([${connectAssetVersionIds.map(obj => obj.id).join(', ')}]) were NOT LINKED due to schema constraints. Link them manually if needed.`);
+            }
             latestVersionIdForPrompt = newPromptVersion.id;
         }
     }

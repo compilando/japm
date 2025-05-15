@@ -88,7 +88,7 @@ export class PromptService {
     private projectService: ProjectService,
     private systemPromptService: SystemPromptService,
     private rawExecutionService: RawExecutionService,
-  ) {}
+  ) { }
 
   // Helper to substitute variables (copied from RawExecutionService for now)
   private substituteVariables(
@@ -155,10 +155,10 @@ export class PromptService {
             translations:
               initialTranslations && initialTranslations.length > 0
                 ? {
-                    createMany: {
-                      data: initialTranslations.map((t) => ({ ...t })),
-                    },
-                  }
+                  createMany: {
+                    data: initialTranslations.map((t) => ({ ...t })),
+                  },
+                }
                 : undefined,
           },
         });
@@ -355,43 +355,35 @@ export class PromptService {
     // 1. Validar prompt padre usando slug
     const prompt = await this.findOne(promptIdSlug, projectId);
 
-    // 2. Encontrar la versión más reciente (sin cambios)
-    const latestVersion = await this.prisma.promptVersion.findFirst({
-      where: { promptId: prompt.id }, // prompt.id es el slug
-      orderBy: { createdAt: 'desc' },
-      select: { versionTag: true },
-    });
+    // 2. Se elimina la búsqueda de la versión más reciente y el cálculo del siguiente tag.
+    // El versionTag ahora viene del DTO.
 
-    if (!latestVersion) {
-      throw new ConflictException(
-        `Cannot create new version for prompt '${prompt.name}' because no initial version was found.`,
-      );
-    }
+    // 3. Validar formato de versionTag (opcional, pero recomendado)
+    // Ejemplo: si quisieras forzar un formato como vX.Y.Z
+    // const versionTagRegex = /^v\d+\.\d+\.\d+$/;
+    // if (!versionTagRegex.test(createVersionDto.versionTag)) {
+    //   throw new BadRequestException(
+    //     `Version tag "${createVersionDto.versionTag}" does not follow the expected format vX.Y.Z.`,
+    //   );
+    // }
 
-    // 3. Calcular el siguiente tag de versión (sin cambios)
-    let newVersionTag = 'v1.0.1';
-    const currentTag = latestVersion.versionTag;
-    const match = currentTag.match(/^v?(\d+)\.(\d+)\.(\d+)$/);
-    if (match) {
-      const major = parseInt(match[1], 10);
-      const minor = parseInt(match[2], 10);
-      const patch = parseInt(match[3], 10);
-      newVersionTag = `v${major}.${minor}.${patch + 1}`;
-    } else {
-      throw new BadRequestException(
-        `Could not determine next version tag. Latest tag '${currentTag}' does not follow expected format vX.Y.Z.`,
-      );
-    }
-
-    // 4. Crear la nueva versión (sin cambios en la lógica interna, promptId es el slug)
-    const { promptText, changeMessage } = createVersionDto;
+    // 4. Crear la nueva versión usando el versionTag del DTO
+    const { promptText, changeMessage, versionTag, initialTranslations } = createVersionDto;
     try {
       return await this.prisma.promptVersion.create({
         data: {
           promptId: prompt.id, // prompt.id es el slug
-          versionTag: newVersionTag,
+          versionTag: versionTag, // Usar el tag del DTO
           promptText: promptText,
-          changeMessage,
+          changeMessage: changeMessage || `Version ${versionTag} created.`, // Mensaje por defecto si no se provee
+          translations: initialTranslations && initialTranslations.length > 0
+            ? {
+              createMany: {
+                data: initialTranslations.map(t => ({ ...t }))
+              }
+            }
+            : undefined,
+          // Considerar añadir 'status' y 'activeInEnvironments' si es necesario por defecto
         },
         include: {
           translations: true,
@@ -403,13 +395,14 @@ export class PromptService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
+        // El error P2002 aquí se debe a la constraint unique (promptId, versionTag)
         throw new ConflictException(
-          `Failed to create version tag '${newVersionTag}'. It might already exist for prompt '${prompt.name}'.`,
+          `Failed to create version. Tag '${versionTag}' already exists for prompt '${prompt.name}'.`,
         );
       }
-      console.error(
-        `Error creating version '${newVersionTag}' for prompt '${prompt.name}':`,
-        error,
+      this.logger.error(
+        `Error creating version '${versionTag}' for prompt '${prompt.name}': ${error.message}`,
+        error.stack,
       );
       throw error;
     }

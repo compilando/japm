@@ -26,12 +26,15 @@ import {
   ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
-import { Prompt } from '@prisma/client';
+import { Prompt, PromptVersion } from '@prisma/client';
 import { ProjectService } from '../project/project.service';
 import { GeneratePromptStructureDto } from './dto/generate-prompt-structure.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { PromptDto } from './dto/prompt.dto';
 import { LoadPromptStructureDto } from './dto/load-prompt-structure.dto';
+import { CreatePromptVersionDto } from './dto/create-prompt-version.dto';
+// import { PromptVersionDto } from './dto/prompt-version.dto';
+// import { UpdatePromptVersionDto } from './dto/update-prompt-version.dto';
 
 @ApiTags('Prompts')
 @ApiBearerAuth()
@@ -43,7 +46,7 @@ export class PromptController {
   constructor(
     private readonly promptService: PromptService,
     private readonly projectService: ProjectService,
-  ) {}
+  ) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new prompt within a project' })
@@ -346,5 +349,49 @@ export class PromptController {
     this.logger.log(
       `RES ${HttpStatus.NO_CONTENT} ${req.method} ${req.url} - Prompt ${promptIdSlug} deleted from project ${projectId}`,
     );
+  }
+
+  @Post(':promptId/versions')
+  @ApiOperation({ summary: 'Create a new version for a specific prompt' })
+  @ApiResponse({
+    status: 201,
+    description: 'The prompt version has been successfully created.',
+    type: CreatePromptVersionDto,
+  })
+  @ApiResponse({ status: 400, description: 'Bad Request (e.g., invalid versionTag format, missing fields).' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Prompt or Project not found.' })
+  @ApiResponse({ status: 409, description: 'Conflict (e.g., versionTag already exists for this prompt).' })
+  @ApiParam({
+    name: 'projectId',
+    type: String,
+    description: 'The ID of the project.',
+  })
+  @ApiParam({
+    name: 'promptId',
+    type: String,
+    description: 'The ID (slug) of the prompt.',
+  })
+  async createVersion(
+    @Param('projectId') projectId: string,
+    @Param('promptId') promptIdSlug: string,
+    @Body() createPromptVersionDto: CreatePromptVersionDto,
+    @Req() req: any,
+  ): Promise<PromptVersion> {
+    this.logger.log(
+      `REQ ${req.method} ${req.url} projectId=${projectId} promptId=${promptIdSlug} ${JSON.stringify(req.body)}`,
+    );
+    const tenantId = req.user.tenantId;
+    await this.projectService.findOne(projectId, tenantId);
+
+    const newVersion = await this.promptService.createVersion(
+      promptIdSlug,
+      createPromptVersionDto,
+      projectId,
+    );
+    this.logger.log(
+      `RES ${HttpStatus.CREATED} ${req.method} ${req.url} ${JSON.stringify(newVersion)}`,
+    );
+    return newVersion;
   }
 }
