@@ -73,11 +73,11 @@ export class ProjectService {
     }
 
     async findAllForUser(userId: string, tenantId: string): Promise<Pick<Project, 'id' | 'name'>[]> {
-        this.logger.debug(`[Service] Finding projects for user: ${userId} in tenant: ${tenantId}`); // Log de depuración
+        this.logger.debug(`[Service] Finding projects for user: ${userId} in tenant: ${tenantId}`);
         return this.prisma.project.findMany({
             where: {
                 ownerUserId: userId,
-                tenantId: tenantId, // Filtrar también por tenantId
+                tenantId: tenantId,
             },
             select: { id: true, name: true },
             orderBy: { name: 'asc' },
@@ -85,56 +85,50 @@ export class ProjectService {
     }
 
     async findOne(id: string, tenantId: string): Promise<ProjectWithRegions> {
-        const project = await this.prisma.project.findFirst({
-            where: {
-                id: id,
-                tenantId: tenantId,
-            },
+        const project = await this.prisma.project.findUnique({
+            where: { id: id },
             include: {
                 regions: true,
             },
         });
 
-        if (!project) {
+        if (!project || project.tenantId !== tenantId) {
             throw new NotFoundException(`Project with ID "${id}" not found for tenant "${tenantId}".`);
         }
         return project as ProjectWithRegions;
     }
 
     async update(id: string, updateProjectDto: UpdateProjectDto, tenantId: string): Promise<Project> {
-        const projectData = updateProjectDto;
-
-        const project = await this.prisma.project.findUnique({ where: { id }, select: { id: true, tenantId: true } });
-        if (!project || project.tenantId !== tenantId) {
-            throw new NotFoundException(`Project with ID "${id}" not found for this tenant`);
-        }
+        await this.findOne(id, tenantId);
 
         try {
             return await this.prisma.project.update({
-                where: { id },
-                data: projectData,
+                where: { id: id },
+                data: updateProjectDto,
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException(`Project with ID "${id}" not found for this tenant`);
+                this.logger.error(`Error P2025 updating project '${id}': ${error.message}`, error.meta);
+                throw new NotFoundException(`Update failed. Ensure all related entities exist.`);
             }
+            this.logger.error(`Error updating project '${id}': ${error.message}`, error.stack);
             throw error;
         }
     }
 
     async remove(id: string, tenantId: string): Promise<Project> {
-        const project = await this.prisma.project.findUnique({ where: { id }, select: { id: true, tenantId: true } });
-        if (!project || project.tenantId !== tenantId) {
-            throw new NotFoundException(`Project with ID "${id}" not found for this tenant`);
-        }
+        await this.findOne(id, tenantId);
+
         try {
             return await this.prisma.project.delete({
-                where: { id },
+                where: { id: id },
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException(`Project with ID "${id}" not found for this tenant`);
+                this.logger.error(`Error P2025 deleting project '${id}': ${error.message}`, error.meta);
+                throw new NotFoundException(`Delete failed. Project with ID "${id}" may have already been deleted.`);
             }
+            this.logger.error(`Error deleting project '${id}': ${error.message}`, error.stack);
             throw error;
         }
     }

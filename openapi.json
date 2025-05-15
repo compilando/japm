@@ -913,6 +913,58 @@
         ]
       }
     },
+    "/api/projects/{projectId}/prompts/{promptId}": {
+      "get": {
+        "operationId": "PromptController_findOne",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "The ID of the project.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "The ID (slug) of the prompt.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The prompt object.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "404": {
+            "description": "Project or Prompt not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a specific prompt by its ID (slug) for a project",
+        "tags": [
+          "Prompts"
+        ]
+      }
+    },
     "/api/projects/{projectId}/prompts/{promptName}": {
       "patch": {
         "operationId": "PromptController_update",
@@ -3421,6 +3473,235 @@
         ]
       }
     },
+    "/api/tenants": {
+      "post": {
+        "operationId": "TenantController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tenant created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden resource."
+          },
+          "409": {
+            "description": "Tenant name already exists."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new tenant",
+        "tags": [
+          "Tenants"
+        ]
+      },
+      "get": {
+        "operationId": "TenantController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Array of tenants.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden resource."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all tenants",
+        "tags": [
+          "Tenants"
+        ]
+      }
+    },
+    "/api/tenants/{tenantId}": {
+      "get": {
+        "operationId": "TenantController_findOne",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "The ID of the tenant",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant object.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden resource."
+          },
+          "404": {
+            "description": "Tenant not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a specific tenant by ID",
+        "tags": [
+          "Tenants"
+        ]
+      },
+      "patch": {
+        "operationId": "TenantController_update",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "The ID of the tenant",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tenant updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden resource."
+          },
+          "404": {
+            "description": "Tenant not found."
+          },
+          "409": {
+            "description": "Tenant name already exists."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a tenant by ID",
+        "tags": [
+          "Tenants"
+        ]
+      },
+      "delete": {
+        "operationId": "TenantController_remove",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "The ID of the tenant",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Tenant deleted successfully."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden resource."
+          },
+          "404": {
+            "description": "Tenant not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a tenant by ID (Caution: Destructive operation)",
+        "tags": [
+          "Tenants"
+        ]
+      }
+    },
     "/api/projects/{projectId}/prompts/{promptId}/versions/{versionTag}/translations": {
       "post": {
         "operationId": "PromptTranslationController_create",
@@ -5151,9 +5432,19 @@
           },
           "password": {
             "type": "string",
-            "minLength": 6,
+            "minLength": 8,
             "example": "password123",
             "description": "User's password"
+          },
+          "role": {
+            "type": "string",
+            "description": "Role of the user",
+            "enum": [
+              "USER",
+              "ADMIN",
+              "TENANT_ADMIN"
+            ],
+            "default": "USER"
           }
         },
         "required": [
@@ -6259,6 +6550,113 @@
             "items": {
               "$ref": "#/components/schemas/InitialTranslationDto"
             }
+          }
+        }
+      },
+      "CreateTenantAdminUserDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email for the initial tenant admin user.",
+            "example": "admin@acme.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "description": "Password for the initial tenant admin user.",
+            "example": "Str0ngP@sswOrd!"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the initial tenant admin user.",
+            "example": "Admin User"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "CreateTenantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the tenant.",
+            "example": "Acme Corporation"
+          },
+          "marketplaceRequiresApproval": {
+            "type": "boolean",
+            "description": "Indicates if marketplace prompt versions require approval for this tenant. Defaults to true.",
+            "example": true
+          },
+          "initialAdminUser": {
+            "description": "Details for creating an initial admin user for this tenant.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CreateTenantAdminUserDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "initialAdminUser"
+        ]
+      },
+      "TenantDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The unique identifier of the tenant.",
+            "example": "clxrbspgy0000u0fwh8zgy17u"
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the tenant.",
+            "example": "Acme Corporation"
+          },
+          "marketplaceRequiresApproval": {
+            "type": "boolean",
+            "description": "Indicates if marketplace prompt versions require approval for this tenant.",
+            "example": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "The date and time the tenant was created.",
+            "example": "2024-01-01T12:00:00.000Z"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "The date and time the tenant was last updated.",
+            "example": "2024-01-02T15:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "marketplaceRequiresApproval",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateTenantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The new name of the tenant.",
+            "example": "Acme Corp Innovations"
+          },
+          "marketplaceRequiresApproval": {
+            "type": "boolean",
+            "description": "Set if marketplace prompt versions require approval for this tenant.",
+            "example": false
           }
         }
       },

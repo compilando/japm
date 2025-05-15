@@ -242,25 +242,27 @@ export class PromptService {
     }
 
     async remove(promptIdSlug: string, projectId: string): Promise<Prompt> {
-        const promptToDelete = await this.findOne(promptIdSlug, projectId);
+        // Primero, asegurar que el prompt existe y pertenece al proyecto.
+        // findOne ya usa prompt_id_project_unique y lanza NotFoundException si no se encuentra.
+        await this.findOne(promptIdSlug, projectId);
 
         try {
             return await this.prisma.prompt.delete({
                 where: {
-                    prompt_id_project_unique: {
+                    prompt_id_project_unique: { // Usar el constraint @@unique
                         id: promptIdSlug,
                         projectId: projectId
                     }
                 },
             });
         } catch (error) {
+            // P2025 podría ocurrir si el prompt ya no existe (condición de carrera) o una FK lo impide.
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException(`Prompt with ID (slug) "${promptIdSlug}" not found.`);
+                this.logger.error(`Error P2025 deleting prompt '${promptIdSlug}' in project '${projectId}': ${error.message}`, error.meta);
+                throw new NotFoundException(`Delete failed. Prompt with ID "${promptIdSlug}" in project "${projectId}" not found or a related entity prevents deletion.`);
             }
-            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-                throw new ConflictException(`Cannot delete prompt "${promptToDelete.name}" (slug: ${promptIdSlug}) because it is still referenced by other entities (e.g., PromptVersions).`);
-            }
-            throw error;
+            this.logger.error(`Error deleting prompt '${promptIdSlug}' in project '${projectId}': ${error.message}`, error.stack);
+            throw error; // Re-lanzar otros errores
         }
     }
 
@@ -424,7 +426,7 @@ export class PromptService {
                     this.logger.error('LLM response was empty after cleaning Markdown markers.');
                     throw new InternalServerErrorException('AI response was empty or contained only Markdown markers.');
                 }
-                
+
                 this.logger.debug(`Cleaned response string for JSON parsing: ${cleanedResponseString}`);
                 const structuredResponse = JSON.parse(cleanedResponseString);
                 this.logger.log('Successfully parsed LLM response as JSON.');
@@ -440,8 +442,8 @@ export class PromptService {
             }
         } catch (error) {
             if (error.status && error.response) {
-                 this.logger.error(`Error from RawExecutionService: ${error.message}`, error.stack);
-                 throw error;
+                this.logger.error(`Error from RawExecutionService: ${error.message}`, error.stack);
+                throw error;
             }
             this.logger.error(`Error calling RawExecutionService: ${error.message}`, error.stack);
             throw new InternalServerErrorException(
@@ -505,8 +507,8 @@ export class PromptService {
                             projectId: projectId,
                             key: assetEntry.key,
                             // name: assetEntry.name, // Asegúrate que tu schema.prisma.PromptAsset tenga 'name' si lo quieres guardar.
-                                                    // El schema actual no lo tiene, así que lo omito por ahora.
-                                                    // Si lo añades al schema, descomenta esta línea.
+                            // El schema actual no lo tiene, así que lo omito por ahora.
+                            // Si lo añades al schema, descomenta esta línea.
                         },
                     });
                     this.logger.debug(`Created PromptAsset: ${newDbAsset.key} (ID: ${newDbAsset.id})`);
@@ -535,7 +537,7 @@ export class PromptService {
                     createdAssetsData.set(newDbAsset.key, { cuid: newDbAsset.id, name: assetEntry.name, value: assetEntry.value });
                 }
             }
-            
+
             // Validar que todos los assets en versionData.assets fueron definidos en assetEntries
             if (versionData.assets && versionData.assets.length > 0) {
                 for (const assetKey of versionData.assets) {
@@ -569,17 +571,17 @@ export class PromptService {
                 });
                 this.logger.debug(`Created ${versionData.translations.length} translations for prompt version: ${newDbPromptVersion.id}`);
             }
-            
+
             // 6. Manejar Tags
             if (tagNames && tagNames.length > 0) {
                 const tagObjectsToConnect: { id: string }[] = [];
                 for (const tagName of tagNames) {
-                    let tag = await tx.tag.findUnique({ 
-                        where: { projectId_name: { projectId, name: tagName } } 
+                    let tag = await tx.tag.findUnique({
+                        where: { projectId_name: { projectId, name: tagName } }
                     });
                     if (!tag) {
-                        tag = await tx.tag.create({ 
-                            data: { projectId, name: tagName, description: `Tag: ${tagName}` } 
+                        tag = await tx.tag.create({
+                            data: { projectId, name: tagName, description: `Tag: ${tagName}` }
                         });
                         this.logger.debug(`Created Tag: ${tag.name}`);
                     }

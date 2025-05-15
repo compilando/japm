@@ -96,6 +96,32 @@ export class PromptController {
         return prompts;
     }
 
+    @Get(':promptId')
+    @ApiOperation({ summary: 'Get a specific prompt by its ID (slug) for a project' })
+    @ApiResponse({
+        status: 200,
+        description: 'The prompt object.',
+        type: PromptDto,
+    })
+    @ApiResponse({ status: 401, description: 'Unauthorized.' })
+    @ApiResponse({ status: 404, description: 'Project or Prompt not found.' })
+    @ApiParam({ name: 'projectId', type: String, description: 'The ID of the project.' })
+    @ApiParam({ name: 'promptId', type: String, description: 'The ID (slug) of the prompt.' })
+    async findOne(
+        @Param('projectId') projectId: string,
+        @Param('promptId') promptId: string,
+        @Req() req: any,
+    ): Promise<Prompt> {
+        this.logger.log(
+            `REQ ${req.method} ${req.url} - Fetching prompt ${promptId} for project ${projectId}`,
+        );
+        const prompt = await this.promptService.findOne(promptId, projectId);
+        this.logger.log(
+            `RES ${HttpStatus.OK} ${req.method} ${req.url} - Found prompt ${promptId} for project ${projectId}`,
+        );
+        return prompt;
+    }
+
     @Patch(':promptName')
     @ApiOperation({ summary: 'Update an existing prompt by name' })
     @ApiResponse({

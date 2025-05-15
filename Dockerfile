@@ -24,6 +24,9 @@ RUN npx prisma generate
 # Build the application
 RUN npm run build
 
+# Check the contents of the dist folder
+RUN echo "Contents of /app/dist after build:" && ls -R /app/dist
+
 # After build, prepare node_modules for production
 # This will remove devDependencies from the existing node_modules
 RUN npm prune --production
@@ -53,4 +56,4 @@ ENV NODE_ENV=production
 
 # Default command to run the application
 # Adjust if your start:prod script is different or if you directly run the main.js
-CMD ["npm", "run", "start:prod"] 
+CMD ["node", "dist/main.js"] 

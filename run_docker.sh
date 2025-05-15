@@ -5,7 +5,7 @@ IMAGE_NAME="japm-api"
 CONTAINER_NAME="japm-api-container"
 
 # Puerto en el que la aplicación escuchará dentro del contenedor (debe coincidir con EXPOSE en Dockerfile)
-CONTAINER_PORT=3000
+CONTAINER_PORT=3001
 # Puerto que se expondrá en el host
 HOST_PORT=3001
 

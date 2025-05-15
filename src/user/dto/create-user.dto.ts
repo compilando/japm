@@ -1,8 +1,9 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, IsOptional, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEmail, IsString, IsOptional, MinLength, IsEnum } from 'class-validator';
+import { Role } from '@prisma/client';
 
 export class CreateUserDto {
-    @ApiProperty({ example: 'John Doe', description: 'User\'s name' })
+    @ApiPropertyOptional({ example: 'John Doe', description: 'User\'s name' })
     @IsString()
     @IsOptional()
     name?: string;
@@ -11,10 +12,19 @@ export class CreateUserDto {
     @IsEmail()
     email: string;
 
-    @ApiProperty({ example: 'password123', description: 'User\'s password', minLength: 6 })
+    @ApiProperty({ example: 'password123', description: 'User\'s password', minLength: 8 })
     @IsString()
-    @MinLength(6)
+    @MinLength(8)
     password: string;
+
+    @ApiPropertyOptional({
+        description: 'Role of the user',
+        enum: Role,
+        default: Role.USER
+    })
+    @IsOptional()
+    @IsEnum(Role)
+    role?: Role;
 
     /* // tenantId should come from the authenticated admin user (req.user.tenantId)
     @ApiProperty({ example: 'tenant-cuid-xxxx', description: 'ID del tenant al que pertenece este usuario' })
