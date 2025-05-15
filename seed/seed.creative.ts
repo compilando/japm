@@ -218,11 +218,32 @@ async function main() {
             .map(id => ({ id }));
     };
 
+    // Crear un Prompt padre para los assets comunes de Creative Writing
+    const crCommonAssetsPromptSlug = 'creative-common-assets';
+    const crCommonAssetsPrompt = await prisma.prompt.upsert({
+        where: {
+            prompt_id_project_unique: {
+                id: crCommonAssetsPromptSlug,
+                projectId: crProjectId,
+            },
+        },
+        update: { name: 'Creative Common Assets' },
+        create: {
+            id: crCommonAssetsPromptSlug,
+            name: 'Creative Common Assets',
+            description: 'Common reusable assets for Creative Writing prompts.',
+            projectId: crProjectId,
+        },
+        select: { id: true } // Solo necesitamos el ID para la FK
+    });
+    console.log(`Upserted Prompt for common Creative assets: ${crCommonAssetsPrompt.id}`);
+
     // --- Upsert Creative Assets ---
     const mainCharAssetName = 'Main Character Profile - Jax';
     const assetMainChar = await prisma.promptAsset.upsert({
         where: {
-            project_asset_key_unique: {
+            prompt_asset_key_unique: {
+                promptId: crCommonAssetsPrompt.id,
                 projectId: crProjectId,
                 key: 'main-char-profile-jax'
             }
@@ -230,6 +251,7 @@ async function main() {
         update: {},
         create: {
             key: 'main-char-profile-jax',
+            promptId: crCommonAssetsPrompt.id,
             projectId: crProjectId
         }
     });
@@ -256,9 +278,10 @@ async function main() {
     });
 
     const settingAssetName = 'Setting Description - Neo-Kyoto';
-    const assetSetting = await prisma.promptAsset.upsert({
+    const assetSettingNeoKyoto = await prisma.promptAsset.upsert({
         where: {
-            project_asset_key_unique: {
+            prompt_asset_key_unique: {
+                promptId: crCommonAssetsPrompt.id,
                 projectId: crProjectId,
                 key: 'setting-neo-kyoto'
             }
@@ -266,13 +289,14 @@ async function main() {
         update: {},
         create: {
             key: 'setting-neo-kyoto',
+            promptId: crCommonAssetsPrompt.id,
             projectId: crProjectId
         }
     });
-    const assetSettingV1 = await prisma.promptAssetVersion.upsert({
+    const assetSettingNeoKyotoV1 = await prisma.promptAssetVersion.upsert({
         where: {
             assetId_versionTag: {
-                assetId: assetSetting.id,
+                assetId: assetSettingNeoKyoto.id,
                 versionTag: 'v1.0.0'
             }
         },
@@ -282,7 +306,7 @@ async function main() {
             changeMessage: settingAssetName
         },
         create: {
-            assetId: assetSetting.id,
+            assetId: assetSettingNeoKyoto.id,
             value: 'Neo-Kyoto, 2242: A sprawling, rain-slicked metropolis dominated by mega-corporations. Holographic ads flicker on towering skyscrapers. Lower levels are dangerous, filled with black markets and cyber-gangs. Upper levels are pristine but sterile.',
             versionTag: 'v1.0.0',
             status: 'active',
@@ -291,10 +315,11 @@ async function main() {
         select: { id: true }
     });
 
-    const toneAssetName = 'Narrative Tone - Cyberpunk Noir';
-    const assetTone = await prisma.promptAsset.upsert({
+    const narrativeToneAssetName = 'Narrative Tone - Cyberpunk Noir';
+    const assetNarrativeToneNoir = await prisma.promptAsset.upsert({
         where: {
-            project_asset_key_unique: {
+            prompt_asset_key_unique: {
+                promptId: crCommonAssetsPrompt.id,
                 projectId: crProjectId,
                 key: 'narrative-tone-noir'
             }
@@ -302,27 +327,28 @@ async function main() {
         update: {},
         create: {
             key: 'narrative-tone-noir',
+            promptId: crCommonAssetsPrompt.id,
             projectId: crProjectId
         }
     });
-    const assetToneV1 = await prisma.promptAssetVersion.upsert({
+    const assetNarrativeToneNoirV1 = await prisma.promptAssetVersion.upsert({
         where: {
             assetId_versionTag: {
-                assetId: assetTone.id,
+                assetId: assetNarrativeToneNoir.id,
                 versionTag: 'v1.0.0'
             }
         },
         update: {
             value: 'Maintain a gritty, noir tone. Focus on atmosphere, shadows, rain, moral ambiguity. Use descriptive language that emphasizes the contrast between high-tech and societal decay.',
             status: 'active',
-            changeMessage: toneAssetName
+            changeMessage: narrativeToneAssetName
         },
         create: {
-            assetId: assetTone.id,
+            assetId: assetNarrativeToneNoir.id,
             value: 'Maintain a gritty, noir tone. Focus on atmosphere, shadows, rain, moral ambiguity. Use descriptive language that emphasizes the contrast between high-tech and societal decay.',
             versionTag: 'v1.0.0',
             status: 'active',
-            changeMessage: toneAssetName
+            changeMessage: narrativeToneAssetName
         },
         select: { id: true }
     });

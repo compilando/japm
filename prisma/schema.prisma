@@ -12,6 +12,7 @@ datasource db {
 
 generator client {
   provider        = "prisma-client-js"
+  output          = "../node_modules/.prisma/client"
   previewFeatures = ["views", "extendedWhereUnique"]
 }
 
@@ -116,7 +117,7 @@ model Prompt {
   tags        Tag[]           @relation("PromptTags")
   project     Project         @relation("ProjectPrompts", fields: [projectId], references: [id], onDelete: Cascade)
   projectId   String          @map("project")
-  // Ya no necesitamos un campo 'slug' separado ni un índice para él.
+  assets      PromptAsset[]   @relation("PromptOwnedAssets") // Added inverse relation
 
   @@unique([id, projectId], name: "prompt_id_project_unique") // Slug (id) único por proyecto
   @@index([projectId])
@@ -174,8 +175,11 @@ model PromptTranslation {
 
 model PromptAsset {
   id        String   @id @default(cuid())
-  projectId String
-  project   Project  @relation("ProjectAssets", fields: [projectId], references: [id], onDelete: Cascade)
+
+  promptId         String  // Corresponds to Prompt.id (slug)
+  projectId  String  // Corresponds to Prompt.projectId (CUID of the project the prompt belongs to)
+  prompt           Prompt  @relation("PromptOwnedAssets", fields: [promptId, projectId], references: [id, projectId], onDelete: Cascade)
+
   key       String // User-defined key for the asset, e.g., "company-bio", "product-list"
   enabled   Boolean  @default(true) // Campo para activar/desactivar el asset
   createdAt DateTime @default(now())
@@ -183,8 +187,8 @@ model PromptAsset {
 
   versions PromptAssetVersion[] @relation("AssetVersions")
 
-  @@unique([projectId, key], name: "project_asset_key_unique")
-  @@index([projectId])
+  @@unique([promptId, projectId, key], name: "prompt_asset_key_unique") // NEW unique constraint: key is unique per prompt
+  @@index([promptId, projectId]) // Index for the new foreign key fields
 }
 
 model PromptAssetVersion {
@@ -282,7 +286,6 @@ model Project {
   owner       User   @relation("OwnedProjects", fields: [ownerUserId], references: [id], onDelete: Restrict)
 
   prompts             Prompt[]              @relation("ProjectPrompts")
-  promptAssets        PromptAsset[]         @relation("ProjectAssets")
   environments        Environment[]         @relation("ProjectEnvironments")
   aiModels            AIModel[]             @relation("ProjectModels")
   regions             Region[]              @relation("ProjectRegions")

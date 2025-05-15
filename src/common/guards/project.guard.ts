@@ -1,16 +1,26 @@
 import { CanActivate, ExecutionContext, Injectable, NotFoundException, BadRequestException, ForbiddenException, UnauthorizedException, Logger, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service'; // Corrected path assuming standard structure
+import { Reflector } from '@nestjs/core'; // Import Reflector
 // import { validate as isUuid } from 'uuid'; // O usa class-validator si prefieres
 // Asumiendo CUIDs para IDs de proyecto
+
+export const PROJECT_ID_PARAM_KEY = 'projectIdParam'; // Key for metadata
 
 @Injectable()
 export class ProjectGuard implements CanActivate {
     private readonly logger = new Logger(ProjectGuard.name); // Initialize logger
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService, private reflector: Reflector) { } // Inject Reflector
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const request = context.switchToHttp().getRequest();
-        const projectId = request.params.projectId;
+
+        // Get the custom param name from metadata, default to 'projectId'
+        const projectIdParamName = this.reflector.getAllAndOverride<string>(PROJECT_ID_PARAM_KEY, [
+            context.getHandler(),
+            context.getClass(),
+        ]) || 'projectId';
+
+        const projectId = request.params[projectIdParamName]; // Use dynamic param name
         const user = request.user; // User object from JwtStrategy: { userId: string, email: string }
 
         // this.logger.log(`ProjectGuard activated for path: ${request.path}`);
@@ -27,11 +37,11 @@ export class ProjectGuard implements CanActivate {
 
         // 2. Validate projectId presence and basic format
         if (!projectId) {
-            this.logger.warn('Project ID missing in URL parameters.');
-            throw new BadRequestException('Project ID parameter is missing in URL');
+            this.logger.warn(`Project ID missing in URL parameters (expected param: ${projectIdParamName}).`);
+            throw new BadRequestException(`Project ID parameter (expected: ${projectIdParamName}) is missing in URL`);
         }
         if (typeof projectId !== 'string' || projectId.trim() === '') {
-            this.logger.warn(`Invalid Project ID format received: ${projectId}`);
+            this.logger.warn(`Invalid Project ID format received (param: ${projectIdParamName}): ${projectId}`);
             throw new BadRequestException('Invalid Project ID format');
         }
         //this.logger.debug(`Project ID format validated: ${projectId}`);
@@ -45,21 +55,23 @@ export class ProjectGuard implements CanActivate {
 
             // 4. Check if project exists
             if (!project) {
-                this.logger.warn(`Project not found for ID: ${projectId}`);
-                throw new NotFoundException(`Project with ID "${projectId}" not found`);
+                this.logger.warn(`Project not found for ID (param: ${projectIdParamName}): ${projectId}`);
+                throw new NotFoundException(`Project with ID "${projectId}" (from param "${projectIdParamName}") not found`);
             }
 
             // 5. Check if the authenticated user owns the project (using userId)
             // this.logger.debug(`Checking ownership: Project Owner=${project.ownerUserId}, Request User=${user.userId}`);
             if (project.ownerUserId !== user.userId) { // Compare ownerUserId with user.userId
-                this.logger.warn(`Authorization failed: User ${user.userId} does not own project ${projectId} (Owner: ${project.ownerUserId}).`);
+                this.logger.warn(`Authorization failed: User ${user.userId} does not own project ${projectId} (Owner: ${project.ownerUserId}). Param: ${projectIdParamName}`);
                 throw new ForbiddenException('User does not have permission to access this project');
             }
             //this.logger.debug(`Ownership confirmed for user ${user.userId} on project ${projectId}.`);
 
-            // 6. Attach validated projectId to request and allow access
-            request.projectId = projectId;
-            //this.logger.debug(`ProjectGuard passed for user ${user.userId} on project ${projectId}.`);
+            // 6. Attach validated projectId to request (using the original dynamic key for clarity if needed, or a fixed key like 'validatedProjectId')
+            // request.projectId = projectId; // Keep this simple, the controller now uses @Param directly for new routes
+            request[projectIdParamName] = projectId; // Or set it dynamically if other parts rely on this specific key
+            request.validatedProjectId = projectId; // A new, consistently named property
+
             return true;
         } catch (error) {
             // Log before re-throwing known exceptions
@@ -72,7 +84,7 @@ export class ProjectGuard implements CanActivate {
             }
 
             // Log unexpected errors
-            this.logger.error(`Unexpected error in ProjectGuard for projectId ${projectId} and userId ${user.userId}:`, error.stack || error); // Use user.userId in log
+            this.logger.error(`Unexpected error in ProjectGuard for projectId ${projectId} (param: ${projectIdParamName}) and userId ${user.userId}:`, error.stack || error); // Use user.userId in log
             // Throw a generic internal server error
             throw new InternalServerErrorException('An internal error occurred while authorizing project access.'); // Use NestJS exception
         }

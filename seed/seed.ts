@@ -304,6 +304,26 @@ async function main() {
 
     // --- Default Project Assets ---
     console.log('Upserting Default Project Assets...');
+
+    // Crear un Prompt "General" para los Default Assets si no existe
+    const generalAssetsPromptSlug = 'general-default-assets';
+    const generalAssetsPrompt = await prisma.prompt.upsert({
+        where: {
+            prompt_id_project_unique: {
+                id: generalAssetsPromptSlug,
+                projectId: defaultProject.id,
+            },
+        },
+        update: { name: 'General Default Assets Prompt' }, // Actualizar nombre por si cambia
+        create: {
+            id: generalAssetsPromptSlug,
+            name: 'General Default Assets Prompt',
+            description: 'A general prompt to house default project assets.',
+            projectId: defaultProject.id,
+        },
+    });
+    console.log(`Upserted general prompt for default assets: ${generalAssetsPrompt.name} (ID: ${generalAssetsPrompt.id})`);
+
     const defaultAssets = [
         {
             key: 'company-mission-statement',
@@ -331,29 +351,34 @@ async function main() {
     for (const assetData of defaultAssets) {
         const asset = await prisma.promptAsset.upsert({
             where: {
-                project_asset_key_unique: { // Corregido según el nombre del constraint
-                    projectId: defaultProject.id,
+                prompt_asset_key_unique: { // NUEVA CLAVE ÚNICA
+                    promptId: generalAssetsPrompt.id,    // ID del prompt genérico
+                    projectId: defaultProject.id,  // ID del proyecto del prompt
                     key: assetData.key,
                 }
             },
             update: {
-                // 'name' eliminado, PromptAsset no tiene este campo
+                // No hay campos específicos para actualizar en PromptAsset directamente en este seed
+                // 'name' y 'description' no están en el modelo PromptAsset
+                // 'enabled' podría ser un candidato si se gestionara aquí.
             },
             create: {
                 key: assetData.key,
-                // 'name' eliminado, PromptAsset no tiene este campo
-                projectId: defaultProject.id,
+                promptId: generalAssetsPrompt.id,    // ID del prompt genérico
+                projectId: defaultProject.id,  // ID del proyecto del prompt
+                // 'name' y 'description' no están en el modelo PromptAsset
             },
-            select: {
+            select: { // ACTUALIZAR SELECT
                 id: true,
                 key: true,
-                // 'name' eliminado
-                projectId: true,
+                promptId: true,        // Seleccionar promptId
+                projectId: true, // Seleccionar projectId
+                // projectId: true, // YA NO EXISTE DIRECTAMENTE
                 createdAt: true,
                 updatedAt: true
             }
         });
-        console.log(`Upserted Asset: ${assetData.name} (Key: ${asset.key})`);
+        console.log(`Upserted Asset: ${assetData.name} (Key: ${asset.key}) for prompt ${generalAssetsPrompt.id}`);
 
         // Crear o actualizar la PromptAssetVersion asociada
 

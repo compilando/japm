@@ -212,22 +212,45 @@ async function main() {
     });
     console.log(`Upserted AI Models for project ${cgProjectId}`);
 
+    // Crear un Prompt padre para los assets comunes de Code Generation
+    const cgCommonAssetsPromptSlug = 'codegen-common-assets';
+    const cgCommonAssetsPrompt = await prisma.prompt.upsert({
+        where: {
+            prompt_id_project_unique: {
+                id: cgCommonAssetsPromptSlug,
+                projectId: cgProjectId,
+            },
+        },
+        update: { name: 'CodeGen Common Assets' },
+        create: {
+            id: cgCommonAssetsPromptSlug,
+            name: 'CodeGen Common Assets',
+            description: 'Common reusable assets for Code Generation prompts.',
+            projectId: cgProjectId,
+        },
+        select: { id: true } // Solo necesitamos el ID para la FK
+    });
+    console.log(`Upserted Prompt for common CodeGen assets: ${cgCommonAssetsPrompt.id}`);
+
     // 2. Upsert common asset and its version
     const pythonImportsAssetName = 'Python Standard Imports';
     const assetPythonImports = await prisma.promptAsset.upsert({
         where: {
-            project_asset_key_unique: { // Corregido
-                projectId: cgProjectId,
+            prompt_asset_key_unique: { // NUEVA CLAVE ÚNICA
+                promptId: cgCommonAssetsPrompt.id, // ID del prompt padre
+                projectId: cgProjectId,     // ID del proyecto padre del prompt
                 key: 'python-standard-imports'
             }
         },
-        update: { /* name eliminado */ },
+        update: {
+            // No hay campos actualizables para PromptAsset aquí, 'enabled' sería uno si se gestionara.
+        },
         create: {
             key: 'python-standard-imports',
-            // name eliminado
-            projectId: cgProjectId
+            promptId: cgCommonAssetsPrompt.id, // ID del prompt padre
+            projectId: cgProjectId,     // ID del proyecto padre del prompt
         },
-        // select eliminado o ajustado si no se necesita el resultado inmediato más que el id
+        select: { id: true } // Solo necesitamos el id para la FK de la versión
     });
     const assetPythonImportsV1 = await prisma.promptAssetVersion.upsert({
         where: { assetId_versionTag: { assetId: assetPythonImports.id, versionTag: 'v1.0.0' } },
@@ -246,6 +269,78 @@ async function main() {
         select: { id: true }
     });
     console.log(`Upserted common Asset: ${pythonImportsAssetName} V1`);
+
+    // Asset: python-try-except-template
+    const tryExceptAssetName = 'Python Try-Except Template';
+    const assetErrorHandling = await prisma.promptAsset.upsert({
+        where: {
+            prompt_asset_key_unique: {
+                promptId: cgCommonAssetsPrompt.id,
+                projectId: cgProjectId,
+                key: 'python-try-except-template'
+            }
+        },
+        update: {},
+        create: {
+            key: 'python-try-except-template',
+            promptId: cgCommonAssetsPrompt.id,
+            projectId: cgProjectId,
+        },
+        select: { id: true }
+    });
+    const assetErrorHandlingV1 = await prisma.promptAssetVersion.upsert({
+        where: { assetId_versionTag: { assetId: assetErrorHandling.id, versionTag: 'v1.0.0' } },
+        update: {
+            value: codegenTranslations.assets['python-try-except-template'],
+            status: 'active',
+            changeMessage: tryExceptAssetName
+        },
+        create: {
+            assetId: assetErrorHandling.id,
+            value: codegenTranslations.assets['python-try-except-template'],
+            versionTag: 'v1.0.0',
+            status: 'active',
+            changeMessage: tryExceptAssetName
+        },
+        select: { id: true }
+    });
+    console.log(`Upserted common Asset: ${tryExceptAssetName} V1 (Prompt: ${cgCommonAssetsPrompt.id})`);
+
+    // Asset: python-unittest-structure
+    const unitTestStructureName = 'Python Unittest Structure';
+    const assetUnitTestStructure = await prisma.promptAsset.upsert({
+        where: {
+            prompt_asset_key_unique: {
+                promptId: cgCommonAssetsPrompt.id,
+                projectId: cgProjectId,
+                key: 'python-unittest-structure'
+            }
+        },
+        update: {},
+        create: {
+            key: 'python-unittest-structure',
+            promptId: cgCommonAssetsPrompt.id,
+            projectId: cgProjectId,
+        },
+        select: { id: true }
+    });
+    const assetUnitTestStructureV1 = await prisma.promptAssetVersion.upsert({
+        where: { assetId_versionTag: { assetId: assetUnitTestStructure.id, versionTag: 'v1.0.0' } },
+        update: {
+            value: codegenTranslations.assets['python-unittest-structure'],
+            status: 'active',
+            changeMessage: unitTestStructureName
+        },
+        create: {
+            assetId: assetUnitTestStructure.id,
+            value: codegenTranslations.assets['python-unittest-structure'],
+            versionTag: 'v1.0.0',
+            status: 'active',
+            changeMessage: unitTestStructureName
+        },
+        select: { id: true }
+    });
+    console.log(`Upserted common Asset: ${unitTestStructureName} V1 (Prompt: ${cgCommonAssetsPrompt.id})`);
 
     // 3. Upsert Code Gen Tags with prefix
     const cgPrefix = 'cg_';
@@ -269,67 +364,7 @@ async function main() {
             .map(id => ({ id }));
     };
 
-    // 4. Upsert Code Gen Assets (excluding the common one) and their versions
-    const errorHandlingAssetName = 'Python Try-Except Template'; // Guardar nombre
-    const assetErrorHandling = await prisma.promptAsset.upsert({
-        where: {
-            project_asset_key_unique: { projectId: cgProjectId, key: 'python-try-except-template' } // Corregido
-        },
-        update: { /* name eliminado */ },
-        create: {
-            key: 'python-try-except-template',
-            // name eliminado
-            projectId: cgProjectId
-        }
-    });
-    const assetErrorHandlingV1 = await prisma.promptAssetVersion.upsert({
-        where: { assetId_versionTag: { assetId: assetErrorHandling.id, versionTag: 'v1.0.0' } },
-        update: {
-            value: 'try:\n    # Your code here\n    pass\nexcept Exception as e:\n    print(f"An error occurred: {e}")\n    # Add specific error handling or logging',
-            status: 'active',
-            changeMessage: errorHandlingAssetName // Añadido
-        },
-        create: {
-            assetId: assetErrorHandling.id,
-            value: 'try:\n    # Your code here\n    pass\nexcept Exception as e:\n    print(f"An error occurred: {e}")\n    # Add specific error handling or logging',
-            versionTag: 'v1.0.0',
-            status: 'active',
-            changeMessage: errorHandlingAssetName // Añadido
-        },
-        select: { id: true }
-    });
-
-    const unitTestStructureAssetName = 'Python Unittest Structure'; // Guardar nombre
-    const assetUnitTestStructure = await prisma.promptAsset.upsert({
-        where: {
-            project_asset_key_unique: { projectId: cgProjectId, key: 'python-unittest-structure' } // Corregido
-        },
-        update: { /* name eliminado */ },
-        create: {
-            key: 'python-unittest-structure',
-            // name eliminado
-            projectId: cgProjectId
-        }
-    });
-    const assetUnitTestStructureV1 = await prisma.promptAssetVersion.upsert({
-        where: { assetId_versionTag: { assetId: assetUnitTestStructure.id, versionTag: 'v1.0.0' } },
-        update: {
-            value: 'import unittest\n\n# Assume function_to_test is imported from your module\n# from my_module import function_to_test\n\nclass TestMyFunction(unittest.TestCase):\n\n    def test_case_1(self):\n        # Arrange\n        input_data = ...\n        expected_output = ...\n        # Act\n        actual_output = function_to_test(input_data)\n        # Assert\n        self.assertEqual(actual_output, expected_output)\n\n    # Add more test methods\n\nif __name__ == \'__main__\':\n    unittest.main()',
-            status: 'active',
-            changeMessage: unitTestStructureAssetName // Añadido
-        },
-        create: {
-            assetId: assetUnitTestStructure.id,
-            value: 'import unittest\n\n# Assume function_to_test is imported from your module\n# from my_module import function_to_test\n\nclass TestMyFunction(unittest.TestCase):\n\n    def test_case_1(self):\n        # Arrange\n        input_data = ...\n        expected_output = ...\n        # Act\n        actual_output = function_to_test(input_data)\n        # Assert\n        self.assertEqual(actual_output, expected_output)\n\n    # Add more test methods\n\nif __name__ == \'__main__\':\n    unittest.main()',
-            versionTag: 'v1.0.0',
-            status: 'active',
-            changeMessage: unitTestStructureAssetName // Añadido
-        },
-        select: { id: true }
-    });
-    console.log(`Upserted Code Gen Assets and V1 Versions`); // Este log es genérico para los dos
-
-    // 5. Upsert Code Gen Prompts and Versions
+    // 4. Upsert Code Gen Prompts and Versions
     const promptGenFuncName = 'generate-python-function';
     const promptGenFuncSlug = slugify(promptGenFuncName); // Este es el ID ahora
     const promptGenFunc = await prisma.prompt.upsert({

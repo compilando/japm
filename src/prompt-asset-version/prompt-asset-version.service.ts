@@ -13,22 +13,29 @@ export class PromptAssetVersionService {
     private tenantService: TenantService,
   ) { }
 
-  // Helper para obtener el PromptAsset padre y verificar pertenencia al proyecto.
+  // Helper para obtener el PromptAsset padre.
   // Devuelve el PromptAsset con su ID CUID.
-  private async getParentAsset(projectId: string, assetKey: string): Promise<PromptAsset> {
+  private async getParentAsset(projectId: string, promptId: string, assetKey: string): Promise<PromptAsset> {
     const asset = await this.prisma.promptAsset.findUnique({
       where: {
-        project_asset_key_unique: { projectId, key: assetKey } // Corregido
+        prompt_asset_key_unique: { projectId, promptId, key: assetKey }
       },
+      // Incluir prompt y project para validación o uso posterior si es necesario
+      include: { prompt: { include: { project: true } } }
     });
     if (!asset) {
-      throw new NotFoundException(`PromptAsset with key "${assetKey}" not found in project "${projectId}".`);
+      throw new NotFoundException(`PromptAsset with key "${assetKey}" for prompt "${promptId}" not found in project "${projectId}".`);
+    }
+    // Opcional: Verificar que asset.prompt.projectId === projectId
+    // Esto debería ser garantizado por la clave única si los IDs son correctos.
+    if (asset.prompt.projectId !== projectId) {
+      throw new ForbiddenException('Mismatch between asset project and provided project ID.');
     }
     return asset;
   }
 
-  async create(projectId: string, assetKey: string, createDto: CreatePromptAssetVersionDto): Promise<PromptAssetVersion> {
-    const parentAsset = await this.getParentAsset(projectId, assetKey);
+  async create(projectId: string, promptId: string, assetKey: string, createDto: CreatePromptAssetVersionDto): Promise<PromptAssetVersion> {
+    const parentAsset = await this.getParentAsset(projectId, promptId, assetKey);
 
     const { versionTag, ...versionData } = createDto; // versionTag es requerido en el DTO
 
@@ -52,8 +59,8 @@ export class PromptAssetVersionService {
     }
   }
 
-  async findAllForAsset(projectId: string, assetKey: string): Promise<PromptAssetVersion[]> {
-    const parentAsset = await this.getParentAsset(projectId, assetKey);
+  async findAllForAsset(projectId: string, promptId: string, assetKey: string): Promise<PromptAssetVersion[]> {
+    const parentAsset = await this.getParentAsset(projectId, promptId, assetKey);
     return this.prisma.promptAssetVersion.findMany({
       where: { assetId: parentAsset.id }, // Filtrar por el ID CUID del PromptAsset padre
       orderBy: { createdAt: 'desc' },
@@ -61,8 +68,8 @@ export class PromptAssetVersionService {
     });
   }
 
-  async findOneByTag(projectId: string, assetKey: string, versionTag: string): Promise<PromptAssetVersion> {
-    const parentAsset = await this.getParentAsset(projectId, assetKey);
+  async findOneByTag(projectId: string, promptId: string, assetKey: string, versionTag: string): Promise<PromptAssetVersion> {
+    const parentAsset = await this.getParentAsset(projectId, promptId, assetKey);
     const version = await this.prisma.promptAssetVersion.findUnique({
       where: {
         assetId_versionTag: { assetId: parentAsset.id, versionTag: versionTag }
@@ -79,8 +86,8 @@ export class PromptAssetVersionService {
     return version;
   }
 
-  async update(projectId: string, assetKey: string, versionTag: string, updateDto: UpdatePromptAssetVersionDto): Promise<PromptAssetVersion> {
-    const existingVersion = await this.findOneByTag(projectId, assetKey, versionTag);
+  async update(projectId: string, promptId: string, assetKey: string, versionTag: string, updateDto: UpdatePromptAssetVersionDto): Promise<PromptAssetVersion> {
+    const existingVersion = await this.findOneByTag(projectId, promptId, assetKey, versionTag);
 
     // Excluir campos que no deben actualizarse o no existen en UpdatePromptAssetVersionDto
     const { assetId: _dtoAssetId, versionTag: _dtoVersionTag, ...dataToUpdate } = updateDto as any;
@@ -106,8 +113,8 @@ export class PromptAssetVersionService {
     }
   }
 
-  async remove(projectId: string, assetKey: string, versionTag: string): Promise<PromptAssetVersion> {
-    const existingVersion = await this.findOneByTag(projectId, assetKey, versionTag);
+  async remove(projectId: string, promptId: string, assetKey: string, versionTag: string): Promise<PromptAssetVersion> {
+    const existingVersion = await this.findOneByTag(projectId, promptId, assetKey, versionTag);
 
     try {
       return await this.prisma.promptAssetVersion.delete({
@@ -141,21 +148,26 @@ export class PromptAssetVersionService {
 
   // --- Marketplace Methods ---
 
-  async requestPublish(projectId: string, assetKey: string, versionTag: string, requesterId: string): Promise<PromptAssetVersion> {
-    // findOneByTag ya incluye el asset. El asset tiene projectId.
-    const assetVersion = await this.findOneByTag(projectId, assetKey, versionTag);
+  async requestPublish(projectId: string, promptId: string, assetKey: string, versionTag: string, requesterId: string): Promise<PromptAssetVersion> {
+    const assetVersion = await this.findOneByTag(projectId, promptId, assetKey, versionTag);
 
-    // Para obtener tenantId, necesitamos cargar el proyecto asociado al asset.
-    // El parentAsset ya tiene el projectId correcto debido a getParentAsset dentro de findOneByTag.
-    const parentAssetWithProject = await this.prisma.promptAsset.findUnique({
-      where: { id: assetVersion.assetId }, // assetVersion.assetId es el CUID del PromptAsset
-      include: { project: { select: { tenantId: true } } },
+    // Para obtener tenantId, necesitamos cargar el prompt y el proyecto asociado al asset.
+    // assetVersion.assetId es el CUID del PromptAsset
+    const parentAssetWithFullPrompt = await this.prisma.promptAsset.findUnique({
+      where: { id: assetVersion.assetId },
+      include: {
+        prompt: {
+          include: {
+            project: { select: { tenantId: true } }
+          }
+        }
+      },
     });
 
-    if (!parentAssetWithProject || !parentAssetWithProject.project) {
-      throw new NotFoundException(`Project not found for asset "${assetKey}" to determine tenant configuration.`);
+    if (!parentAssetWithFullPrompt || !parentAssetWithFullPrompt.prompt || !parentAssetWithFullPrompt.prompt.project) {
+      throw new NotFoundException(`Project or Prompt not found for asset "${assetKey}" (ID: ${assetVersion.assetId}) to determine tenant configuration.`);
     }
-    const tenantId = parentAssetWithProject.project.tenantId;
+    const tenantId = parentAssetWithFullPrompt.prompt.project.tenantId;
 
     const requiresApproval = await this.tenantService.getMarketplaceRequiresApproval(tenantId);
 
@@ -188,8 +200,8 @@ export class PromptAssetVersionService {
     }
   }
 
-  async unpublish(projectId: string, assetKey: string, versionTag: string, /* userId: string */): Promise<PromptAssetVersion> {
-    const assetVersion = await this.findOneByTag(projectId, assetKey, versionTag);
+  async unpublish(projectId: string, promptId: string, assetKey: string, versionTag: string, /* userId: string */): Promise<PromptAssetVersion> {
+    const assetVersion = await this.findOneByTag(projectId, promptId, assetKey, versionTag);
 
     if (assetVersion.marketplaceStatus === MarketplacePublishStatus.NOT_PUBLISHED) {
       return assetVersion;
@@ -208,5 +220,48 @@ export class PromptAssetVersionService {
       },
     });
   }
-  // TODO: Métodos para approve, reject, cancel (Fase 2)
+
+  async approvePublish(projectId: string, promptId: string, assetKey: string, versionTag: string, approverId: string): Promise<PromptAssetVersion> {
+    const assetVersion = await this.findOneByTag(projectId, promptId, assetKey, versionTag);
+
+    // Adicionalmente, verificar que el approver tiene permiso (ej. es ADMIN o TENANT_ADMIN del tenant correcto)
+    // Esto requeriría cargar el tenantId como en requestPublish y luego verificar el rol del approverId.
+    // Por simplicidad, esta lógica de autorización avanzada se omite aquí pero sería importante en producción.
+
+    if (assetVersion.marketplaceStatus !== MarketplacePublishStatus.PENDING_APPROVAL) {
+      throw new ForbiddenException('Cannot approve a version that is not pending approval.');
+    }
+
+    return this.prisma.promptAssetVersion.update({
+      where: { id: assetVersion.id },
+      data: {
+        marketplaceStatus: MarketplacePublishStatus.PUBLISHED,
+        marketplaceApprovedAt: new Date(),
+        marketplaceApproverId: approverId,
+        marketplacePublishedAt: new Date(),
+        marketplaceRejectionReason: null,
+      },
+    });
+  }
+
+  async rejectPublish(projectId: string, promptId: string, assetKey: string, versionTag: string, approverId: string, rejectionReason: string): Promise<PromptAssetVersion> {
+    const assetVersion = await this.findOneByTag(projectId, promptId, assetKey, versionTag);
+
+    // Similar a approvePublish, aquí iría la lógica de autorización del approver.
+
+    if (assetVersion.marketplaceStatus !== MarketplacePublishStatus.PENDING_APPROVAL) {
+      throw new ForbiddenException('Cannot reject a version that is not pending approval.');
+    }
+
+    return this.prisma.promptAssetVersion.update({
+      where: { id: assetVersion.id },
+      data: {
+        marketplaceStatus: MarketplacePublishStatus.REJECTED,
+        marketplaceRejectionReason: rejectionReason,
+        marketplaceApproverId: approverId,
+        marketplaceApprovedAt: null,
+        marketplacePublishedAt: null,
+      },
+    });
+  }
 }

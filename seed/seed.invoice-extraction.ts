@@ -249,11 +249,146 @@ async function main() {
             .map(id => ({ id }));
     };
 
-    // 3. Upsert Invoice Extraction Assets and Versions
-    const invoiceFieldsAssetName = 'Invoice Standard Fields List';
-    const assetInvoiceFields = await prisma.promptAsset.upsert({
+    // Crear un Prompt padre para los assets comunes de Invoice Extraction
+    const invCommonAssetsPromptSlug = 'invoice-extraction-common-assets';
+    const invCommonAssetsPrompt = await prisma.prompt.upsert({
         where: {
-            project_asset_key_unique: {
+            prompt_id_project_unique: {
+                id: invCommonAssetsPromptSlug,
+                projectId: invProjectId,
+            },
+        },
+        update: { name: 'Invoice Extraction Common Assets' },
+        create: {
+            id: invCommonAssetsPromptSlug,
+            name: 'Invoice Extraction Common Assets',
+            description: 'Common reusable assets for Invoice Extraction prompts.',
+            projectId: invProjectId,
+        },
+        select: { id: true }
+    });
+    console.log(`Upserted Prompt for common Invoice Extraction assets: ${invCommonAssetsPrompt.id}`);
+
+    // 3. Upsert Invoice Extraction Assets and their versions
+    const extractionInstructionsName = 'Invoice Extraction Instructions';
+    const assetExtractionInstructions = await prisma.promptAsset.upsert({
+        where: {
+            prompt_asset_key_unique: {
+                promptId: invCommonAssetsPrompt.id,
+                projectId: invProjectId,
+                key: 'invoice-extraction-instructions'
+            }
+        },
+        update: {},
+        create: {
+            key: 'invoice-extraction-instructions',
+            promptId: invCommonAssetsPrompt.id,
+            projectId: invProjectId
+        }
+    });
+    const assetExtractionInstructionsV1 = await prisma.promptAssetVersion.upsert({
+        where: {
+            assetId_versionTag: {
+                assetId: assetExtractionInstructions.id,
+                versionTag: 'v1.0.0'
+            }
+        },
+        update: {
+            value: `Extract the following information from the document:\n- Invoice number\n- Date\n- Total amount\n- Vendor details\n- Customer details\n- Line items\n- Taxes\n- Payment terms`,
+            status: 'active',
+            changeMessage: extractionInstructionsName
+        },
+        create: {
+            assetId: assetExtractionInstructions.id,
+            value: `Extract the following information from the document:\n- Invoice number\n- Date\n- Total amount\n- Vendor details\n- Customer details\n- Line items\n- Taxes\n- Payment terms`,
+            versionTag: 'v1.0.0',
+            status: 'active',
+            changeMessage: extractionInstructionsName
+        },
+        select: { id: true }
+    });
+
+    const validationRulesName = 'Invoice Validation Rules';
+    const assetValidationRules = await prisma.promptAsset.upsert({
+        where: {
+            prompt_asset_key_unique: {
+                promptId: invCommonAssetsPrompt.id,
+                projectId: invProjectId,
+                key: 'invoice-validation-rules'
+            }
+        },
+        update: {},
+        create: {
+            key: 'invoice-validation-rules',
+            promptId: invCommonAssetsPrompt.id,
+            projectId: invProjectId
+        }
+    });
+    const assetValidationRulesV1 = await prisma.promptAssetVersion.upsert({
+        where: {
+            assetId_versionTag: {
+                assetId: assetValidationRules.id,
+                versionTag: 'v1.0.0'
+            }
+        },
+        update: {
+            value: `Validation rules:\n1. Invoice number must be unique\n2. Date cannot be in the future\n3. Total amount must match sum of items\n4. All required fields must be present\n5. Amounts must be positive`,
+            status: 'active',
+            changeMessage: validationRulesName
+        },
+        create: {
+            assetId: assetValidationRules.id,
+            value: `Validation rules:\n1. Invoice number must be unique\n2. Date cannot be in the future\n3. Total amount must match sum of items\n4. All required fields must be present\n5. Amounts must be positive`,
+            versionTag: 'v1.0.0',
+            status: 'active',
+            changeMessage: validationRulesName
+        },
+        select: { id: true }
+    });
+
+    const errorMessagesName = 'Invoice Error Messages';
+    const assetErrorMessages = await prisma.promptAsset.upsert({
+        where: {
+            prompt_asset_key_unique: {
+                promptId: invCommonAssetsPrompt.id,
+                projectId: invProjectId,
+                key: 'invoice-error-messages'
+            }
+        },
+        update: {},
+        create: {
+            key: 'invoice-error-messages',
+            promptId: invCommonAssetsPrompt.id,
+            projectId: invProjectId
+        }
+    });
+    const assetErrorMessagesV1 = await prisma.promptAssetVersion.upsert({
+        where: {
+            assetId_versionTag: {
+                assetId: assetErrorMessages.id,
+                versionTag: 'v1.0.0'
+            }
+        },
+        update: {
+            value: `Error messages:\n- "Duplicate invoice number"\n- "Invalid date"\n- "Total amount mismatch"\n- "Missing required fields"\n- "Negative amount detected"`,
+            status: 'active',
+            changeMessage: errorMessagesName
+        },
+        create: {
+            assetId: assetErrorMessages.id,
+            value: `Error messages:\n- "Duplicate invoice number"\n- "Invalid date"\n- "Total amount mismatch"\n- "Missing required fields"\n- "Negative amount detected"`,
+            versionTag: 'v1.0.0',
+            status: 'active',
+            changeMessage: errorMessagesName
+        },
+        select: { id: true }
+    });
+
+    const standardFieldsName = 'Invoice Standard Fields List';
+    const assetStandardFields = await prisma.promptAsset.upsert({
+        where: {
+            prompt_asset_key_unique: {
+                promptId: invCommonAssetsPrompt.id,
                 projectId: invProjectId,
                 key: 'invoice-standard-fields'
             }
@@ -261,13 +396,14 @@ async function main() {
         update: {},
         create: {
             key: 'invoice-standard-fields',
+            promptId: invCommonAssetsPrompt.id,
             projectId: invProjectId
         }
     });
-    const assetInvoiceFieldsV1 = await prisma.promptAssetVersion.upsert({
+    const assetStandardFieldsV1 = await prisma.promptAssetVersion.upsert({
         where: {
             assetId_versionTag: {
-                assetId: assetInvoiceFields.id,
+                assetId: assetStandardFields.id,
                 versionTag: 'v1.0.0'
             }
         },
@@ -275,23 +411,24 @@ async function main() {
             value: `Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price
 Line Item Total`,
             status: 'active',
-            changeMessage: invoiceFieldsAssetName
+            changeMessage: standardFieldsName
         },
         create: {
-            assetId: assetInvoiceFields.id,
+            assetId: assetStandardFields.id,
             value: `Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price
 Line Item Total`,
             versionTag: 'v1.0.0',
             status: 'active',
-            changeMessage: invoiceFieldsAssetName
+            changeMessage: standardFieldsName
         },
         select: { id: true }
     });
 
-    const jsonSchemaAssetName = 'Target JSON Schema for Invoice';
+    const jsonSchemaName = 'Invoice JSON Output Schema';
     const assetJsonSchema = await prisma.promptAsset.upsert({
         where: {
-            project_asset_key_unique: {
+            prompt_asset_key_unique: {
+                promptId: invCommonAssetsPrompt.id,
                 projectId: invProjectId,
                 key: 'invoice-json-schema'
             }
@@ -299,6 +436,7 @@ Line Item Total`,
         update: {},
         create: {
             key: 'invoice-json-schema',
+            promptId: invCommonAssetsPrompt.id,
             projectId: invProjectId
         }
     });
@@ -324,7 +462,7 @@ Line Item Total`,
                 required: ["invoiceNumber", "invoiceDate", "vendorName", "totalAmount"]
             }, null, 2),
             status: 'active',
-            changeMessage: jsonSchemaAssetName
+            changeMessage: jsonSchemaName
         },
         create: {
             assetId: assetJsonSchema.id,
@@ -343,7 +481,7 @@ Line Item Total`,
             }, null, 2),
             versionTag: 'v1.0.0',
             status: 'active',
-            changeMessage: jsonSchemaAssetName
+            changeMessage: jsonSchemaName
         },
         select: { id: true }
     });

@@ -5,7 +5,10 @@ CREATE TABLE "User" (
     "email" TEXT NOT NULL DEFAULT '',
     "password" TEXT NOT NULL,
     "createdAt" DATETIME DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "updatedAt" DATETIME NOT NULL,
+    "tenantId" TEXT NOT NULL,
+    "role" TEXT NOT NULL DEFAULT 'USER',
+    CONSTRAINT "User_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -62,8 +65,17 @@ CREATE TABLE "PromptVersion" (
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     "aiModelId" TEXT,
+    "marketplaceStatus" TEXT NOT NULL DEFAULT 'NOT_PUBLISHED',
+    "marketplacePublishedAt" DATETIME,
+    "marketplaceRequestedAt" DATETIME,
+    "marketplaceApprovedAt" DATETIME,
+    "marketplaceRejectionReason" TEXT,
+    "marketplaceRequesterId" TEXT,
+    "marketplaceApproverId" TEXT,
     CONSTRAINT "PromptVersion_prompt_fkey" FOREIGN KEY ("prompt") REFERENCES "Prompt" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "PromptVersion_aiModelId_fkey" FOREIGN KEY ("aiModelId") REFERENCES "AIModel" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+    CONSTRAINT "PromptVersion_aiModelId_fkey" FOREIGN KEY ("aiModelId") REFERENCES "AIModel" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "PromptVersion_marketplaceRequesterId_fkey" FOREIGN KEY ("marketplaceRequesterId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "PromptVersion_marketplaceApproverId_fkey" FOREIGN KEY ("marketplaceApproverId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -80,11 +92,13 @@ CREATE TABLE "PromptTranslation" (
 -- CreateTable
 CREATE TABLE "PromptAsset" (
     "id" TEXT NOT NULL PRIMARY KEY,
+    "promptId" TEXT NOT NULL,
     "projectId" TEXT NOT NULL,
     "key" TEXT NOT NULL,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "PromptAsset_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "PromptAsset_promptId_projectId_fkey" FOREIGN KEY ("promptId", "projectId") REFERENCES "Prompt" ("id", "project") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -97,7 +111,16 @@ CREATE TABLE "PromptAssetVersion" (
     "status" TEXT NOT NULL DEFAULT 'draft',
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "PromptAssetVersion_asset_fkey" FOREIGN KEY ("asset") REFERENCES "PromptAsset" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "marketplaceStatus" TEXT NOT NULL DEFAULT 'NOT_PUBLISHED',
+    "marketplacePublishedAt" DATETIME,
+    "marketplaceRequestedAt" DATETIME,
+    "marketplaceApprovedAt" DATETIME,
+    "marketplaceRejectionReason" TEXT,
+    "marketplaceRequesterId" TEXT,
+    "marketplaceApproverId" TEXT,
+    CONSTRAINT "PromptAssetVersion_asset_fkey" FOREIGN KEY ("asset") REFERENCES "PromptAsset" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "PromptAssetVersion_marketplaceRequesterId_fkey" FOREIGN KEY ("marketplaceRequesterId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "PromptAssetVersion_marketplaceApproverId_fkey" FOREIGN KEY ("marketplaceApproverId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -143,10 +166,12 @@ CREATE TABLE "Project" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "description" TEXT,
-    "ownerUser" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "Project_ownerUser_fkey" FOREIGN KEY ("ownerUser") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+    "tenantId" TEXT NOT NULL,
+    "ownerUserId" TEXT NOT NULL,
+    CONSTRAINT "Project_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "Project_ownerUserId_fkey" FOREIGN KEY ("ownerUserId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -209,6 +234,15 @@ CREATE TABLE "SystemPrompt" (
 );
 
 -- CreateTable
+CREATE TABLE "Tenant" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL DEFAULT '',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    "marketplaceRequiresApproval" BOOLEAN NOT NULL DEFAULT true
+);
+
+-- CreateTable
 CREATE TABLE "_PromptTags" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
@@ -234,6 +268,9 @@ CREATE TABLE "_ActiveAssetsInEnvironment" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE INDEX "User_tenantId_idx" ON "User"("tenantId");
 
 -- CreateIndex
 CREATE INDEX "Region_parentRegion_idx" ON "Region"("parentRegion");
@@ -272,6 +309,12 @@ CREATE INDEX "PromptVersion_prompt_idx" ON "PromptVersion"("prompt");
 CREATE INDEX "PromptVersion_aiModelId_idx" ON "PromptVersion"("aiModelId");
 
 -- CreateIndex
+CREATE INDEX "PromptVersion_marketplaceRequesterId_idx" ON "PromptVersion"("marketplaceRequesterId");
+
+-- CreateIndex
+CREATE INDEX "PromptVersion_marketplaceApproverId_idx" ON "PromptVersion"("marketplaceApproverId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "PromptVersion_prompt_versionTag_key" ON "PromptVersion"("prompt", "versionTag");
 
 -- CreateIndex
@@ -284,13 +327,19 @@ CREATE INDEX "PromptTranslation_languageCode_idx" ON "PromptTranslation"("langua
 CREATE UNIQUE INDEX "PromptTranslation_version_languageCode_key" ON "PromptTranslation"("version", "languageCode");
 
 -- CreateIndex
-CREATE INDEX "PromptAsset_projectId_idx" ON "PromptAsset"("projectId");
+CREATE INDEX "PromptAsset_promptId_projectId_idx" ON "PromptAsset"("promptId", "projectId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "PromptAsset_projectId_key_key" ON "PromptAsset"("projectId", "key");
+CREATE UNIQUE INDEX "PromptAsset_promptId_projectId_key_key" ON "PromptAsset"("promptId", "projectId", "key");
 
 -- CreateIndex
 CREATE INDEX "PromptAssetVersion_asset_idx" ON "PromptAssetVersion"("asset");
+
+-- CreateIndex
+CREATE INDEX "PromptAssetVersion_marketplaceRequesterId_idx" ON "PromptAssetVersion"("marketplaceRequesterId");
+
+-- CreateIndex
+CREATE INDEX "PromptAssetVersion_marketplaceApproverId_idx" ON "PromptAssetVersion"("marketplaceApproverId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "PromptAssetVersion_asset_versionTag_key" ON "PromptAssetVersion"("asset", "versionTag");
@@ -320,7 +369,13 @@ CREATE INDEX "Tag_project_idx" ON "Tag"("project");
 CREATE UNIQUE INDEX "Tag_project_name_key" ON "Tag"("project", "name");
 
 -- CreateIndex
-CREATE INDEX "Project_ownerUser_idx" ON "Project"("ownerUser");
+CREATE INDEX "Project_tenantId_idx" ON "Project"("tenantId");
+
+-- CreateIndex
+CREATE INDEX "Project_ownerUserId_idx" ON "Project"("ownerUserId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Project_tenantId_name_key" ON "Project"("tenantId", "name");
 
 -- CreateIndex
 CREATE INDEX "AIModel_projectId_idx" ON "AIModel"("projectId");

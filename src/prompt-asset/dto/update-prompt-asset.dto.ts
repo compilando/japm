@@ -7,7 +7,7 @@ import { IsOptional, IsBoolean } from 'class-validator';
 // La clave (key), projectId, initialValue, initialChangeMessage son inmutables a través de este DTO.
 export class UpdatePromptAssetDto extends PartialType(
     // Omitimos los campos que no deben ser actualizables aquí o que se gestionan de otra forma.
-    OmitType(CreatePromptAssetDto, ['key', 'initialValue', 'initialChangeMessage', 'projectId', 'name'] as const)
+    OmitType(CreatePromptAssetDto, ['key', 'initialValue', 'initialChangeMessage', 'name'] as const)
 ) {
     @ApiPropertyOptional({ description: 'Activa o desactiva el asset' })
     @IsOptional()

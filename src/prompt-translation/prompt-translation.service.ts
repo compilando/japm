@@ -92,10 +92,10 @@ export class PromptTranslationService {
 
       const { processedText, resolvedAssetsMetadata } = await this.servePromptService.resolveAssets(
         translation.promptText,
+        promptId,
         projectId,
-        assetLanguageToUse, // Use the determined language for asset resolution
-        inputVariables,
-        { id: promptId } // Pass prompt context (promptId is the CUID of the prompt model)
+        assetLanguageToUse,
+        inputVariables
       );
       translation.promptText = processedText;
       // Optionally, attach resolvedAssetsMetadata

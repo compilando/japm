@@ -64,8 +64,8 @@ async function bootstrap() {
   ################################################################
   #####                                                      #####
   #####   JAPM - Just Another Prompt Manager                 #####
-  #####   Backend escuchando en: ${appUrl}           #####
-  #####   Swagger UI en:        ${appUrl}/api-docs        #####
+  #####   Backend: ${appUrl}                         #####
+  #####   Swagger UI:        ${appUrl}/api-docs      #####
   #####                                                      #####
   ################################################################
   MAY THE PROMPTS BE WITH YOU! (^_^)b

@@ -81,8 +81,10 @@ export class MarketplaceService {
         const whereClause: Prisma.PromptAssetVersionWhereInput = {
             marketplaceStatus: MarketplacePublishStatus.PUBLISHED,
             asset: {
-                project: {
-                    tenantId: tenantId,
+                prompt: {
+                    project: {
+                        tenantId: tenantId,
+                    }
                 },
                 // Filtrado por búsqueda de texto en la key del asset (o podríamos añadir name/description a PromptAsset)
                 ...(search && {
@@ -100,7 +102,11 @@ export class MarketplaceService {
                 include: {
                     asset: { // Incluir información del asset padre
                         include: {
-                            project: { select: { id: true, name: true } } // Información básica del proyecto
+                            prompt: {
+                                include: {
+                                    project: { select: { id: true, name: true } } // Información básica del proyecto
+                                }
+                            }
                         }
                     }
                 },

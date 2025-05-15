@@ -101,14 +101,14 @@ export class PromptVersionService {
       // otherwise, if we are fetching a specific prompt translation later, that languageCode would be used.
       // For a base prompt version, query.regionCode is the primary source for asset language.
       // If not resolving for a specific translation, query.regionCode is used for assets.
-      const assetLanguageCode = query.regionCode;
+      const assetLanguageCode = query?.regionCode; // string | undefined
 
       const { processedText, resolvedAssetsMetadata } = await this.servePromptService.resolveAssets(
-        version.promptText,
-        projectId,
-        assetLanguageCode, // Use regionCode from query for asset translations
-        inputVariables,
-        { id: promptId } // Pass prompt context (promptId is the CUID of the prompt model)
+        version.promptText,    // text
+        promptId,              // promptIdInput (slug of the Prompt)
+        projectId,             // projectIdInput (CUID of the project the Prompt belongs to)
+        assetLanguageCode,     // languageCode for asset translation (optional)
+        inputVariables         // inputVariables (Record<string, any>)
       );
       version.promptText = processedText;
       // Optionally, attach resolvedAssetsMetadata to the version object if the return type is adjusted

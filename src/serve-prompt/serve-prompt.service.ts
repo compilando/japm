@@ -30,7 +30,8 @@ export class ServePromptService {
     /**
      * Resolves asset placeholders in a given text.
      * @param text The text containing potential asset placeholders.
-     * @param projectId The ID of the project to scope asset search.
+     * @param promptIdInput The ID of the prompt to scope asset search.
+     * @param projectIdInput The ID of the project to scope asset search.
      * @param languageCode Optional language code for asset translation.
      * @param inputVariables Optional map of variables to distinguish from assets.
      * @param promptContext Optional prompt context for better logging
@@ -38,17 +39,12 @@ export class ServePromptService {
      */
     async resolveAssets(
         text: string,
-        projectId: string,
+        promptIdInput: string,      // Slug del Prompt, renombrado para evitar colisión con el campo del modelo
+        projectIdInput: string, // ProjectId del Prompt, renombrado para evitar colisión
         languageCode?: string,
-        inputVariables: Record<string, any> = {}, // Default to empty object
-        promptContext?: { id?: string; name?: string } // Added optional promptContext
+        inputVariables: Record<string, any> = {}
     ): Promise<{ processedText: string; resolvedAssetsMetadata: any[] }> {
-        let contextLog = `project "${projectId}"`;
-        if (promptContext?.id || promptContext?.name) {
-            const promptIdentifier = promptContext.name ? `prompt "${promptContext.name}"` : `prompt ID "${promptContext.id}"`;
-            contextLog = `${promptIdentifier} (project: "${projectId}")`;
-        }
-        this.logger.debug(`Resolving assets for ${contextLog}${languageCode ? ` with language "${languageCode}"` : ''}`);
+        this.logger.debug(`Resolving assets for prompt "${promptIdInput}" (project: "${projectIdInput}")${languageCode ? ` with language "${languageCode}"` : ''}`);
         const potentialPlaceholders = [...text.matchAll(/\{\{([^}]+)\}\}/g)];
 
         const assetSpecifications = potentialPlaceholders
@@ -59,9 +55,7 @@ export class ServePromptService {
                 const versionTag = parts.length > 1 ? parts[1] : undefined;
                 return { placeholderContent, key, versionTag };
             })
-            // Filter out placeholders that are actually keys in the inputVariables
             .filter(spec => !inputVariables.hasOwnProperty(spec.key) && !inputVariables.hasOwnProperty(spec.placeholderContent));
-
 
         const assetContext: Record<string, string> = {};
         const resolvedAssetsMetadata: any[] = [];
@@ -70,30 +64,29 @@ export class ServePromptService {
             const uniqueAssetKeys = [...new Set(assetSpecifications.map(spec => spec.key))];
             this.logger.debug(`Potential asset keys to resolve from text: ${uniqueAssetKeys.join(', ')} after filtering against input variables.`);
 
+            // Prisma query usando los nombres de campos del schema para PromptAsset
             const foundAssets = await this.prisma.promptAsset.findMany({
                 where: {
-                    projectId: projectId,
+                    promptId: promptIdInput,          // Campo del modelo PromptAsset
+                    projectId: projectIdInput, // Campo del modelo PromptAsset
                     key: { in: uniqueAssetKeys }
                 },
                 include: {
-                    versions: {
+                    versions: { // Relación en PromptAsset
                         orderBy: { createdAt: 'desc' },
                         include: { translations: true }
                     }
                 }
             });
 
-            // Updated log message here
-            const foundAssetsLogMessage = promptContext?.id || promptContext?.name ?
-                `Found ${foundAssets.length} asset(s) in DB (project "${projectId}") for keys from prompt "${promptContext.name || promptContext.id}":` :
-                `Found ${foundAssets.length} asset(s) in DB for project "${projectId}" matching keys from text:`;
-            this.logger.debug(foundAssetsLogMessage);
+            this.logger.debug(`Found ${foundAssets.length} asset(s) in DB for prompt "${promptIdInput}" (project: "${projectIdInput}") matching keys: [${uniqueAssetKeys.join(', ')}]`);
 
             for (const asset of foundAssets) {
-                if (asset.versions.length > 0) {
-                    const latestVersion = asset.versions[0]; // Due to orderBy, this is the latest by createdAt
+                // Asumiendo que 'versions' está disponible después de prisma generate y el include
+                if (asset.versions && asset.versions.length > 0) {
+                    const latestVersion = asset.versions[0];
                     this.logger.debug(
-                        `  - Asset Key: "${asset.key}", ` +
+                        `  - Asset Key: "${asset.key}" (for prompt "${promptIdInput}"), ` +
                         `Latest Version ID: "${latestVersion.id}", ` +
                         `Tag: "${latestVersion.versionTag}", ` +
                         `Status: "${latestVersion.status}", ` +
@@ -108,11 +101,17 @@ export class ServePromptService {
             for (const spec of assetSpecifications) {
                 const asset = foundAssets.find(a => a.key === spec.key);
                 if (!asset) {
-                    this.logger.warn(`Asset with key "${spec.key}" (referenced as "{{${spec.placeholderContent}}}") not found in project "${projectId}".`);
+                    this.logger.warn(`Asset with key "${spec.key}" (referenced as "{{${spec.placeholderContent}}}") not found for prompt "${promptIdInput}" in project "${projectIdInput}".`);
                     continue;
                 }
 
+                // Asumiendo que 'versions' está disponible
                 const assetVersions = asset.versions as (Prisma.PromptAssetVersionGetPayload<{ include: { translations: true } }>)[];
+                if (!assetVersions) { // Chequeo adicional por si acaso
+                    this.logger.warn(`Asset key "${spec.key}" for prompt "${promptIdInput}" found, but versions array is unexpectedly undefined.`);
+                    continue;
+                }
+
                 let targetVersion: Prisma.PromptAssetVersionGetPayload<{ include: { translations: true } }> | undefined = undefined;
 
                 if (spec.versionTag) {
@@ -125,7 +124,6 @@ export class ServePromptService {
                 if (!targetVersion) {
                     targetVersion = assetVersions.find(v => v.status === 'active');
                 }
-
 
                 if (targetVersion) {
                     let assetValue = targetVersion.value;
@@ -151,28 +149,24 @@ export class ServePromptService {
                         languageUsed: languageSource
                     });
                 } else {
-                    this.logger.warn(`Asset key "${spec.key}" (referenced as "{{${spec.placeholderContent}}}") found, but no suitable version (specified: ${spec.versionTag || 'any active'}) could be resolved for project "${projectId}".`);
+                    this.logger.warn(`Asset key "${spec.key}" (referenced as "{{${spec.placeholderContent}}}") for prompt "${promptIdInput}" (project "${projectIdInput}") found, but no suitable version (specified: ${spec.versionTag || 'any active'}) could be resolved.`);
                 }
             }
         }
 
-        // Combine asset context with input variables for final substitution
-        // Input variables should take precedence if there's an overlap in keys (though asset filtering should prevent this for asset placeholders)
         const finalContext = { ...assetContext, ...inputVariables };
         let processedText: string;
         try {
             processedText = text.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
-                const trimmedKey = key.trim(); // This is the placeholderContent
+                const trimmedKey = key.trim();
                 if (finalContext.hasOwnProperty(trimmedKey)) {
                     return String(finalContext[trimmedKey]);
                 }
                 this.logger.warn(`Placeholder {{${trimmedKey}}} not found in provided variables or resolved assets.`);
-                return match; // Keep placeholder if not found
+                return match;
             });
         } catch (error) {
             this.logger.error("Error during placeholder substitution:", error);
-            // Decide how to handle: throw, or return text unmodified, or with partial substitution
-            // For now, let's throw, consistent with original executePromptVersion
             throw new BadRequestException(`Failed to substitute placeholders: ${error.message}`);
         }
 
@@ -189,24 +183,24 @@ export class ServePromptService {
         body: ExecutePromptBodyDto
     ): Promise<{ processedPrompt: string; metadata: any }> {
         const { projectId, promptName, versionTag, languageCode } = params;
-        const { variables } = body; // variables from the body are the inputVariables
+        const { variables } = body;
 
-        // 1. Find the Prompt within the Project using the correct composite key
-        const promptNameSlug = slugify(promptName);
+        const promptNameSlug = slugify(promptName);      // This is the promptId for PromptAsset
+        const currentProjectId = projectId; // This is the projectId for PromptAsset
+
         const prompt = await this.prisma.prompt.findUnique({
             where: {
                 prompt_id_project_unique: {
                     id: promptNameSlug,
-                    projectId: projectId
+                    projectId: currentProjectId
                 }
             },
         });
 
         if (!prompt) {
-            throw new NotFoundException(`Prompt "${promptName}" (ID/slug: "${promptNameSlug}") not found in project "${projectId}".`);
+            throw new NotFoundException(`Prompt "${promptName}" (slug: "${promptNameSlug}") not found in project "${currentProjectId}".`);
         }
 
-        // 2. Find the specific PromptVersion
         const versionToUse = await this.prisma.promptVersion.findUnique({
             where: {
                 promptId_versionTag: { promptId: prompt.id, versionTag },
@@ -215,11 +209,10 @@ export class ServePromptService {
         });
 
         if (!versionToUse) {
-            throw new NotFoundException(`Version "${versionTag}" for prompt "${promptName}" (ID: ${prompt.id}) in project "${projectId}" not found.`);
+            throw new NotFoundException(`Version "${versionTag}" for prompt "${promptName}" (ID: ${prompt.id}) in project "${currentProjectId}" not found.`);
         }
 
-        // 3. Determine language and get base prompt text
-        const finalLanguageCode = languageCode; // Use languageCode from params
+        const finalLanguageCode = languageCode;
         let basePromptText = versionToUse.promptText;
 
         if (finalLanguageCode) {
@@ -231,26 +224,23 @@ export class ServePromptService {
             }
         }
 
-        // 4. Resolve assets and substitute placeholders (including variables)
-        // variables from body are passed as inputVariables
         const { processedText, resolvedAssetsMetadata } = await this.resolveAssets(
             basePromptText,
-            projectId,
-            finalLanguageCode, // Pass language code for asset translation consistency
-            variables,
-            { id: prompt.id, name: prompt.name } // Pass prompt context
+            prompt.id,         // Corresponds to promptIdInput (slug of Prompt)
+            prompt.projectId,  // Corresponds to projectIdInput (projectId of Prompt)
+            finalLanguageCode,
+            variables
         );
 
-        // 5. Prepare metadata
         const metadata = {
-            projectId: projectId,
-            promptName: prompt.name, // Use original name for metadata
+            projectId: currentProjectId,
+            promptName: prompt.name,
             promptId: prompt.id,
             promptVersionId: versionToUse.id,
             promptVersionTag: versionToUse.versionTag,
             languageUsed: finalLanguageCode ? (versionToUse.translations.some(t => t.languageCode === finalLanguageCode) ? finalLanguageCode : 'base_language_fallback') : 'base_language',
             assetsUsed: resolvedAssetsMetadata,
-            variablesProvided: Object.keys(variables || {}), // Ensure variables is not null
+            variablesProvided: Object.keys(variables || {}),
         };
 
         return { processedPrompt: processedText, metadata };

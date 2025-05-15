@@ -12,7 +12,11 @@ export type AssetWithInitialVersion = PromptAsset & {
 // Type for findOne response with details
 type PromptAssetWithDetails = Prisma.PromptAssetGetPayload<{
     include: {
-        project: true,
+        prompt: {
+            include: {
+                project: true
+            }
+        },
         versions: {
             orderBy: { createdAt: 'desc' },
             include: {
@@ -27,26 +31,26 @@ type PromptAssetWithDetails = Prisma.PromptAssetGetPayload<{
 export class PromptAssetService {
     constructor(private prisma: PrismaService) { }
 
-    async create(createDto: CreatePromptAssetDto, projectIdFromRoute?: string): Promise<AssetWithInitialVersion> {
+    async create(createDto: CreatePromptAssetDto, promptIdInput: string, projectIdInput: string): Promise<AssetWithInitialVersion> {
         const { key, name, category, initialValue, initialChangeMessage } = createDto;
-        const resolvedProjectId = projectIdFromRoute || createDto.projectId;
 
-        if (!resolvedProjectId) {
-            throw new BadRequestException('Project ID is required to create an asset.');
+        if (!promptIdInput || !projectIdInput) {
+            throw new BadRequestException('Prompt ID and Prompt Project ID are required to create an asset.');
         }
 
-        // Verificar si ya existe un asset con la misma clave en el proyecto
+        // Verificar si ya existe un asset con la misma clave en el prompt
         const existingAsset = await this.prisma.promptAsset.findUnique({
             where: {
-                project_asset_key_unique: {
-                    projectId: resolvedProjectId,
+                prompt_asset_key_unique: {
+                    promptId: promptIdInput,
+                    projectId: projectIdInput,
                     key: key,
                 }
             }
         });
 
         if (existingAsset) {
-            throw new ConflictException(`PromptAsset with key "${key}" already exists in project "${resolvedProjectId}".`);
+            throw new ConflictException(`PromptAsset with key "${key}" already exists in prompt "${promptIdInput}" (project "${projectIdInput}").`);
         }
 
         // Crear el asset y su primera versión
@@ -54,27 +58,32 @@ export class PromptAssetService {
             const newAsset = await this.prisma.promptAsset.create({
                 data: {
                     key,
-                    project: { connect: { id: resolvedProjectId } },
+                    promptId: promptIdInput,
+                    projectId: projectIdInput,
                     versions: {
                         create: [
                             {
                                 value: initialValue,
-                                versionTag: 'v1.0.0', // Versión inicial
-                                status: 'active',     // Activa por defecto
+                                versionTag: 'v1.0.0',
+                                status: 'active',
                                 changeMessage: initialChangeMessage || name || 'Initial version',
                             }
                         ]
                     }
                 },
                 include: {
-                    versions: true // Incluir la versión creada
+                    versions: true
                 }
             });
             return newAsset as AssetWithInitialVersion;
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError) {
-                if (error.code === 'P2002') { // Unique constraint violation
-                    throw new ConflictException(`Failed to create asset due to a conflict (e.g., key already exists or project not found): ${error.message}`);
+                if (error.code === 'P2002') {
+                    throw new ConflictException(`Failed to create asset due to a conflict (e.g., key already exists for this prompt, or prompt/project not found): ${error.message}`);
+                } else if (error.code === 'P2025') {
+                    throw new NotFoundException(`Could not create asset: The specified prompt (ID: ${promptIdInput}, ProjectID: ${projectIdInput}) was not found, or other required related record is missing.`);
+                } else if (error.code === 'P2003') {
+                    throw new NotFoundException(`Could not create asset: The specified prompt (ID: ${promptIdInput}, ProjectID: ${projectIdInput}) does not exist.`);
                 }
             }
             console.error(`Failed to create asset: ${error.message}`, error.stack);
@@ -82,19 +91,36 @@ export class PromptAssetService {
         }
     }
 
-    findAll(projectId: string): Promise<PromptAsset[]> {
+    findAll(promptIdInput: string, projectIdInput: string): Promise<PromptAsset[]> {
         return this.prisma.promptAsset.findMany({
-            where: { projectId },
-            include: {
-                versions: { select: { id: true, versionTag: true, status: true }, orderBy: { createdAt: 'desc' } },
+            where: {
+                promptId: promptIdInput,
+                projectId: projectIdInput
             },
+            include: {
+                versions: { select: { id: true, versionTag: true, status: true, createdAt: true }, orderBy: { createdAt: 'desc' } },
+            },
+            orderBy: {
+                key: 'asc' // Opcional: ordenar los assets por clave
+            }
         });
     }
 
-    async findOne(key: string, projectId: string): Promise<PromptAssetWithDetails> {
+    async findOne(key: string, promptIdInput: string, projectIdInput: string): Promise<PromptAssetWithDetails> {
         const asset = await this.prisma.promptAsset.findUnique({
-            where: { project_asset_key_unique: { projectId, key } },
+            where: {
+                prompt_asset_key_unique: {
+                    promptId: promptIdInput,
+                    projectId: projectIdInput,
+                    key: key
+                }
+            },
             include: {
+                prompt: { // UPDATED to fetch through prompt
+                    include: {
+                        project: true
+                    }
+                },
                 versions: {
                     orderBy: { createdAt: 'desc' },
                     include: {
@@ -105,75 +131,104 @@ export class PromptAssetService {
             }
         });
         if (!asset) {
-            throw new NotFoundException(`PromptAsset with KEY "${key}" not found in project "${projectId}"`);
+            throw new NotFoundException(`PromptAsset with KEY "${key}" not found in prompt "${promptIdInput}" (project "${projectIdInput}")`);
         }
-        return asset as PromptAssetWithDetails;
+        return asset as PromptAssetWithDetails; // Type assertion should align now
     }
 
-    async update(key: string, updateDto: UpdatePromptAssetDto, projectId: string): Promise<PromptAsset> {
-        const existingAsset = await this.findAndValidateAsset(key, projectId);
+    async update(key: string, updateDto: UpdatePromptAssetDto, promptIdInput: string, projectIdInput: string): Promise<PromptAsset> {
+        const existingAsset = await this.findAndValidateAsset(key, promptIdInput, projectIdInput);
 
-        const { key: dtoKey, projectId: dtoProjectId, tenantId: _omitTenantId, ...restData } = updateDto as any;
+        // Ensure that key, promptId, and projectId are not part of the updateDto itself if they define the asset's identity
+        const { key: dtoKey, promptId: dtoPromptId, projectId: dtoprojectId, projectId: dtoLegacyProjectId, tenantId: _omitTenantId, ...restData } = updateDto as any;
+
+        // Prevent changing the key or prompt linkage via this method if key/promptId/projectId define the asset
+        if (dtoKey !== undefined && dtoKey !== key) {
+            throw new BadRequestException('Changing the asset key via update is not allowed. Delete and recreate if necessary.');
+        }
+        // Similar checks for promptId/projectId could be added if they were in DTO and meant to be immutable here
 
         const data: Prisma.PromptAssetUpdateInput = { ...restData };
 
         if (Object.keys(data).length === 0) {
+            // Nothing to update, return the asset as is.
+            // Fetch it again with full details if existingAsset from findAndValidateAsset isn't detailed enough
+            // For now, assuming existingAsset (which is just PromptAsset) is acceptable for this return path.
             return existingAsset;
         }
 
         try {
             return await this.prisma.promptAsset.update({
-                where: { id: existingAsset.id },
+                where: {
+                    id: existingAsset.id // Assets are updated by their CUID (id)
+                },
                 data,
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new NotFoundException(`PromptAsset with KEY "${key}" (ID: ${existingAsset.id}) not found during update.`);
+                throw new NotFoundException(`PromptAsset with KEY "${key}" (ID: ${existingAsset.id}) not found during update in prompt "${promptIdInput}".`);
             }
-            console.error(`Error updating asset with key "${key}" (ID: ${existingAsset.id}) in project ${projectId}:`, error);
+            console.error(`Error updating asset with key "${key}" (ID: ${existingAsset.id}) in prompt ${promptIdInput} (project ${projectIdInput}):`, error);
             throw error;
         }
     }
 
-    async remove(key: string, projectId: string): Promise<PromptAsset> {
-        const assetToDelete = await this.findAndValidateAsset(key, projectId);
+    async remove(key: string, promptIdInput: string, projectIdInput: string): Promise<PromptAsset> {
+        const assetToDelete = await this.findAndValidateAsset(key, promptIdInput, projectIdInput);
 
         try {
             await this.prisma.promptAsset.delete({
-                where: { id: assetToDelete.id },
+                where: { id: assetToDelete.id }, // Assets are deleted by their CUID (id)
             });
             return assetToDelete;
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError) {
                 if (error.code === 'P2025') {
-                    throw new NotFoundException(`PromptAsset with KEY "${key}" (ID: ${assetToDelete.id}) not found during deletion.`);
+                    throw new NotFoundException(`PromptAsset with KEY "${key}" (ID: ${assetToDelete.id}) not found during deletion in prompt "${promptIdInput}".`);
                 }
-                if (error.code === 'P2003') {
-                    throw new ConflictException(`Cannot delete asset '${key}' (ID: ${assetToDelete.id}) in project '${projectId}' as it is still referenced.`);
+                if (error.code === 'P2003') { // Foreign key constraint failed
+                    throw new ConflictException(`Cannot delete asset '${key}' (ID: ${assetToDelete.id}) in prompt '${promptIdInput}' as it is still referenced by other entities (e.g., active versions, logs).`);
                 }
             }
-            console.error(`Error deleting asset with key "${key}" (ID: ${assetToDelete.id}) in project ${projectId}:`, error);
+            console.error(`Error deleting asset with key "${key}" (ID: ${assetToDelete.id}) in prompt ${promptIdInput} (project ${projectIdInput}):`, error);
             throw error;
         }
     }
 
-    private async findAndValidateAsset(key: string, projectId: string): Promise<PromptAsset> {
+    private async findAndValidateAsset(key: string, promptIdInput: string, projectIdInput: string): Promise<PromptAsset> {
         const asset = await this.prisma.promptAsset.findUnique({
-            where: { project_asset_key_unique: { projectId, key } }
+            where: {
+                prompt_asset_key_unique: {
+                    promptId: promptIdInput,
+                    projectId: projectIdInput,
+                    key: key
+                }
+            }
         });
         if (!asset) {
-            throw new NotFoundException(`PromptAsset with KEY "${key}" not found in project "${projectId}"`);
+            throw new NotFoundException(`PromptAsset with KEY "${key}" not found in prompt "${promptIdInput}" (project "${projectIdInput}")`);
         }
         return asset;
     }
 
     // Methods createVersion and addOrUpdateTranslation REMOVED as they belong elsewhere or are handled differently
 
-    async findOneByKey(projectId: string, key: string): Promise<PromptAssetWithDetails> {
+    async findOneByKey(key: string, promptIdInput: string, projectIdInput: string): Promise<PromptAssetWithDetails> {
+        // This method is essentially the same as findOne now. Consider deprecating or aliasing.
         const asset = await this.prisma.promptAsset.findUnique({
-            where: { project_asset_key_unique: { projectId, key } },
-            include: {
-                project: true,
+            where: {
+                prompt_asset_key_unique: {
+                    promptId: promptIdInput,
+                    projectId: projectIdInput,
+                    key: key
+                }
+            },
+            include: { // Ensure this include matches PromptAssetWithDetails
+                prompt: {
+                    include: {
+                        project: true
+                    }
+                },
                 versions: {
                     orderBy: { createdAt: 'desc' },
                     include: {
@@ -184,7 +239,7 @@ export class PromptAssetService {
             }
         });
         if (!asset) {
-            throw new NotFoundException(`PromptAsset with KEY "${key}" not found in project "${projectId}"`);
+            throw new NotFoundException(`PromptAsset with KEY "${key}" not found in prompt "${promptIdInput}" (project "${projectIdInput}")`);
         }
         return asset as PromptAssetWithDetails;
     }

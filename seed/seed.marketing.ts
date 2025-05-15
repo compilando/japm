@@ -216,11 +216,32 @@ async function main() {
             .map(id => ({ id }));
     };
 
+    // Crear un Prompt padre para los assets comunes de Marketing
+    const mktCommonAssetsPromptSlug = 'marketing-common-assets';
+    const mktCommonAssetsPrompt = await prisma.prompt.upsert({
+        where: {
+            prompt_id_project_unique: {
+                id: mktCommonAssetsPromptSlug,
+                projectId: marketingProject.id,
+            },
+        },
+        update: { name: 'Marketing Common Assets' },
+        create: {
+            id: mktCommonAssetsPromptSlug,
+            name: 'Marketing Common Assets',
+            description: 'Common reusable assets for Marketing prompts.',
+            projectId: marketingProject.id,
+        },
+        select: { id: true }
+    });
+    console.log(`Upserted Prompt for common Marketing assets: ${mktCommonAssetsPrompt.id}`);
+
     // --- Upsert Marketing Assets --- 
     const audienceAssetName = 'Target Audience Persona';
     const assetAudience = await prisma.promptAsset.upsert({
         where: {
-            project_asset_key_unique: {
+            prompt_asset_key_unique: {
+                promptId: mktCommonAssetsPrompt.id,
                 projectId: marketingProject.id,
                 key: 'target-audience-persona'
             }
@@ -228,6 +249,7 @@ async function main() {
         update: {},
         create: {
             key: 'target-audience-persona',
+            promptId: mktCommonAssetsPrompt.id,
             projectId: marketingProject.id
         }
     });
@@ -270,17 +292,19 @@ async function main() {
     });
     console.log(`Upserted AssetVersion ${assetAudience.key} v1.0.0 with Marketplace Status: PENDING_APPROVAL`);
 
-    const brandVoiceAssetName = 'Brand Voice Eco';
+    const brandVoiceAssetName = 'Brand Voice Guidelines - Eco-Friendly';
     const assetBrandVoice = await prisma.promptAsset.upsert({
         where: {
-            project_asset_key_unique: {
+            prompt_asset_key_unique: {
+                promptId: mktCommonAssetsPrompt.id,
                 projectId: marketingProject.id,
-                key: 'brand-voice-eco'
+                key: 'brand-voice-eco-friendly'
             }
         },
         update: {},
         create: {
-            key: 'brand-voice-eco',
+            key: 'brand-voice-eco-friendly',
+            promptId: mktCommonAssetsPrompt.id,
             projectId: marketingProject.id
         }
     });
@@ -325,7 +349,8 @@ async function main() {
     const smToneAssetName = 'Social Media Tone & CTAs'; // Nombre corregido/aclarado
     const assetSMTone = await prisma.promptAsset.upsert({
         where: {
-            project_asset_key_unique: {
+            prompt_asset_key_unique: {
+                promptId: mktCommonAssetsPrompt.id,
                 projectId: marketingProject.id,
                 key: 'social-media-tone'
             }
@@ -333,6 +358,7 @@ async function main() {
         update: {},
         create: {
             key: 'social-media-tone',
+            promptId: mktCommonAssetsPrompt.id,
             projectId: marketingProject.id
         }
     });
@@ -373,6 +399,116 @@ async function main() {
         }
     });
     console.log(`Upserted AssetVersion ${assetSMTone.key} v1.0.0 with Marketplace Status: NOT_PUBLISHED`);
+
+    const ctaListName = 'Common Call-to-Actions (CTA) List';
+    const assetCtaList = await prisma.promptAsset.upsert({
+        where: {
+            prompt_asset_key_unique: {
+                promptId: mktCommonAssetsPrompt.id,
+                projectId: marketingProject.id,
+                key: 'common-cta-list'
+            }
+        },
+        update: {},
+        create: {
+            key: 'common-cta-list',
+            promptId: mktCommonAssetsPrompt.id,
+            projectId: marketingProject.id
+        }
+    });
+    const assetCtaListV1 = await prisma.promptAssetVersion.upsert({
+        where: {
+            assetId_versionTag: {
+                assetId: assetCtaList.id,
+                versionTag: 'v1.0.0'
+            }
+        },
+        update: {
+            value: `List of common call-to-actions for marketing purposes.`,
+            status: 'active',
+            changeMessage: ctaListName,
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.PUBLISHED,
+            marketplaceRequestedAt: new Date(),
+            marketplaceRequesterId: testUser.id,
+            marketplaceApprovedAt: new Date(),
+            marketplaceApproverId: testUser.id,
+            marketplacePublishedAt: new Date(),
+            marketplaceRejectionReason: null,
+        },
+        create: {
+            assetId: assetCtaList.id,
+            value: `List of common call-to-actions for marketing purposes.`,
+            versionTag: 'v1.0.0',
+            status: 'active',
+            changeMessage: ctaListName,
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.PUBLISHED,
+            marketplaceRequestedAt: new Date(),
+            marketplaceRequesterId: testUser.id,
+            marketplaceApprovedAt: new Date(),
+            marketplaceApproverId: testUser.id,
+            marketplacePublishedAt: new Date(),
+            marketplaceRejectionReason: null,
+        },
+        select: { id: true }
+    });
+    console.log(`Upserted AssetVersion ${assetCtaList.key} v1.0.0 with Marketplace Status: PUBLISHED`);
+
+    const productDescriptionName = 'Product Description Template - Standard Product';
+    const assetProductDescription = await prisma.promptAsset.upsert({
+        where: {
+            prompt_asset_key_unique: {
+                promptId: mktCommonAssetsPrompt.id,
+                projectId: marketingProject.id,
+                key: 'product-description-template'
+            }
+        },
+        update: {},
+        create: {
+            key: 'product-description-template',
+            promptId: mktCommonAssetsPrompt.id,
+            projectId: marketingProject.id
+        }
+    });
+    const assetProductDescriptionV1 = await prisma.promptAssetVersion.upsert({
+        where: {
+            assetId_versionTag: {
+                assetId: assetProductDescription.id,
+                versionTag: 'v1.0.0'
+            }
+        },
+        update: {
+            value: `This is a standard product description template.`,
+            status: 'active',
+            changeMessage: productDescriptionName,
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.PUBLISHED,
+            marketplaceRequestedAt: new Date(),
+            marketplaceRequesterId: testUser.id,
+            marketplaceApprovedAt: new Date(),
+            marketplaceApproverId: testUser.id,
+            marketplacePublishedAt: new Date(),
+            marketplaceRejectionReason: null,
+        },
+        create: {
+            assetId: assetProductDescription.id,
+            value: `This is a standard product description template.`,
+            versionTag: 'v1.0.0',
+            status: 'active',
+            changeMessage: productDescriptionName,
+            // Marketplace fields
+            marketplaceStatus: MarketplacePublishStatus.PUBLISHED,
+            marketplaceRequestedAt: new Date(),
+            marketplaceRequesterId: testUser.id,
+            marketplaceApprovedAt: new Date(),
+            marketplaceApproverId: testUser.id,
+            marketplacePublishedAt: new Date(),
+            marketplaceRejectionReason: null,
+        },
+        select: { id: true }
+    });
+    console.log(`Upserted AssetVersion ${assetProductDescription.key} v1.0.0 with Marketplace Status: PUBLISHED`);
 
     // --- Upsert Marketing Prompt: Generate Blog Post Idea --- 
     const promptBlogPostIdeaName = 'generate-blog-post-idea';

@@ -496,22 +496,27 @@ export class PromptService {
             if (assetEntries && assetEntries.length > 0) {
                 for (const assetEntry of assetEntries) {
                     const existingAsset = await tx.promptAsset.findUnique({
-                        where: { project_asset_key_unique: { projectId, key: assetEntry.key } }
+                        where: {
+                            prompt_asset_key_unique: {
+                                promptId: prompt.id,
+                                projectId: projectId,
+                                key: assetEntry.key
+                            }
+                        }
                     });
                     if (existingAsset) {
-                        throw new ConflictException(`Asset with key "${assetEntry.key}" already exists in project "${projectId}".`);
+                        throw new ConflictException(`Asset with key "${assetEntry.key}" already exists for prompt "${prompt.id}" in project "${projectId}".`);
                     }
 
                     const newDbAsset = await tx.promptAsset.create({
                         data: {
-                            projectId: projectId,
                             key: assetEntry.key,
-                            // name: assetEntry.name, // Asegúrate que tu schema.prisma.PromptAsset tenga 'name' si lo quieres guardar.
-                            // El schema actual no lo tiene, así que lo omito por ahora.
-                            // Si lo añades al schema, descomenta esta línea.
+                            promptId: prompt.id,
+                            projectId: projectId,
+                            // name: assetEntry.name, // Schema actual no tiene 'name' en PromptAsset.
                         },
                     });
-                    this.logger.debug(`Created PromptAsset: ${newDbAsset.key} (ID: ${newDbAsset.id})`);
+                    this.logger.debug(`Created PromptAsset: ${newDbAsset.key} (ID: ${newDbAsset.id}) for prompt ${prompt.id}`);
 
                     const newDbAssetVersion = await tx.promptAssetVersion.create({
                         data: {

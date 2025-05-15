@@ -226,11 +226,32 @@ async function main() {
             .map(id => ({ id }));
     };
 
+    // Crear un Prompt padre para los assets comunes de Education
+    const eduCommonAssetsPromptSlug = 'education-common-assets';
+    const eduCommonAssetsPrompt = await prisma.prompt.upsert({
+        where: {
+            prompt_id_project_unique: {
+                id: eduCommonAssetsPromptSlug,
+                projectId: eduProjectId,
+            },
+        },
+        update: { name: 'Education Common Assets' },
+        create: {
+            id: eduCommonAssetsPromptSlug,
+            name: 'Education Common Assets',
+            description: 'Common reusable assets for Education prompts.',
+            projectId: eduProjectId,
+        },
+        select: { id: true }
+    });
+    console.log(`Upserted Prompt for common Education assets: ${eduCommonAssetsPrompt.id}`);
+
     // --- Upsert Educational Assets ---
     const definitionCellAssetName = 'Definition - Cell (Biology)';
     const assetDefinitionCell = await prisma.promptAsset.upsert({
         where: {
-            project_asset_key_unique: {
+            prompt_asset_key_unique: {
+                promptId: eduCommonAssetsPrompt.id,
                 projectId: eduProjectId,
                 key: 'definition-cell-biology'
             }
@@ -238,6 +259,7 @@ async function main() {
         update: {},
         create: {
             key: 'definition-cell-biology',
+            promptId: eduCommonAssetsPrompt.id,
             projectId: eduProjectId
         }
     });
@@ -263,10 +285,11 @@ async function main() {
         select: { id: true }
     });
 
-    const mcqTemplateAssetName = 'Multiple Choice Question Template (4 Options)';
-    const assetMcqTemplate = await prisma.promptAsset.upsert({
+    const mcqTemplateAssetName = 'MCQ Template - 4 Options';
+    const assetMCQTemplate = await prisma.promptAsset.upsert({
         where: {
-            project_asset_key_unique: {
+            prompt_asset_key_unique: {
+                promptId: eduCommonAssetsPrompt.id,
                 projectId: eduProjectId,
                 key: 'mcq-template-4-options'
             }
@@ -274,13 +297,14 @@ async function main() {
         update: {},
         create: {
             key: 'mcq-template-4-options',
+            promptId: eduCommonAssetsPrompt.id,
             projectId: eduProjectId
         }
     });
-    const assetMcqTemplateV1 = await prisma.promptAssetVersion.upsert({
+    const assetMCQTemplateV1 = await prisma.promptAssetVersion.upsert({
         where: {
             assetId_versionTag: {
-                assetId: assetMcqTemplate.id,
+                assetId: assetMCQTemplate.id,
                 versionTag: 'v1.0.0'
             }
         },
@@ -291,7 +315,7 @@ Explanation: {Explanation Text}`,
             changeMessage: mcqTemplateAssetName
         },
         create: {
-            assetId: assetMcqTemplate.id,
+            assetId: assetMCQTemplate.id,
             value: `Question:\n{Question Text}\nA) {Option A}\nB) {Option B}\nC) {Option C}\nD) {Option D}\nCorrect Answer: {Correct Letter}
 Explanation: {Explanation Text}`,
             versionTag: 'v1.0.0',
@@ -301,10 +325,11 @@ Explanation: {Explanation Text}`,
         select: { id: true }
     });
 
-    const explanationStyleAssetName = 'Explanation Style - Use Analogies';
+    const explanationStyleAssetName = 'Explanation Style - Analogy';
     const assetExplanationStyle = await prisma.promptAsset.upsert({
         where: {
-            project_asset_key_unique: {
+            prompt_asset_key_unique: {
+                promptId: eduCommonAssetsPrompt.id,
                 projectId: eduProjectId,
                 key: 'explanation-style-analogy'
             }
@@ -312,6 +337,7 @@ Explanation: {Explanation Text}`,
         update: {},
         create: {
             key: 'explanation-style-analogy',
+            promptId: eduCommonAssetsPrompt.id,
             projectId: eduProjectId
         }
     });

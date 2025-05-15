@@ -10,16 +10,16 @@ export class AssetTranslationService {
   constructor(private prisma: PrismaService) { }
 
   // Helper to verify access to the parent asset version
-  private async verifyVersionAccess(projectId: string, assetKey: string, versionTag: string): Promise<PromptAssetVersion> {
-    // First find the asset by its key and projectId
+  private async verifyVersionAccess(projectId: string, promptId: string, assetKey: string, versionTag: string): Promise<PromptAssetVersion> {
+    // First find the asset by its key and promptId/projectId
     const asset = await this.prisma.promptAsset.findUnique({
       where: {
-        project_asset_key_unique: { projectId, key: assetKey }
+        prompt_asset_key_unique: { projectId, promptId, key: assetKey }
       }
     });
 
     if (!asset) {
-      throw new NotFoundException(`PromptAsset with key "${assetKey}" not found in project "${projectId}".`);
+      throw new NotFoundException(`PromptAsset with key "${assetKey}" not found for prompt "${promptId}" in project "${projectId}".`);
     }
 
     // Then find the version using the asset ID
@@ -34,11 +34,14 @@ export class AssetTranslationService {
       throw new NotFoundException(`PromptAssetVersion with tag "${versionTag}" not found for asset "${assetKey}".`);
     }
 
+    // TODO: Consider if we need to verify that asset.prompt.project.id === projectId
+    // This is implicitly handled by the unique key if promptId and projectId are correctly scoped.
+
     return version;
   }
 
-  async create(projectId: string, assetKey: string, versionTag: string, createDto: CreateAssetTranslationDto): Promise<AssetTranslation> {
-    const version = await this.verifyVersionAccess(projectId, assetKey, versionTag);
+  async create(projectId: string, promptId: string, assetKey: string, versionTag: string, createDto: CreateAssetTranslationDto): Promise<AssetTranslation> {
+    const version = await this.verifyVersionAccess(projectId, promptId, assetKey, versionTag);
     const { languageCode, value } = createDto;
 
     try {
@@ -58,15 +61,15 @@ export class AssetTranslationService {
     }
   }
 
-  async findAllForVersion(projectId: string, assetKey: string, versionTag: string): Promise<AssetTranslation[]> {
-    const version = await this.verifyVersionAccess(projectId, assetKey, versionTag);
+  async findAllForVersion(projectId: string, promptId: string, assetKey: string, versionTag: string): Promise<AssetTranslation[]> {
+    const version = await this.verifyVersionAccess(projectId, promptId, assetKey, versionTag);
     return this.prisma.assetTranslation.findMany({
       where: { versionId: version.id },
     });
   }
 
-  async findOneByLanguage(projectId: string, assetKey: string, versionTag: string, languageCode: string): Promise<AssetTranslation> {
-    const version = await this.verifyVersionAccess(projectId, assetKey, versionTag);
+  async findOneByLanguage(projectId: string, promptId: string, assetKey: string, versionTag: string, languageCode: string): Promise<AssetTranslation> {
+    const version = await this.verifyVersionAccess(projectId, promptId, assetKey, versionTag);
     const translation = await this.prisma.assetTranslation.findUnique({
       where: {
         versionId_languageCode: { versionId: version.id, languageCode: languageCode }
@@ -79,8 +82,8 @@ export class AssetTranslationService {
     return translation;
   }
 
-  async update(projectId: string, assetKey: string, versionTag: string, languageCode: string, updateDto: UpdateAssetTranslationDto): Promise<AssetTranslation> {
-    const existingTranslation = await this.findOneByLanguage(projectId, assetKey, versionTag, languageCode);
+  async update(projectId: string, promptId: string, assetKey: string, versionTag: string, languageCode: string, updateDto: UpdateAssetTranslationDto): Promise<AssetTranslation> {
+    const existingTranslation = await this.findOneByLanguage(projectId, promptId, assetKey, versionTag, languageCode);
     // updateDto should only contain value
     const data = updateDto;
     try {
@@ -98,8 +101,8 @@ export class AssetTranslationService {
     }
   }
 
-  async remove(projectId: string, assetKey: string, versionTag: string, languageCode: string): Promise<AssetTranslation> {
-    const existingTranslation = await this.findOneByLanguage(projectId, assetKey, versionTag, languageCode);
+  async remove(projectId: string, promptId: string, assetKey: string, versionTag: string, languageCode: string): Promise<AssetTranslation> {
+    const existingTranslation = await this.findOneByLanguage(projectId, promptId, assetKey, versionTag, languageCode);
     try {
       return await this.prisma.assetTranslation.delete({
         where: {

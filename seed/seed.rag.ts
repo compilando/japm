@@ -234,6 +234,26 @@ async function main() {
             .map(id => ({ id }));
     };
 
+    // Crear un Prompt padre para los assets comunes de RAG
+    const ragCommonAssetsPromptSlug = 'rag-common-assets';
+    const ragCommonAssetsPrompt = await prisma.prompt.upsert({
+        where: {
+            prompt_id_project_unique: {
+                id: ragCommonAssetsPromptSlug,
+                projectId: ragProjectId,
+            },
+        },
+        update: { name: 'RAG Common Assets' },
+        create: {
+            id: ragCommonAssetsPromptSlug,
+            name: 'RAG Common Assets',
+            description: 'Common reusable assets for RAG prompts.',
+            projectId: ragProjectId,
+        },
+        select: { id: true }
+    });
+    console.log(`Upserted Prompt for common RAG assets: ${ragCommonAssetsPrompt.id}`);
+
     // --- Upsert RAG Document Metadata ---
     // Using individual upserts for idempotency
     const metadataToUpsert = [
@@ -252,40 +272,41 @@ async function main() {
     }
     console.log('Upserted RAG Document Metadata entries.');
 
-    // --- Upsert RAG Assets ---
-    const systemInstructionAssetName = 'RAG System Instruction';
-    const assetSystemInstruction = await prisma.promptAsset.upsert({
+    // --- Upsert RAG Assets (using the common prompt as parent) ---
+    const ragInstructionsName = 'RAG System General Instructions';
+    const assetRagInstructions = await prisma.promptAsset.upsert({
         where: {
-            project_asset_key_unique: { // Corregido
+            prompt_asset_key_unique: {
+                promptId: ragCommonAssetsPrompt.id,
                 projectId: ragProjectId,
-                key: 'rag-system-instruction'
+                key: 'rag-instructions'
             }
         },
-        update: { /* name y type eliminados */ },
+        update: {},
         create: {
-            key: 'rag-system-instruction',
-            // name y type eliminados
+            key: 'rag-instructions',
+            promptId: ragCommonAssetsPrompt.id,
             projectId: ragProjectId
         }
     });
-    const assetSystemInstructionV1 = await prisma.promptAssetVersion.upsert({
+    const assetRagInstructionsV1 = await prisma.promptAssetVersion.upsert({
         where: {
             assetId_versionTag: {
-                assetId: assetSystemInstruction.id,
+                assetId: assetRagInstructions.id,
                 versionTag: 'v1.0.0'
             }
         },
         update: {
             value: 'You are an AI assistant helping employees answer questions based ONLY on the provided internal documents. Answer concisely and accurately using the information given in the context. Cite the source document name(s) for your answer. If the answer cannot be found in the provided context, state that clearly. Do not make assumptions or use external knowledge.',
             status: 'active',
-            changeMessage: systemInstructionAssetName // Añadido
+            changeMessage: ragInstructionsName
         },
         create: {
-            assetId: assetSystemInstruction.id,
+            assetId: assetRagInstructions.id,
             value: 'You are an AI assistant helping employees answer questions based ONLY on the provided internal documents. Answer concisely and accurately using the information given in the context. Cite the source document name(s) for your answer. If the answer cannot be found in the provided context, state that clearly. Do not make assumptions or use external knowledge.',
             versionTag: 'v1.0.0',
             status: 'active',
-            changeMessage: systemInstructionAssetName // Añadido
+            changeMessage: ragInstructionsName
         },
         select: { id: true }
     });
@@ -293,15 +314,16 @@ async function main() {
     const citationFormatAssetName = 'RAG Citation Format';
     const assetCitationFormat = await prisma.promptAsset.upsert({
         where: {
-            project_asset_key_unique: { // Corregido
+            prompt_asset_key_unique: {
+                promptId: ragCommonAssetsPrompt.id,
                 projectId: ragProjectId,
                 key: 'rag-citation-format'
             }
         },
-        update: { /* name eliminado */ },
+        update: {},
         create: {
             key: 'rag-citation-format',
-            // name eliminado
+            promptId: ragCommonAssetsPrompt.id,
             projectId: ragProjectId
         }
     });
@@ -315,14 +337,14 @@ async function main() {
         update: {
             value: 'Cite sources like this: (Source: [Document Name])',
             status: 'active',
-            changeMessage: citationFormatAssetName // Añadido
+            changeMessage: citationFormatAssetName
         },
         create: {
             assetId: assetCitationFormat.id,
             value: 'Cite sources like this: (Source: [Document Name])',
             versionTag: 'v1.0.0',
             status: 'active',
-            changeMessage: citationFormatAssetName // Añadido
+            changeMessage: citationFormatAssetName
         },
         select: { id: true }
     });
@@ -330,15 +352,16 @@ async function main() {
     const notFoundResponseAssetName = 'RAG Not Found Response';
     const assetNotFoundResponse = await prisma.promptAsset.upsert({
         where: {
-            project_asset_key_unique: { // Corregido
+            prompt_asset_key_unique: {
+                promptId: ragCommonAssetsPrompt.id,
                 projectId: ragProjectId,
                 key: 'rag-not-found-response'
             }
         },
-        update: { /* name y type eliminados */ },
+        update: {},
         create: {
             key: 'rag-not-found-response',
-            // name y type eliminados
+            promptId: ragCommonAssetsPrompt.id,
             projectId: ragProjectId
         }
     });
@@ -352,19 +375,104 @@ async function main() {
         update: {
             value: 'I could not find information about that in the provided documents.',
             status: 'active',
-            changeMessage: notFoundResponseAssetName // Añadido
+            changeMessage: notFoundResponseAssetName
         },
         create: {
             assetId: assetNotFoundResponse.id,
             value: 'I could not find information about that in the provided documents.',
             versionTag: 'v1.0.0',
             status: 'active',
-            changeMessage: notFoundResponseAssetName // Añadido
+            changeMessage: notFoundResponseAssetName
         },
         select: { id: true }
     });
     console.log('Upserted RAG Assets and V1 Versions');
 
+    const ragValidationRulesName = 'RAG Document Validation Rules';
+    const assetRagValidationRules = await prisma.promptAsset.upsert({
+        where: {
+            prompt_asset_key_unique: {
+                promptId: ragCommonAssetsPrompt.id,
+                projectId: ragProjectId,
+                key: 'rag-validation-rules'
+            }
+        },
+        update: {},
+        create: {
+            key: 'rag-validation-rules',
+            promptId: ragCommonAssetsPrompt.id,
+            projectId: ragProjectId
+        }
+    });
+    const assetRagValidationRulesV1 = await prisma.promptAssetVersion.upsert({
+        where: {
+            assetId_versionTag: {
+                assetId: assetRagValidationRules.id,
+                versionTag: 'v1.0.0'
+            }
+        },
+        update: {
+            value: 'Validation rules: 1. Documents in supported format 2. Maximum size allowed 3. Non - malicious content 4. Complete metadata 5. Correctly generated embeddings',
+            status: 'active',
+            changeMessage: ragValidationRulesName
+        },
+        create: {
+            assetId: assetRagValidationRules.id,
+            value: 'Validation rules: 1. Documents in supported format 2. Maximum size allowed 3. Non - malicious content 4. Complete metadata 5. Correctly generated embeddings',
+            versionTag: 'v1.0.0',
+            status: 'active',
+            changeMessage: ragValidationRulesName
+        },
+        select: { id: true }
+    });
+
+    const ragErrorMessagesName = 'RAG System Error Messages';
+    const assetRagErrorMessages = await prisma.promptAsset.upsert({
+        where: {
+            prompt_asset_key_unique: {
+                promptId: ragCommonAssetsPrompt.id,
+                projectId: ragProjectId,
+                key: 'rag-error-messages'
+            }
+        },
+        update: {},
+        create: {
+            key: 'rag-error-messages',
+            promptId: ragCommonAssetsPrompt.id,
+            projectId: ragProjectId
+        }
+    });
+    const assetRagErrorMessagesV1 = await prisma.promptAssetVersion.upsert({
+        where: {
+            assetId_versionTag: {
+                assetId: assetRagErrorMessages.id,
+                versionTag: 'v1.0.0'
+            }
+        },
+        update: {
+            value: `Error messages:
+- "Unsupported format"
+- "Size exceeds limit"
+- "Malicious content detected"
+- "Incomplete metadata"
+- "Embedding generation error"`,
+            status: 'active',
+            changeMessage: ragErrorMessagesName
+        },
+        create: {
+            assetId: assetRagErrorMessages.id,
+            value: `Error messages:
+- "Unsupported format"
+- "Size exceeds limit"
+- "Malicious content detected"
+- "Incomplete metadata"
+- "Embedding generation error"`,
+            versionTag: 'v1.0.0',
+            status: 'active',
+            changeMessage: ragErrorMessagesName
+        },
+        select: { id: true }
+    });
 
     // --- Upsert RAG Prompt: Answer Question ---
     const promptRagQueryName = 'answer-hr-question-rag';
