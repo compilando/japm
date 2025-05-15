@@ -6,6 +6,6 @@ import { PrismaModule } from '../prisma/prisma.module';
 @Module({
   imports: [PrismaModule],
   controllers: [CulturalDataController],
-  providers: [CulturalDataService]
+  providers: [CulturalDataService],
 })
-export class CulturalDataModule { }
+export class CulturalDataModule {}

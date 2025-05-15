@@ -6,13 +6,9 @@ import { TenantModule } from '../tenant/tenant.module';
 import { ServePromptModule } from '../serve-prompt/serve-prompt.module';
 
 @Module({
-  imports: [
-    PrismaModule,
-    TenantModule,
-    ServePromptModule
-  ],
+  imports: [PrismaModule, TenantModule, ServePromptModule],
   controllers: [PromptVersionController],
   providers: [PromptVersionService],
-  exports: [PromptVersionService]
+  exports: [PromptVersionService],
 })
-export class PromptVersionModule { }
+export class PromptVersionModule {}

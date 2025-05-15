@@ -7,7 +7,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) { }
+  constructor(private readonly appService: AppService) {}
 
   @Get('admin-check')
   @UseGuards(AuthGuard('jwt'), RolesGuard)

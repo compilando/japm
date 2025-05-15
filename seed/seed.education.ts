@@ -17,6 +17,38 @@ function slugify(text: string): string {
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
 
+// Estructuras para los seeds
+interface PromptAssetSeed {
+    key: string;
+}
+
+interface AssetVersionSeed {
+    assetKey: string;
+    versionTag: string;
+    value: string;
+    name?: string;
+    type?: string;
+    description?: string;
+    category?: string;
+}
+
+interface PromptVersionSeed {
+    versionTag: string;
+    promptText?: string;
+    aiModelId?: string;
+    assetVersions?: AssetVersionSeed[];
+}
+
+interface EducationPromptSeed {
+    promptSlug: string;
+    promptName: string;
+    promptDescription: string;
+    promptContent: string;
+    promptTags?: string[];
+    assets: PromptAssetSeed[];
+    versions: PromptVersionSeed[];
+}
+
 // Traducciones específicas para el proyecto de educación
 const educationTranslations = {
     assets: {
@@ -76,11 +108,10 @@ Organize the information in a clear and structured way.`
 async function createSpanishTranslations(projectId: string) {
     console.log(`Creating Spanish translations for project ${projectId}...`);
 
-    // Obtener todas las promptversion y promptassetversion del proyecto
     const promptVersions = await prisma.promptVersion.findMany({
         where: {
             prompt: {
-                projectId: projectId
+                projectId: projectId,
             }
         },
         include: {
@@ -91,7 +122,7 @@ async function createSpanishTranslations(projectId: string) {
     const promptAssetVersions = await prisma.promptAssetVersion.findMany({
         where: {
             asset: {
-                projectId: projectId
+                projectId: projectId,
             }
         },
         include: {
@@ -101,50 +132,136 @@ async function createSpanishTranslations(projectId: string) {
 
     // Crear traducciones para promptversion
     for (const version of promptVersions) {
+        // Usar el slug del prompt como clave para la traducción
         const translation = educationTranslations.prompts[version.prompt.id] || version.promptText;
-        await prisma.promptTranslation.upsert({
-            where: {
-                versionId_languageCode: {
+        if (translation) {
+            await prisma.promptTranslation.upsert({
+                where: {
+                    versionId_languageCode: {
+                        versionId: version.id,
+                        languageCode: 'es-ES'
+                    }
+                },
+                update: {
+                    promptText: translation
+                },
+                create: {
                     versionId: version.id,
-                    languageCode: 'es-ES'
+                    languageCode: 'es-ES',
+                    promptText: translation
                 }
-            },
-            update: {
-                promptText: translation
-            },
-            create: {
-                versionId: version.id,
-                languageCode: 'es-ES',
-                promptText: translation
-            }
-        });
-        console.log(`Created Spanish translation for prompt version ${version.id}`);
+            });
+            console.log(`Created/Updated Spanish translation for prompt version ${version.id} (Prompt: ${version.prompt.id})`);
+        } else {
+            console.warn(`No Spanish translation found for prompt: ${version.prompt.id}`);
+        }
     }
 
     // Crear traducciones para promptassetversion
     for (const version of promptAssetVersions) {
-        const translation = educationTranslations.assets[version.asset.key] || version.value;
-        await prisma.assetTranslation.upsert({
-            where: {
-                versionId_languageCode: {
+        // Usar la key del asset como clave para la traducción
+        const translation = educationTranslations.assets[version.asset.key] || version.value as string;
+        if (translation) {
+            await prisma.assetTranslation.upsert({
+                where: {
+                    versionId_languageCode: {
+                        versionId: version.id,
+                        languageCode: 'es-ES'
+                    }
+                },
+                update: {
+                    value: translation
+                },
+                create: {
                     versionId: version.id,
-                    languageCode: 'es-ES'
+                    languageCode: 'es-ES',
+                    value: translation
                 }
-            },
-            update: {
-                value: translation
-            },
-            create: {
-                versionId: version.id,
-                languageCode: 'es-ES',
-                value: translation
-            }
-        });
-        console.log(`Created Spanish translation for prompt asset version ${version.id}`);
+            });
+            console.log(`Created/Updated Spanish translation for prompt asset version ${version.id} (Asset Key: ${version.asset.key})`);
+        } else {
+            console.warn(`No Spanish translation found for asset key: ${version.asset.key}`);
+        }
     }
 
     console.log(`Finished creating Spanish translations for project ${projectId}`);
 }
+
+// Datos para los prompts de Education
+const educationPrompts: EducationPromptSeed[] = [
+    {
+        promptSlug: 'generate-biology-quiz',
+        promptName: 'Generate Biology Quiz',
+        promptDescription: 'Generates a biology quiz based on specified topic, level, and number of questions.',
+        promptContent: `Generate a biology quiz with the following characteristics:\\n\\nTopic: {{topic}}\\nLevel: {{level}}\\nNumber of questions: {{number}}\\n\\nInclude:\\n- Multiple choice questions using the template: {{mcq_template_4_options}}\\n- One short answer question\\n- One analysis question\\n\\nEnsure questions are clear and challenging. Explain all answers.`,
+        promptTags: ['biology', 'quiz', 'assessment', 'high-school'],
+        assets: [
+            { key: 'mcq-template-4-options' },
+        ],
+        versions: [
+            {
+                versionTag: 'v1.0.0',
+                assetVersions: [
+                    {
+                        assetKey: 'mcq-template-4-options',
+                        versionTag: 'v1.0.0',
+                        name: 'MCQ Template (4 options)',
+                        type: 'text',
+                        description: 'Template for multiple-choice questions with four options.',
+                        value: 'Question:\\n{Question Text}\\nA) {Option A}\\nB) {Option B}\\nC) {Option C}\\nD) {Option D}\\nCorrect Answer: {Correct Letter}\\nExplanation: {Explanation Text}'
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        promptSlug: 'explain-biology-concept',
+        promptName: 'Explain Biology Concept',
+        promptDescription: 'Explains a biology concept with definitions, examples, analogies, and applications.',
+        promptContent: `Explain the following biology concept:\\n\\nConcept: {{concept}}\\nLevel: {{level}}\\n\\nThe explanation should include:\\n- Clear definition from: {{definition_cell_biology}}\\n- Relevant examples\\n- Simple analogies following style: {{explanation_style_analogy}}\\n- Practical applications\\n\\nUse language accessible to high school students.`,
+        promptTags: ['biology', 'explanation', 'tutoring', 'high-school'],
+        assets: [
+            { key: 'definition-cell-biology' },
+            { key: 'explanation-style-analogy' },
+        ],
+        versions: [
+            {
+                versionTag: 'v1.0.0',
+                assetVersions: [
+                    {
+                        assetKey: 'definition-cell-biology',
+                        versionTag: 'v1.0.0',
+                        name: 'Definition - Cell Biology',
+                        type: 'text',
+                        description: 'Standard definition of a cell in biology.',
+                        value: 'The basic structural, functional, and biological unit of all known organisms. A cell is the smallest unit of life.'
+                    },
+                    {
+                        assetKey: 'explanation-style-analogy',
+                        versionTag: 'v1.0.0',
+                        name: 'Explanation Style with Analogy',
+                        type: 'text',
+                        description: 'Guideline for styling explanations with analogies.',
+                        value: 'Explain the concept clearly and concisely. Use simple language suitable for a high school student. Where possible, include a simple analogy to aid understanding.'
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        promptSlug: 'create-study-guide',
+        promptName: 'Create Biology Study Guide',
+        promptDescription: 'Creates a study guide for a biology topic including summary, key points, and exercises.',
+        promptContent: `Create a study guide for the following biology topic:\\n\\nTopic: {{topic}}\\nLevel: {{level}}\\n\\nThe guide should include:\\n- Topic summary\\n- Key points\\n- Diagrams or visualizations (describe if text-only)\\n- Practice exercises\\n- Additional resources\\n\\nOrganize the information in a clear and structured way.`,
+        promptTags: ['biology', 'education', 'tutoring'],
+        assets: [],
+        versions: [
+            {
+                versionTag: 'v1.0.0'
+            }
+        ]
+    }
+];
 
 async function main() {
     console.log(`-----------------------------------`);
@@ -168,18 +285,19 @@ async function main() {
         select: { id: true } // Select ID for connecting later
     });
 
+    const eduProjectSlug = 'education-content-project'; // Renombrado para claridad
     const educationProject = await prisma.project.upsert({
-        where: { id: 'education-content-project' },
+        where: { id: eduProjectSlug },
         update: { name: 'Education Content Generation', description: 'AI-powered educational content generation and management.', ownerUserId: testUser.id },
         create: {
-            id: 'education-content-project',
+            id: eduProjectSlug,
             name: 'Education Content Generation',
             description: 'AI-powered educational content generation and management.',
             owner: { connect: { id: testUser.id } },
             tenant: { connect: { id: testUser.tenantId } }
         },
     });
-    console.log(`Upserted Project: ${educationProject.name}`);
+    console.log(`Upserted Project: ${educationProject.name} (ID: ${educationProject.id})`);
 
     // Crear región es-ES y datos culturales para el proyecto Education
     await createSpanishRegionAndCulturalData(educationProject.id);
@@ -205,7 +323,7 @@ async function main() {
     // Upsert Educational Tags with prefix
     const eduPrefix = 'edu_';
     const eduBaseTags = ['education', 'biology', 'quiz', 'explanation', 'tutoring', 'high-school', 'assessment'];
-    const eduTagMap: Map<string, string> = new Map(); // Map tagName to tagId
+    const eduTagMap: Map<string, string> = new Map();
 
     for (const baseTagName of eduBaseTags) {
         const tagName = `${eduPrefix}${baseTagName}`;
@@ -215,10 +333,9 @@ async function main() {
             create: { name: tagName, projectId: eduProjectId },
             select: { id: true }
         });
-        eduTagMap.set(tagName, tag.id); // Store ID in map
+        eduTagMap.set(tagName, tag.id);
         console.log(`Upserted Tag: ${tagName} for project ${eduProjectId}`);
     }
-    // Helper function to get tag IDs
     const getEduTagIds = (baseNames: string[]): { id: string }[] => {
         return baseNames
             .map(baseName => eduTagMap.get(`${eduPrefix}${baseName}`))
@@ -226,238 +343,110 @@ async function main() {
             .map(id => ({ id }));
     };
 
-    // Crear un Prompt padre para los assets comunes de Education
-    const eduCommonAssetsPromptSlug = 'education-common-assets';
-    const eduCommonAssetsPrompt = await prisma.prompt.upsert({
-        where: {
-            prompt_id_project_unique: {
-                id: eduCommonAssetsPromptSlug,
-                projectId: eduProjectId,
+    // --- Upsert Education Prompts with Local Assets ---
+    for (const promptSeed of educationPrompts) {
+        const prompt = await prisma.prompt.upsert({
+            where: {
+                prompt_id_project_unique: {
+                    id: promptSeed.promptSlug,
+                    projectId: eduProjectId,
+                },
             },
-        },
-        update: { name: 'Education Common Assets' },
-        create: {
-            id: eduCommonAssetsPromptSlug,
-            name: 'Education Common Assets',
-            description: 'Common reusable assets for Education prompts.',
-            projectId: eduProjectId,
-        },
-        select: { id: true }
-    });
-    console.log(`Upserted Prompt for common Education assets: ${eduCommonAssetsPrompt.id}`);
-
-    // --- Upsert Educational Assets ---
-    const definitionCellAssetName = 'Definition - Cell (Biology)';
-    const assetDefinitionCell = await prisma.promptAsset.upsert({
-        where: {
-            prompt_asset_key_unique: {
-                promptId: eduCommonAssetsPrompt.id,
+            update: {
+                name: promptSeed.promptName,
+                description: promptSeed.promptDescription,
+                tags: promptSeed.promptTags ? { connect: getEduTagIds(promptSeed.promptTags) } : undefined,
+            },
+            create: {
+                id: promptSeed.promptSlug,
+                name: promptSeed.promptName,
+                description: promptSeed.promptDescription,
                 projectId: eduProjectId,
-                key: 'definition-cell-biology'
-            }
-        },
-        update: {},
-        create: {
-            key: 'definition-cell-biology',
-            promptId: eduCommonAssetsPrompt.id,
-            projectId: eduProjectId
+                tags: promptSeed.promptTags ? { connect: getEduTagIds(promptSeed.promptTags) } : undefined,
+            },
+            select: { id: true }
+        });
+        console.log(`Upserted Prompt: ${prompt.id}`);
+
+        const assetIdMap = new Map<string, string>();
+        for (const assetSeed of promptSeed.assets) {
+            const assetKeySlug = slugify(assetSeed.key);
+            const newAsset = await prisma.promptAsset.upsert({
+                where: {
+                    prompt_asset_key_unique: {
+                        key: assetKeySlug,
+                        promptId: prompt.id,
+                        projectId: eduProjectId,
+                    }
+                },
+                update: {},
+                create: {
+                    key: assetKeySlug,
+                    promptId: prompt.id,
+                    projectId: eduProjectId,
+                },
+                select: { id: true }
+            });
+            assetIdMap.set(assetKeySlug, newAsset.id);
+            console.log(`Upserted PromptAsset: ${newAsset.id} (Key: ${assetKeySlug}) for Prompt ${prompt.id}`);
         }
-    });
-    const assetDefinitionCellV1 = await prisma.promptAssetVersion.upsert({
-        where: {
-            assetId_versionTag: {
-                assetId: assetDefinitionCell.id,
-                versionTag: 'v1.0.0'
-            }
-        },
-        update: {
-            value: 'The basic structural, functional, and biological unit of all known organisms. A cell is the smallest unit of life.',
-            status: 'active',
-            changeMessage: definitionCellAssetName
-        },
-        create: {
-            assetId: assetDefinitionCell.id,
-            value: 'The basic structural, functional, and biological unit of all known organisms. A cell is the smallest unit of life.',
-            versionTag: 'v1.0.0',
-            status: 'active',
-            changeMessage: definitionCellAssetName
-        },
-        select: { id: true }
-    });
 
-    const mcqTemplateAssetName = 'MCQ Template - 4 Options';
-    const assetMCQTemplate = await prisma.promptAsset.upsert({
-        where: {
-            prompt_asset_key_unique: {
-                promptId: eduCommonAssetsPrompt.id,
-                projectId: eduProjectId,
-                key: 'mcq-template-4-options'
+        let latestVersionIdForPrompt: string | null = null;
+
+        for (const versionSeed of promptSeed.versions) {
+            const connectAssetVersionIds: { id: string }[] = [];
+            if (versionSeed.assetVersions) {
+                for (const avSeed of versionSeed.assetVersions) {
+                    const assetKeySlug = slugify(avSeed.assetKey);
+                    const assetId = assetIdMap.get(assetKeySlug);
+
+                    if (assetId) {
+                        const assetVersion = await prisma.promptAssetVersion.upsert({
+                            where: {
+                                assetId_versionTag: {
+                                    assetId: assetId,
+                                    versionTag: avSeed.versionTag,
+                                }
+                            },
+                            update: {
+                                value: avSeed.value,
+                            },
+                            create: {
+                                assetId: assetId,
+                                versionTag: avSeed.versionTag,
+                                value: avSeed.value,
+                            },
+                            select: { id: true }
+                        });
+                        connectAssetVersionIds.push({ id: assetVersion.id });
+                    } else {
+                        console.warn(`Asset with key ${assetKeySlug} (original: ${avSeed.assetKey}) not found in assetIdMap for prompt ${promptSeed.promptSlug}. Skipping asset version.`);
+                    }
+                }
             }
-        },
-        update: {},
-        create: {
-            key: 'mcq-template-4-options',
-            promptId: eduCommonAssetsPrompt.id,
-            projectId: eduProjectId
+
+            const newPromptVersion = await prisma.promptVersion.create({
+                data: {
+                    promptId: prompt.id,
+                    versionTag: versionSeed.versionTag,
+                    promptText: versionSeed.promptText || promptSeed.promptContent,
+                    aiModelId: versionSeed.aiModelId || eduGpt4oMini.id,
+                    assetVersions: {
+                        connect: connectAssetVersionIds.length > 0 ? connectAssetVersionIds : undefined
+                    },
+                    environments: { connect: [{ id: stagingEnvironment.id }, { id: testingEnvironment.id }] },
+                },
+                select: { id: true }
+            });
+            console.log(`Created PromptVersion ${newPromptVersion.id} (Tag: ${versionSeed.versionTag}) for Prompt ${prompt.id}`);
+            latestVersionIdForPrompt = newPromptVersion.id;
         }
-    });
-    const assetMCQTemplateV1 = await prisma.promptAssetVersion.upsert({
-        where: {
-            assetId_versionTag: {
-                assetId: assetMCQTemplate.id,
-                versionTag: 'v1.0.0'
-            }
-        },
-        update: {
-            value: `Question:\n{Question Text}\nA) {Option A}\nB) {Option B}\nC) {Option C}\nD) {Option D}\nCorrect Answer: {Correct Letter}
-Explanation: {Explanation Text}`,
-            status: 'active',
-            changeMessage: mcqTemplateAssetName
-        },
-        create: {
-            assetId: assetMCQTemplate.id,
-            value: `Question:\n{Question Text}\nA) {Option A}\nB) {Option B}\nC) {Option C}\nD) {Option D}\nCorrect Answer: {Correct Letter}
-Explanation: {Explanation Text}`,
-            versionTag: 'v1.0.0',
-            status: 'active',
-            changeMessage: mcqTemplateAssetName
-        },
-        select: { id: true }
-    });
+    }
 
-    const explanationStyleAssetName = 'Explanation Style - Analogy';
-    const assetExplanationStyle = await prisma.promptAsset.upsert({
-        where: {
-            prompt_asset_key_unique: {
-                promptId: eduCommonAssetsPrompt.id,
-                projectId: eduProjectId,
-                key: 'explanation-style-analogy'
-            }
-        },
-        update: {},
-        create: {
-            key: 'explanation-style-analogy',
-            promptId: eduCommonAssetsPrompt.id,
-            projectId: eduProjectId
-        }
-    });
-    const assetExplanationStyleV1 = await prisma.promptAssetVersion.upsert({
-        where: {
-            assetId_versionTag: {
-                assetId: assetExplanationStyle.id,
-                versionTag: 'v1.0.0'
-            }
-        },
-        update: {
-            value: 'Explain the concept clearly and concisely. Use simple language suitable for a high school student. Where possible, include a simple analogy to aid understanding.',
-            status: 'active',
-            changeMessage: explanationStyleAssetName
-        },
-        create: {
-            assetId: assetExplanationStyle.id,
-            value: 'Explain the concept clearly and concisely. Use simple language suitable for a high school student. Where possible, include a simple analogy to aid understanding.',
-            versionTag: 'v1.0.0',
-            status: 'active',
-            changeMessage: explanationStyleAssetName
-        },
-        select: { id: true }
-    });
-    console.log('Upserted Educational Assets and V1 Versions');
-
-    // --- Upsert Educational Prompt: Explain Concept ---
-    const promptExplainName = 'explain-biology-concept';
-    const promptExplainSlug = slugify(promptExplainName);
-    const promptExplain = await prisma.prompt.upsert({
-        where: {
-            prompt_id_project_unique: {
-                id: promptExplainSlug,
-                projectId: eduProjectId
-            }
-        },
-        update: {
-            name: promptExplainName,
-            description: 'Explain a biological concept using a specific style.',
-            tags: { set: getEduTagIds(['education', 'biology', 'explanation', 'tutoring']) }
-        },
-        create: {
-            id: promptExplainSlug,
-            name: promptExplainName,
-            description: 'Explain a biological concept using a specific style.',
-            projectId: eduProjectId,
-            tags: { connect: getEduTagIds(['education', 'biology', 'explanation', 'tutoring']) }
-        },
-        select: { id: true, name: true }
-    });
-
-    const promptExplainV1 = await prisma.promptVersion.upsert({
-        where: { promptId_versionTag: { promptId: promptExplain.id, versionTag: 'v1.0.0' } },
-        update: {
-            promptText: `Explain the following biological concept: {{Concept Name}}.\n            Use this definition as a starting point if relevant: {{definition-cell-biology}} (Modify based on actual concept).\n            Target Audience: High School Student.\n            Required Style: {{explanation-style-analogy}}\n            Keep the explanation under 150 words.`,
-            status: 'active',
-            activeInEnvironments: { set: [{ id: stagingEnvironment.id }] },
-            aiModelId: eduGpt4o.id // Assign default AI model
-        },
-        create: {
-            promptId: promptExplain.id, // Use ID
-            promptText: `Explain the following biological concept: {{Concept Name}}.\n            Use this definition as a starting point if relevant: {{definition-cell-biology}} (Modify based on actual concept).\n            Target Audience: High School Student.\n            Required Style: {{explanation-style-analogy}}\n            Keep the explanation under 150 words.`,
-            versionTag: 'v1.0.0', status: 'active',
-            changeMessage: 'Initial prompt for explaining concepts with analogies.',
-            activeInEnvironments: { connect: [{ id: stagingEnvironment.id }] },
-            aiModelId: eduGpt4o.id // Assign default AI model
-        },
-        select: { id: true }
-    });
-    console.log(`Upserted Prompt ${promptExplain.name} V1`);
-
-    // --- Upsert Educational Prompt: Generate Quiz Question ---
-    const promptQuizName = 'generate-biology-mcq';
-    const promptQuizSlug = slugify(promptQuizName);
-    const promptQuiz = await prisma.prompt.upsert({
-        where: {
-            prompt_id_project_unique: {
-                id: promptQuizSlug,
-                projectId: eduProjectId
-            }
-        },
-        update: {
-            name: promptQuizName,
-            description: 'Generate a multiple-choice question about a biology topic.',
-            tags: { set: getEduTagIds(['education', 'biology', 'quiz', 'assessment']) }
-        },
-        create: {
-            id: promptQuizSlug,
-            name: promptQuizName,
-            description: 'Generate a multiple-choice question about a biology topic.',
-            projectId: eduProjectId,
-            tags: { connect: getEduTagIds(['education', 'biology', 'quiz', 'assessment']) }
-        },
-        select: { id: true, name: true }
-    });
-
-    const promptQuizV1 = await prisma.promptVersion.upsert({
-        where: { promptId_versionTag: { promptId: promptQuiz.id, versionTag: 'v1.0.0' } },
-        update: {
-            promptText: `Generate a multiple-choice question (MCQ) suitable for a high school biology student on the topic of: {{Topic}}.\n            The question should test understanding, not just recall.\n            Provide 4 plausible options (A, B, C, D), with only one correct answer.\n            Format the output EXACTLY like this template:\n            {{mcq-template-4-options}}\n            Ensure the explanation clearly states why the correct answer is right and the others are wrong.`,
-            status: 'active',
-            activeInEnvironments: { set: [{ id: stagingEnvironment.id }, { id: testingEnvironment.id }] },
-            aiModelId: eduGpt4o.id // Assign default AI model
-        },
-        create: {
-            promptId: promptQuiz.id, // Use ID
-            promptText: `Generate a multiple-choice question (MCQ) suitable for a high school biology student on the topic of: {{Topic}}.\n            The question should test understanding, not just recall.\n            Provide 4 plausible options (A, B, C, D), with only one correct answer.\n            Format the output EXACTLY like this template:\n            {{mcq-template-4-options}}\n            Ensure the explanation clearly states why the correct answer is right and the others are wrong.`,
-            versionTag: 'v1.0.0', status: 'active',
-            changeMessage: 'Initial prompt for generating MCQs.',
-            activeInEnvironments: { connect: [{ id: stagingEnvironment.id }, { id: testingEnvironment.id }] },
-            aiModelId: eduGpt4o.id // Assign default AI model
-        },
-        select: { id: true }
-    });
-    console.log(`Upserted Prompt ${promptQuiz.name} V1`);
-
-    // Crear traducciones es-ES para los assets y prompts
+    // Crear traducciones en español
     await createSpanishTranslations(eduProjectId);
 
-    console.log(`Educational Content & Tutoring seeding finished.`);
+    console.log('Finished seeding Educational Content & Tutoring.');
 }
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(async () => { await prisma.$disconnect(); });

@@ -1,7 +1,18 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { UpdatePromptVersionDto } from './dto/update-prompt-version.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, PromptVersion, Prompt, MarketplacePublishStatus } from '@prisma/client';
+import {
+  Prisma,
+  PromptVersion,
+  Prompt,
+  MarketplacePublishStatus,
+} from '@prisma/client';
 import { CreatePromptVersionDto } from 'src/prompt/dto/create-prompt-version.dto';
 import { TenantService } from '../tenant/tenant.service';
 import { ServePromptService } from '../serve-prompt/serve-prompt.service';
@@ -15,10 +26,13 @@ export class PromptVersionService {
     private prisma: PrismaService,
     private tenantService: TenantService,
     private servePromptService: ServePromptService,
-  ) { }
+  ) {}
 
   // Helper to verify prompt access
-  private async verifyPromptAccess(projectId: string, promptId: string): Promise<Prompt> {
+  private async verifyPromptAccess(
+    projectId: string,
+    promptId: string,
+  ): Promise<Prompt> {
     // Attempt to use findUnique again after DB reset
     const prompt = await this.prisma.prompt.findUnique({
       where: { id: promptId },
@@ -27,12 +41,18 @@ export class PromptVersionService {
       throw new NotFoundException(`Prompt with ID "${promptId}" not found.`);
     }
     if (prompt.projectId !== projectId) {
-      throw new ForbiddenException(`Access denied to Prompt "${promptId}" for project "${projectId}".`);
+      throw new ForbiddenException(
+        `Access denied to Prompt "${promptId}" for project "${projectId}".`,
+      );
     }
     return prompt;
   }
 
-  async create(projectId: string, promptId: string, createDto: CreatePromptVersionDto): Promise<PromptVersion> {
+  async create(
+    projectId: string,
+    promptId: string,
+    createDto: CreatePromptVersionDto,
+  ): Promise<PromptVersion> {
     await this.verifyPromptAccess(projectId, promptId); // Ensure prompt exists in project
 
     // versionTag no viene de createDto. Se asignará 'v1.0.0' por defecto para la creación inicial.
@@ -49,11 +69,19 @@ export class PromptVersionService {
         },
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         // Esto ahora atrapa versionTag duplicado para el MISMO promptId (CUID)
-        throw new ConflictException(`Version tag "${newVersionTag}" already exists for prompt "${promptId}".`);
+        throw new ConflictException(
+          `Version tag "${newVersionTag}" already exists for prompt "${promptId}".`,
+        );
       }
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         // Debería ser atrapado por verifyPromptAccess, pero se mantiene como respaldo
         throw new NotFoundException(`Prompt with ID "${promptId}" not found.`);
       }
@@ -61,7 +89,10 @@ export class PromptVersionService {
     }
   }
 
-  async findAllForPrompt(projectId: string, promptId: string): Promise<PromptVersion[]> {
+  async findAllForPrompt(
+    projectId: string,
+    promptId: string,
+  ): Promise<PromptVersion[]> {
     await this.verifyPromptAccess(projectId, promptId); // Verify access first
 
     return this.prisma.promptVersion.findMany({
@@ -70,7 +101,12 @@ export class PromptVersionService {
     });
   }
 
-  async findOneByTag(projectId: string, promptId: string, versionTag: string, query?: ResolveAssetsQueryDto): Promise<PromptVersion> {
+  async findOneByTag(
+    projectId: string,
+    promptId: string,
+    versionTag: string,
+    query?: ResolveAssetsQueryDto,
+  ): Promise<PromptVersion> {
     await this.verifyPromptAccess(projectId, promptId);
 
     const version = await this.prisma.promptVersion.findUnique({
@@ -84,7 +120,9 @@ export class PromptVersionService {
     });
 
     if (!version) {
-      throw new NotFoundException(`PromptVersion with tag "${versionTag}" not found for prompt "${promptId}".`);
+      throw new NotFoundException(
+        `PromptVersion with tag "${versionTag}" not found for prompt "${promptId}".`,
+      );
     }
 
     if (query && query.resolveAssets === 'true') {
@@ -93,48 +131,64 @@ export class PromptVersionService {
         try {
           inputVariables = JSON.parse(query.variables);
         } catch (e) {
-          this.logger.warn(`Failed to parse variables JSON string: ${query.variables}. Proceeding without variables.`);
+          this.logger.warn(
+            `Failed to parse variables JSON string: ${query.variables}. Proceeding without variables.`,
+          );
         }
       }
 
-      // The languageCode for asset translation should be query.regionCode if provided, 
+      // The languageCode for asset translation should be query.regionCode if provided,
       // otherwise, if we are fetching a specific prompt translation later, that languageCode would be used.
       // For a base prompt version, query.regionCode is the primary source for asset language.
       // If not resolving for a specific translation, query.regionCode is used for assets.
       const assetLanguageCode = query?.regionCode; // string | undefined
 
-      const { processedText, resolvedAssetsMetadata } = await this.servePromptService.resolveAssets(
-        version.promptText,    // text
-        promptId,              // promptIdInput (slug of the Prompt)
-        projectId,             // projectIdInput (CUID of the project the Prompt belongs to)
-        assetLanguageCode,     // languageCode for asset translation (optional)
-        inputVariables         // inputVariables (Record<string, any>)
-      );
+      const { processedText, resolvedAssetsMetadata } =
+        await this.servePromptService.resolveAssets(
+          version.promptText, // text
+          promptId, // promptIdInput (slug of the Prompt)
+          projectId, // projectIdInput (CUID of the project the Prompt belongs to)
+          assetLanguageCode, // languageCode for asset translation (optional)
+          inputVariables, // inputVariables (Record<string, any>)
+        );
       version.promptText = processedText;
       // Optionally, attach resolvedAssetsMetadata to the version object if the return type is adjusted
-      // (version as any).resolvedAssetsMetadata = resolvedAssetsMetadata; 
+      // (version as any).resolvedAssetsMetadata = resolvedAssetsMetadata;
     }
 
     return version;
   }
 
-  async update(projectId: string, promptId: string, versionTag: string, updateDto: UpdatePromptVersionDto): Promise<PromptVersion> {
+  async update(
+    projectId: string,
+    promptId: string,
+    versionTag: string,
+    updateDto: UpdatePromptVersionDto,
+  ): Promise<PromptVersion> {
     // Verify access and find the specific version by tag first
     // Pass undefined for query to avoid asset resolution during this specific find operation
-    const existingVersion = await this.findOneByTag(projectId, promptId, versionTag, undefined);
+    const existingVersion = await this.findOneByTag(
+      projectId,
+      promptId,
+      versionTag,
+      undefined,
+    );
 
     // Use updateDto directly
 
     try {
       return await this.prisma.promptVersion.update({
         where: {
-          id: existingVersion.id // Use the CUID of the version found
+          id: existingVersion.id, // Use the CUID of the version found
         },
         data: updateDto, // Update allowed fields like promptText, changeMessage, status
       });
     } catch (error) {
       // P2025 should be caught by findOneByTag
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         throw new NotFoundException(`PromptVersion not found for update.`);
       }
       // Handle other potential errors if necessary
@@ -142,26 +196,42 @@ export class PromptVersionService {
     }
   }
 
-  async remove(projectId: string, promptId: string, versionTag: string): Promise<PromptVersion> {
+  async remove(
+    projectId: string,
+    promptId: string,
+    versionTag: string,
+  ): Promise<PromptVersion> {
     // Verify access and find the specific version by tag first
-    const existingVersion = await this.findOneByTag(projectId, promptId, versionTag);
+    const existingVersion = await this.findOneByTag(
+      projectId,
+      promptId,
+      versionTag,
+    );
 
     // TODO: Add logic? Prevent deleting the last version? Prevent deleting active versions?
 
     try {
       return await this.prisma.promptVersion.delete({
         where: {
-          id: existingVersion.id // Use the CUID of the version found
+          id: existingVersion.id, // Use the CUID of the version found
         },
       });
     } catch (error) {
       // P2025 should be caught by findOneByTag
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         throw new NotFoundException(`PromptVersion not found.`);
       }
       // P2003 could happen if translations, links, logs, etc., block deletion
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-        throw new ConflictException(`Cannot delete PromptVersion "${versionTag}" because it is still referenced by other entities (e.g., translations, links, logs).`);
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new ConflictException(
+          `Cannot delete PromptVersion "${versionTag}" because it is still referenced by other entities (e.g., translations, links, logs).`,
+        );
       }
       throw error;
     }
@@ -174,10 +244,21 @@ export class PromptVersionService {
 
   // --- Marketplace Methods ---
 
-  async requestPublish(projectId: string, promptSlug: string, versionTag: string, requesterId: string): Promise<PromptVersion> {
-    this.logger.log(`[User: ${requesterId}] Requesting to publish PromptVersion: project ${projectId}, slug ${promptSlug}, tag ${versionTag}`);
+  async requestPublish(
+    projectId: string,
+    promptSlug: string,
+    versionTag: string,
+    requesterId: string,
+  ): Promise<PromptVersion> {
+    this.logger.log(
+      `[User: ${requesterId}] Requesting to publish PromptVersion: project ${projectId}, slug ${promptSlug}, tag ${versionTag}`,
+    );
 
-    const promptVersion = await this.findOneByTag(projectId, promptSlug, versionTag);
+    const promptVersion = await this.findOneByTag(
+      projectId,
+      promptSlug,
+      versionTag,
+    );
 
     const promptWithProject = await this.prisma.prompt.findUnique({
       where: { id: promptSlug, projectId: projectId }, // projectId es el del path, promptSlug es el id del prompt
@@ -185,14 +266,23 @@ export class PromptVersionService {
     });
 
     if (!promptWithProject || !promptWithProject.project) {
-      this.logger.warn(`Project not found for prompt "${promptSlug}" (Project ID: ${projectId}) during publish request by User: ${requesterId}.`);
-      throw new NotFoundException(`Project not found for prompt "${promptSlug}" to determine tenant configuration.`);
+      this.logger.warn(
+        `Project not found for prompt "${promptSlug}" (Project ID: ${projectId}) during publish request by User: ${requesterId}.`,
+      );
+      throw new NotFoundException(
+        `Project not found for prompt "${promptSlug}" to determine tenant configuration.`,
+      );
     }
     const tenantId = promptWithProject.project.tenantId;
-    this.logger.debug(`Tenant ID ${tenantId} identified for publish request of PromptVersion ${promptVersion.id} by User: ${requesterId}`);
+    this.logger.debug(
+      `Tenant ID ${tenantId} identified for publish request of PromptVersion ${promptVersion.id} by User: ${requesterId}`,
+    );
 
-    const requiresApproval = await this.tenantService.getMarketplaceRequiresApproval(tenantId);
-    this.logger.log(`Marketplace requires approval for tenant ${tenantId}: ${requiresApproval}. PromptVersion ID: ${promptVersion.id}, User: ${requesterId}`);
+    const requiresApproval =
+      await this.tenantService.getMarketplaceRequiresApproval(tenantId);
+    this.logger.log(
+      `Marketplace requires approval for tenant ${tenantId}: ${requiresApproval}. PromptVersion ID: ${promptVersion.id}, User: ${requesterId}`,
+    );
 
     let updatedPromptVersion: PromptVersion;
     if (requiresApproval) {
@@ -209,7 +299,9 @@ export class PromptVersionService {
           marketplaceRejectionReason: null,
         },
       });
-      this.logger.log(`[User: ${requesterId}] PromptVersion ID ${updatedPromptVersion.id} status set to PENDING_APPROVAL.`);
+      this.logger.log(
+        `[User: ${requesterId}] PromptVersion ID ${updatedPromptVersion.id} status set to PENDING_APPROVAL.`,
+      );
     } else {
       updatedPromptVersion = await this.prisma.promptVersion.update({
         where: { id: promptVersion.id },
@@ -224,20 +316,37 @@ export class PromptVersionService {
           marketplaceRejectionReason: null,
         },
       });
-      this.logger.log(`[User: ${requesterId}] PromptVersion ID ${updatedPromptVersion.id} status set to PUBLISHED directly.`);
+      this.logger.log(
+        `[User: ${requesterId}] PromptVersion ID ${updatedPromptVersion.id} status set to PUBLISHED directly.`,
+      );
     }
     return updatedPromptVersion;
   }
 
-  async unpublish(projectId: string, promptSlug: string, versionTag: string, userId?: string): Promise<PromptVersion> {
+  async unpublish(
+    projectId: string,
+    promptSlug: string,
+    versionTag: string,
+    userId?: string,
+  ): Promise<PromptVersion> {
     // userId es opcional aquí, pero útil para logging si se pasa desde el controlador
     const loggerCtx = `[User: ${userId || 'unknown'}]`;
-    this.logger.log(`${loggerCtx} Requesting to unpublish PromptVersion: project ${projectId}, slug ${promptSlug}, tag ${versionTag}`);
+    this.logger.log(
+      `${loggerCtx} Requesting to unpublish PromptVersion: project ${projectId}, slug ${promptSlug}, tag ${versionTag}`,
+    );
 
-    const promptVersion = await this.findOneByTag(projectId, promptSlug, versionTag);
+    const promptVersion = await this.findOneByTag(
+      projectId,
+      promptSlug,
+      versionTag,
+    );
 
-    if (promptVersion.marketplaceStatus === MarketplacePublishStatus.NOT_PUBLISHED) {
-      this.logger.warn(`${loggerCtx} PromptVersion ID ${promptVersion.id} is already NOT_PUBLISHED. No action taken.`);
+    if (
+      promptVersion.marketplaceStatus === MarketplacePublishStatus.NOT_PUBLISHED
+    ) {
+      this.logger.warn(
+        `${loggerCtx} PromptVersion ID ${promptVersion.id} is already NOT_PUBLISHED. No action taken.`,
+      );
       return promptVersion;
     }
 
@@ -256,7 +365,9 @@ export class PromptVersionService {
         marketplaceRejectionReason: null, // Limpiar razón de rechazo si la hubo antes
       },
     });
-    this.logger.log(`${loggerCtx} PromptVersion ID ${updatedPromptVersion.id} status set to NOT_PUBLISHED.`);
+    this.logger.log(
+      `${loggerCtx} PromptVersion ID ${updatedPromptVersion.id} status set to NOT_PUBLISHED.`,
+    );
     return updatedPromptVersion;
   }
 

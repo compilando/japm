@@ -4,8 +4,8 @@ import { RagDocumentMetadataController } from './rag-document-metadata.controlle
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-    imports: [PrismaModule],
-    controllers: [RagDocumentMetadataController],
-    providers: [RagDocumentMetadataService],
+  imports: [PrismaModule],
+  controllers: [RagDocumentMetadataController],
+  providers: [RagDocumentMetadataService],
 })
-export class RagDocumentMetadataModule { }
+export class RagDocumentMetadataModule {}

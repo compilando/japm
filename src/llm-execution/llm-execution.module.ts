@@ -5,15 +5,9 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [
-    PrismaModule,
-    ConfigModule,
-  ],
-  providers: [
-    LlmExecutionService,
-    Logger,
-  ],
+  imports: [PrismaModule, ConfigModule],
+  providers: [LlmExecutionService, Logger],
   controllers: [LlmExecutionController],
-  exports: [LlmExecutionService]
+  exports: [LlmExecutionService],
 })
 export class LlmExecutionModule {}

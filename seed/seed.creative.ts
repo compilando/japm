@@ -11,46 +11,9 @@ const creativeTranslations = {
         'narrative-tone-noir': `Maintain a raw, noir tone. Focus on atmosphere, shadows, rain, moral ambiguity. Use descriptive language that emphasizes the contrast between high technology and social decay.`
     },
     prompts: {
-        'generate-scene': `Generate a scene for the science fiction novel with the following characteristics:
-
-Scene: {scene type}
-Characters: {characters}
-Setting: {setting}
-
-The scene should include:
-- Natural dialogue
-- Atmospheric description
-- Character development
-- Plot advancement
-
-Maintain the established cyberpunk noir tone.`,
-        'develop-character': `Develop a character for the novel with the following characteristics:
-
-Name: {name}
-Role: {role}
-Background: {background}
-
-The development should include:
-- Backstory
-- Motivations
-- Internal conflicts
-- Relationships with other characters
-- Character arc
-
-Create a complex and memorable character.`,
-        'world-building': `Develop an aspect of the novel's world:
-
-Aspect: {aspect}
-Location: {location}
-
-The development should include:
-- Physical description
-- Social system
-- Technology
-- History
-- Impact on the plot
-
-Create a rich and coherent world.`
+        'generate-scene': `Generate a scene for the science fiction novel with the following characteristics:\n\nScene: {scene type}\nCharacters: {characters}\nSetting: {setting}\n\nThe scene should include:\n- Natural dialogue\n- Atmospheric description\n- Character development\n- Plot advancement\n\nMaintain the established cyberpunk noir tone.`,
+        'develop-character': `Develop a character for the novel with the following characteristics:\n\nName: {name}\nRole: {role}\nBackground: {background}\n\nThe development should include:\n- Backstory\n- Motivations\n- Internal conflicts\n- Relationships with other characters\n- Character arc\n\nCreate a complex and memorable character.`,
+        'world-building': `Develop an aspect of the novel's world:\n\nAspect: {aspect}\nLocation: {location}\n\nThe development should include:\n- Physical description\n- Social system\n- Technology\n- History\n- Impact on the plot\n\nCreate a rich and coherent world.`
     }
 };
 
@@ -58,7 +21,6 @@ Create a rich and coherent world.`
 async function createSpanishTranslations(projectId: string) {
     console.log(`Creating Spanish translations for project ${projectId}...`);
 
-    // Obtener todas las promptversion y promptassetversion del proyecto
     const promptVersions = await prisma.promptVersion.findMany({
         where: {
             prompt: {
@@ -66,65 +28,47 @@ async function createSpanishTranslations(projectId: string) {
             }
         },
         include: {
-            prompt: true
+            prompt: { select: { id: true } } // Solo necesitamos el id (slug) del prompt padre
         }
     });
 
     const promptAssetVersions = await prisma.promptAssetVersion.findMany({
         where: {
-            asset: {
-                projectId: projectId
+            asset: { // Filtro a través de PromptAsset
+                prompt: { // PromptAsset está vinculado a un Prompt
+                    projectId: projectId // Y el Prompt tiene el projectId
+                }
             }
         },
         include: {
-            asset: true
+            asset: { select: { key: true } } // Incluir el PromptAsset y seleccionar su 'key'
         }
     });
 
-    // Crear traducciones para promptversion
     for (const version of promptVersions) {
-        const translation = creativeTranslations.prompts[version.prompt.id] || version.promptText;
+        const translationKey = version.prompt.id; // Este es el slug del prompt, ej: 'generate-scene'
+        const translationText = creativeTranslations.prompts[translationKey] || version.promptText;
         await prisma.promptTranslation.upsert({
-            where: {
-                versionId_languageCode: {
-                    versionId: version.id,
-                    languageCode: 'es-ES'
-                }
-            },
-            update: {
-                promptText: translation
-            },
-            create: {
-                versionId: version.id,
-                languageCode: 'es-ES',
-                promptText: translation
-            }
+            where: { versionId_languageCode: { versionId: version.id, languageCode: 'es-ES' } },
+            update: { promptText: translationText },
+            create: { versionId: version.id, languageCode: 'es-ES', promptText: translationText }
         });
-        console.log(`Created Spanish translation for prompt version ${version.id}`);
+        console.log(`Created Spanish translation for prompt version ${version.id} (prompt slug: ${translationKey})`);
     }
 
-    // Crear traducciones para promptassetversion
     for (const version of promptAssetVersions) {
-        const translation = creativeTranslations.assets[version.asset.key] || version.value;
-        await prisma.assetTranslation.upsert({
-            where: {
-                versionId_languageCode: {
-                    versionId: version.id,
-                    languageCode: 'es-ES'
-                }
-            },
-            update: {
-                value: translation
-            },
-            create: {
-                versionId: version.id,
-                languageCode: 'es-ES',
-                value: translation
-            }
-        });
-        console.log(`Created Spanish translation for prompt asset version ${version.id}`);
+        if (version.asset && version.asset.key) { // Asegurar que asset y asset.key existen
+            const translationText = creativeTranslations.assets[version.asset.key] || version.value;
+            await prisma.assetTranslation.upsert({
+                where: { versionId_languageCode: { versionId: version.id, languageCode: 'es-ES' } },
+                update: { value: translationText },
+                create: { versionId: version.id, languageCode: 'es-ES', value: translationText }
+            });
+            console.log(`Created Spanish translation for prompt asset version ${version.id} (asset key: ${version.asset.key})`);
+        } else {
+            console.warn(`Skipping translation for asset version ${version.id} due to missing asset key.`);
+        }
     }
-
     console.log(`Finished creating Spanish translations for project ${projectId}`);
 }
 
@@ -153,11 +97,11 @@ async function main() {
     }
 
     const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS), tenant: { connect: { id: defaultTenant.id } } } });
-    // Find necessary base data
-    const defaultProjectId = 'default-project'; // Assuming the default project ID
+
+    const defaultProjectId = 'default-project';
     const devEnvironment = await prisma.environment.findUniqueOrThrow({
-        where: { projectId_name: { name: 'development', projectId: defaultProjectId } }, // Find env in default project
-        select: { id: true } // Select ID for connecting later
+        where: { projectId_name: { name: 'development', projectId: defaultProjectId } },
+        select: { id: true }
     });
 
     const creativeProject = await prisma.project.upsert({
@@ -172,14 +116,11 @@ async function main() {
         },
     });
     console.log(`Upserted Project: ${creativeProject.name}`);
-
-    // Crear región es-ES y datos culturales para el proyecto Creative
-    await createSpanishRegionAndCulturalData(creativeProject.id);
-    // Crear región en-US y datos culturales para el proyecto Creative
-    await createUSRegionAndCulturalData(creativeProject.id);
-
-    // Create specific AI models for this project
     const crProjectId = creativeProject.id;
+
+    await createSpanishRegionAndCulturalData(crProjectId);
+    await createUSRegionAndCulturalData(crProjectId);
+
     const crGpt4o = await prisma.aIModel.upsert({
         where: { projectId_name: { projectId: crProjectId, name: 'gpt-4o-2024-05-13' } },
         update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
@@ -194,10 +135,9 @@ async function main() {
     });
     console.log(`Upserted AI Models for project ${crProjectId}`);
 
-    // Upsert Creative Tags with prefix
     const crPrefix = 'cr_';
     const crBaseTags = ['creative-writing', 'sci-fi', 'character-dev', 'world-building', 'dialogue', 'plot-outline', 'adaptation'];
-    const crTagMap: Map<string, string> = new Map(); // Map tagName to tagId
+    const crTagMap: Map<string, string> = new Map();
 
     for (const baseTagName of crBaseTags) {
         const tagName = `${crPrefix}${baseTagName}`;
@@ -207,10 +147,10 @@ async function main() {
             create: { name: tagName, projectId: crProjectId },
             select: { id: true }
         });
-        crTagMap.set(tagName, tag.id); // Store ID in map
+        crTagMap.set(tagName, tag.id);
         console.log(`Upserted Tag: ${tagName} for project ${crProjectId}`);
     }
-    // Helper function to get tag IDs
+
     const getCrTagIds = (baseNames: string[]): { id: string }[] => {
         return baseNames
             .map(baseName => crTagMap.get(`${crPrefix}${baseName}`))
@@ -218,194 +158,152 @@ async function main() {
             .map(id => ({ id }));
     };
 
-    // Crear un Prompt padre para los assets comunes de Creative Writing
-    const crCommonAssetsPromptSlug = 'creative-common-assets';
-    const crCommonAssetsPrompt = await prisma.prompt.upsert({
-        where: {
-            prompt_id_project_unique: {
-                id: crCommonAssetsPromptSlug,
-                projectId: crProjectId,
+    // Definición de los Prompts Temáticos con sus assets locales
+    const creativeProjectPrompts: {
+        id: string;
+        name: string;
+        description: string;
+        promptText: string;
+        tags: string[];
+        assets?: { key: string; name: string; initialValue: string; initialChangeMessage?: string }[];
+        aiModelId?: string; // ID del AIModel a usar (opcional, usará el del proyecto si no)
+        activeInEnvironments?: { id: string }[];
+    }[] = [
+            {
+                id: slugify('generate-scene-dialogue'),
+                name: 'Generate Scene with Dialogue',
+                description: 'Generate a scene with dialogue between characters.',
+                promptText: `Write a short scene (approx. 300 words) set in {{setting-neo-kyoto}}.\nCharacters involved: {{main-char-profile-jax}} and {{Secondary Character Description}}.\nScene Goal: {{Scene Goal / Conflict}}.\nDialogue should reflect the characters\' personalities and the {{narrative-tone-noir}}.\nFocus on showing, not telling. Include brief descriptions of actions and environment.`,
+                tags: ['creative-writing', 'sci-fi', 'dialogue'],
+                assets: [
+                    {
+                        key: 'setting-neo-kyoto',
+                        name: 'Setting: Neo-Kyoto',
+                        initialValue: creativeTranslations.assets['setting-neo-kyoto'] || 'Default setting description'
+                    },
+                    {
+                        key: 'main-char-profile-jax',
+                        name: 'Main Character: Jax',
+                        initialValue: creativeTranslations.assets['main-char-profile-jax'] || 'Default character profile for Jax'
+                    },
+                    {
+                        key: 'narrative-tone-noir',
+                        name: 'Narrative Tone: Noir',
+                        initialValue: creativeTranslations.assets['narrative-tone-noir'] || 'Default noir narrative tone'
+                    }
+                ],
+                aiModelId: crGpt4o.id,
+                activeInEnvironments: [{ id: devEnvironment.id }]
             },
-        },
-        update: { name: 'Creative Common Assets' },
-        create: {
-            id: crCommonAssetsPromptSlug,
-            name: 'Creative Common Assets',
-            description: 'Common reusable assets for Creative Writing prompts.',
-            projectId: crProjectId,
-        },
-        select: { id: true } // Solo necesitamos el ID para la FK
-    });
-    console.log(`Upserted Prompt for common Creative assets: ${crCommonAssetsPrompt.id}`);
-
-    // --- Upsert Creative Assets ---
-    const mainCharAssetName = 'Main Character Profile - Jax';
-    const assetMainChar = await prisma.promptAsset.upsert({
-        where: {
-            prompt_asset_key_unique: {
-                promptId: crCommonAssetsPrompt.id,
-                projectId: crProjectId,
-                key: 'main-char-profile-jax'
+            {
+                id: slugify('develop-character-story'),
+                name: 'Develop Character for Story',
+                description: 'Develop a complex character for a story.',
+                promptText: creativeTranslations.prompts['develop-character'] || 'Develop character: {{name}}',
+                tags: ['creative-writing', 'character-dev'],
+                aiModelId: crGpt4o.id,
+                activeInEnvironments: [{ id: devEnvironment.id }]
+            },
+            {
+                id: slugify('world-building-detail'),
+                name: 'World Building Detail',
+                description: 'Develop a specific aspect of the novel\'s world.',
+                promptText: creativeTranslations.prompts['world-building'] || 'Develop world aspect: {{aspect}} in {{location}}',
+                tags: ['creative-writing', 'world-building', 'sci-fi'],
+                assets: [
+                    {
+                        key: 'setting-neo-kyoto',
+                        name: 'Setting: Neo-Kyoto (for world-building context)',
+                        initialValue: creativeTranslations.assets['setting-neo-kyoto'] || 'Default setting description for world-building'
+                    }
+                ],
+                aiModelId: crGpt4o.id,
+                activeInEnvironments: [{ id: devEnvironment.id }]
             }
-        },
-        update: {},
-        create: {
-            key: 'main-char-profile-jax',
-            promptId: crCommonAssetsPrompt.id,
-            projectId: crProjectId
+        ];
+
+    for (const promptData of creativeProjectPrompts) {
+        const prompt = await prisma.prompt.upsert({
+            where: { prompt_id_project_unique: { id: promptData.id, projectId: crProjectId } },
+            update: {
+                name: promptData.name,
+                description: promptData.description,
+                tags: { connect: getCrTagIds(promptData.tags) }
+            },
+            create: {
+                id: promptData.id,
+                name: promptData.name,
+                description: promptData.description,
+                project: { connect: { id: crProjectId } },
+                tags: { connect: getCrTagIds(promptData.tags) },
+            },
+        });
+        console.log(`Upserted Prompt: ${prompt.name} (ID: ${prompt.id}) in project ${crProjectId}`);
+
+        if (promptData.assets) {
+            for (const assetInfo of promptData.assets) {
+                const asset = await prisma.promptAsset.upsert({
+                    where: {
+                        prompt_asset_key_unique: {
+                            promptId: prompt.id,
+                            projectId: crProjectId,
+                            key: assetInfo.key,
+                        }
+                    },
+                    update: {},
+                    create: {
+                        key: assetInfo.key,
+                        promptId: prompt.id,
+                        projectId: crProjectId,
+                    },
+                    include: { versions: true }
+                });
+
+                let version = asset.versions?.find(v => v.versionTag === 'v1.0.0');
+                if (!version) {
+                    version = await prisma.promptAssetVersion.create({
+                        data: {
+                            assetId: asset.id,
+                            value: assetInfo.initialValue,
+                            versionTag: 'v1.0.0',
+                            status: 'active',
+                            changeMessage: assetInfo.initialChangeMessage || `Initial version of ${assetInfo.name}`
+                        }
+                    });
+                    console.log(`Created initial version for asset ${asset.key} in prompt ${prompt.id}`);
+                } else if (version.value !== assetInfo.initialValue) {
+                    await prisma.promptAssetVersion.update({
+                        where: { id: version.id },
+                        data: { value: assetInfo.initialValue, changeMessage: `Updated initial value for ${assetInfo.name} during seed` }
+                    });
+                    console.log(`Updated initial version for asset ${asset.key} in prompt ${prompt.id}`);
+                }
+            }
         }
-    });
-    const assetMainCharV1 = await prisma.promptAssetVersion.upsert({
-        where: {
-            assetId_versionTag: {
-                assetId: assetMainChar.id,
-                versionTag: 'v1.0.0'
-            }
-        },
-        update: {
-            value: 'Jax: Ex-military cyborg, cynical but skilled pilot. Haunted by past mission. Distrusts authority. Has a cybernetic arm with hidden tools. Motivation: Find his missing sister.',
-            status: 'active',
-            changeMessage: mainCharAssetName
-        },
-        create: {
-            assetId: assetMainChar.id,
-            value: 'Jax: Ex-military cyborg, cynical but skilled pilot. Haunted by past mission. Distrusts authority. Has a cybernetic arm with hidden tools. Motivation: Find his missing sister.',
-            versionTag: 'v1.0.0',
-            status: 'active',
-            changeMessage: mainCharAssetName
-        },
-        select: { id: true }
-    });
 
-    const settingAssetName = 'Setting Description - Neo-Kyoto';
-    const assetSettingNeoKyoto = await prisma.promptAsset.upsert({
-        where: {
-            prompt_asset_key_unique: {
-                promptId: crCommonAssetsPrompt.id,
-                projectId: crProjectId,
-                key: 'setting-neo-kyoto'
-            }
-        },
-        update: {},
-        create: {
-            key: 'setting-neo-kyoto',
-            promptId: crCommonAssetsPrompt.id,
-            projectId: crProjectId
-        }
-    });
-    const assetSettingNeoKyotoV1 = await prisma.promptAssetVersion.upsert({
-        where: {
-            assetId_versionTag: {
-                assetId: assetSettingNeoKyoto.id,
-                versionTag: 'v1.0.0'
-            }
-        },
-        update: {
-            value: 'Neo-Kyoto, 2242: A sprawling, rain-slicked metropolis dominated by mega-corporations. Holographic ads flicker on towering skyscrapers. Lower levels are dangerous, filled with black markets and cyber-gangs. Upper levels are pristine but sterile.',
-            status: 'active',
-            changeMessage: settingAssetName
-        },
-        create: {
-            assetId: assetSettingNeoKyoto.id,
-            value: 'Neo-Kyoto, 2242: A sprawling, rain-slicked metropolis dominated by mega-corporations. Holographic ads flicker on towering skyscrapers. Lower levels are dangerous, filled with black markets and cyber-gangs. Upper levels are pristine but sterile.',
-            versionTag: 'v1.0.0',
-            status: 'active',
-            changeMessage: settingAssetName
-        },
-        select: { id: true }
-    });
+        await prisma.promptVersion.upsert({
+            where: { promptId_versionTag: { promptId: prompt.id, versionTag: 'v1.0.0' } },
+            update: {
+                promptText: promptData.promptText,
+                status: 'active',
+                changeMessage: `Initial version for ${promptData.name}. (Updated via upsert)`,
+                activeInEnvironments: { set: promptData.activeInEnvironments || [{ id: devEnvironment.id }] },
+                aiModelId: promptData.aiModelId || crGpt4o.id
+            },
+            create: {
+                promptId: prompt.id,
+                promptText: promptData.promptText,
+                versionTag: 'v1.0.0', status: 'active',
+                changeMessage: `Initial version for ${promptData.name}.`,
+                activeInEnvironments: { connect: promptData.activeInEnvironments || [{ id: devEnvironment.id }] },
+                aiModelId: promptData.aiModelId || crGpt4o.id
+            },
+        });
+        console.log(`Upserted PromptVersion for ${prompt.name} V1`);
+    }
 
-    const narrativeToneAssetName = 'Narrative Tone - Cyberpunk Noir';
-    const assetNarrativeToneNoir = await prisma.promptAsset.upsert({
-        where: {
-            prompt_asset_key_unique: {
-                promptId: crCommonAssetsPrompt.id,
-                projectId: crProjectId,
-                key: 'narrative-tone-noir'
-            }
-        },
-        update: {},
-        create: {
-            key: 'narrative-tone-noir',
-            promptId: crCommonAssetsPrompt.id,
-            projectId: crProjectId
-        }
-    });
-    const assetNarrativeToneNoirV1 = await prisma.promptAssetVersion.upsert({
-        where: {
-            assetId_versionTag: {
-                assetId: assetNarrativeToneNoir.id,
-                versionTag: 'v1.0.0'
-            }
-        },
-        update: {
-            value: 'Maintain a gritty, noir tone. Focus on atmosphere, shadows, rain, moral ambiguity. Use descriptive language that emphasizes the contrast between high-tech and societal decay.',
-            status: 'active',
-            changeMessage: narrativeToneAssetName
-        },
-        create: {
-            assetId: assetNarrativeToneNoir.id,
-            value: 'Maintain a gritty, noir tone. Focus on atmosphere, shadows, rain, moral ambiguity. Use descriptive language that emphasizes the contrast between high-tech and societal decay.',
-            versionTag: 'v1.0.0',
-            status: 'active',
-            changeMessage: narrativeToneAssetName
-        },
-        select: { id: true }
-    });
-    console.log('Upserted Creative Assets and V1 Versions');
-
-    // --- Upsert Creative Prompt: Generate Scene ---
-    const promptGenSceneName = 'generate-scene-dialogue';
-    const promptGenSceneSlug = slugify(promptGenSceneName);
-    const promptGenScene = await prisma.prompt.upsert({
-        where: {
-            prompt_id_project_unique: {
-                id: promptGenSceneSlug,
-                projectId: crProjectId
-            }
-        },
-        update: {
-            name: promptGenSceneName,
-            description: 'Generate a scene with dialogue between characters.',
-            tags: { set: getCrTagIds(['creative-writing', 'sci-fi', 'dialogue']) }
-        },
-        create: {
-            id: promptGenSceneSlug,
-            name: promptGenSceneName,
-            description: 'Generate a scene with dialogue between characters.',
-            projectId: crProjectId,
-            tags: { connect: getCrTagIds(['creative-writing', 'sci-fi', 'dialogue']) }
-        },
-        select: { id: true, name: true }
-    });
-
-    const promptGenSceneV1 = await prisma.promptVersion.upsert({
-        where: { promptId_versionTag: { promptId: promptGenScene.id, versionTag: 'v1.0.0' } },
-        update: {
-            promptText: `Write a short scene (approx. 300 words) set in {{setting-neo-kyoto}}.\n            Characters involved: {{main-char-profile-jax}} and {{Secondary Character Description}}.\n            Scene Goal: {{Scene Goal / Conflict}}.\n            Dialogue should reflect the characters\' personalities and the {{narrative-tone-noir}}.
-            Focus on showing, not telling. Include brief descriptions of actions and environment.`,
-            status: 'active',
-            changeMessage: 'Initial prompt for generating dialogue scenes. (Updated via upsert)',
-            activeInEnvironments: { set: [{ id: devEnvironment.id }] }, // Use set for update
-            aiModelId: crGpt4o.id // Assign default AI model
-        },
-        create: {
-            promptId: promptGenScene.id,
-            promptText: `Write a short scene (approx. 300 words) set in {{setting-neo-kyoto}}.\n            Characters involved: {{main-char-profile-jax}} and {{Secondary Character Description}}.\n            Scene Goal: {{Scene Goal / Conflict}}.\n            Dialogue should reflect the characters\' personalities and the {{narrative-tone-noir}}.
-            Focus on showing, not telling. Include brief descriptions of actions and environment.`,
-            versionTag: 'v1.0.0', status: 'active',
-            changeMessage: 'Initial prompt for generating dialogue scenes.',
-            activeInEnvironments: { connect: [{ id: devEnvironment.id }] },
-            aiModelId: crGpt4o.id // Assign default AI model
-        },
-        select: { id: true }
-    });
-    console.log(`Upserted Prompt ${promptGenScene.name} V1`);
-
-    // Crear traducciones es-ES para los assets y prompts
     await createSpanishTranslations(crProjectId);
-
-    console.log(`Creative Writing & Adaptation seeding finished.`);
+    console.log(`Finished seeding Creative Writing & Adaptation.`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(async () => { await prisma.$disconnect(); });

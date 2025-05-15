@@ -47,7 +47,11 @@ async function bootstrap() {
     fs.writeFileSync('./openapi.json', JSON.stringify(document, null, 2));
     Logger.log('OpenAPI specification written to openapi.json', 'Bootstrap');
   } catch (err) {
-    Logger.error('Error writing OpenAPI specification:', err.stack, 'Bootstrap');
+    Logger.error(
+      'Error writing OpenAPI specification:',
+      err.stack,
+      'Bootstrap',
+    );
   }
 
   SwaggerModule.setup('api-docs', app, document);

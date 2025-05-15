@@ -14,6 +14,6 @@ import { PrismaModule } from '../prisma/prisma.module';
   ],
   controllers: [PromptAssetController],
   providers: [PromptAssetService],
-  exports: [PromptAssetService]
+  exports: [PromptAssetService],
 })
-export class PromptAssetModule { }
+export class PromptAssetModule {}

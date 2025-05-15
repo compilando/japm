@@ -3,20 +3,21 @@ import { PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class PrismaService
-    extends PrismaClient
-    implements OnModuleInit, OnModuleDestroy {
-    constructor() {
-        super({
-            // Opcional: configura aquí las opciones del cliente Prisma, como logging
-            // log: ['query', 'info', 'warn', 'error'],
-        });
-    }
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
+  constructor() {
+    super({
+      // Opcional: configura aquí las opciones del cliente Prisma, como logging
+      // log: ['query', 'info', 'warn', 'error'],
+    });
+  }
 
-    async onModuleInit() {
-        await this.$connect();
-    }
+  async onModuleInit() {
+    await this.$connect();
+  }
 
-    async onModuleDestroy() {
-        await this.$disconnect();
-    }
+  async onModuleDestroy() {
+    await this.$disconnect();
+  }
 }

@@ -17,6 +17,6 @@ import { RawExecutionModule } from '../raw-execution/raw-execution.module';
   ],
   controllers: [PromptController],
   providers: [PromptService],
-  exports: [PromptService]
+  exports: [PromptService],
 })
-export class PromptModule { }
+export class PromptModule {}

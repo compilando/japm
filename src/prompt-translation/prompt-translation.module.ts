@@ -5,11 +5,8 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { ServePromptModule } from '../serve-prompt/serve-prompt.module';
 
 @Module({
-  imports: [
-    PrismaModule,
-    ServePromptModule
-  ],
+  imports: [PrismaModule, ServePromptModule],
   controllers: [PromptTranslationController],
   providers: [PromptTranslationService],
 })
-export class PromptTranslationModule { }
+export class PromptTranslationModule {}

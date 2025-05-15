@@ -5,11 +5,8 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { TenantModule } from '../tenant/tenant.module';
 
 @Module({
-  imports: [
-    PrismaModule,
-    TenantModule,
-  ],
+  imports: [PrismaModule, TenantModule],
   controllers: [PromptAssetVersionController],
   providers: [PromptAssetVersionService],
 })
-export class PromptAssetVersionModule { }
+export class PromptAssetVersionModule {}

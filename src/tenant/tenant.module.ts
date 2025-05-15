@@ -5,12 +5,12 @@ import { PrismaModule } from '../prisma/prisma.module'; // Asegúrate que Prisma
 import { UserModule } from '../user/user.module'; // Importar UserModule
 
 @Module({
-    imports: [
-        PrismaModule,
-        UserModule, // Añadir UserModule a los imports
-    ],
-    controllers: [TenantController],
-    providers: [TenantService],
-    exports: [TenantService], // Exportar para que otros módulos puedan usarlo
+  imports: [
+    PrismaModule,
+    UserModule, // Añadir UserModule a los imports
+  ],
+  controllers: [TenantController],
+  providers: [TenantService],
+  exports: [TenantService], // Exportar para que otros módulos puedan usarlo
 })
-export class TenantModule { }
+export class TenantModule {}

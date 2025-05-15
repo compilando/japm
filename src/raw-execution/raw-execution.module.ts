@@ -8,14 +8,14 @@ import { ConfigModule } from '@nestjs/config'; // Needed for ConfigService
 import { SystemPromptModule } from '../system-prompt/system-prompt.module'; // <-- Importar
 
 @Module({
-    imports: [
-        PrismaModule,
-        AuthModule, // Import AuthModule to use JwtAuthGuard
-        ConfigModule, // Import ConfigModule to use ConfigService
-        SystemPromptModule // <-- Añadir para poder inyectar SystemPromptService
-    ],
-    controllers: [RawExecutionController],
-    providers: [RawExecutionService],
-    exports: [RawExecutionService]
+  imports: [
+    PrismaModule,
+    AuthModule, // Import AuthModule to use JwtAuthGuard
+    ConfigModule, // Import ConfigModule to use ConfigService
+    SystemPromptModule, // <-- Añadir para poder inyectar SystemPromptService
+  ],
+  controllers: [RawExecutionController],
+  providers: [RawExecutionService],
+  exports: [RawExecutionService],
 })
-export class RawExecutionModule { } 
+export class RawExecutionModule {}

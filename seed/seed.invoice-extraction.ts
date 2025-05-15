@@ -93,74 +93,37 @@ Report any errors or inconsistencies.`
 // Función para crear traducciones en español
 async function createSpanishTranslations(projectId: string) {
     console.log(`Creating Spanish translations for project ${projectId}...`);
-
-    // Obtener todas las promptversion y promptassetversion del proyecto
     const promptVersions = await prisma.promptVersion.findMany({
-        where: {
-            prompt: {
-                projectId: projectId
-            }
-        },
-        include: {
-            prompt: true
-        }
+        where: { prompt: { projectId: projectId } },
+        include: { prompt: { select: { id: true } } }
     });
-
     const promptAssetVersions = await prisma.promptAssetVersion.findMany({
-        where: {
-            asset: {
-                projectId: projectId
-            }
-        },
-        include: {
-            asset: true
-        }
+        where: { asset: { prompt: { projectId: projectId } } },
+        include: { asset: { select: { key: true } } }
     });
-
-    // Crear traducciones para promptversion
     for (const version of promptVersions) {
-        const translation = invoiceTranslations.prompts[version.prompt.id] || version.promptText;
+        const translationKey = version.prompt.id;
+        const translationText = invoiceTranslations.prompts[translationKey] || version.promptText;
         await prisma.promptTranslation.upsert({
-            where: {
-                versionId_languageCode: {
-                    versionId: version.id,
-                    languageCode: 'es-ES'
-                }
-            },
-            update: {
-                promptText: translation
-            },
-            create: {
-                versionId: version.id,
-                languageCode: 'es-ES',
-                promptText: translation
-            }
+            where: { versionId_languageCode: { versionId: version.id, languageCode: 'es-ES' } },
+            update: { promptText: translationText },
+            create: { versionId: version.id, languageCode: 'es-ES', promptText: translationText }
         });
-        console.log(`Created Spanish translation for prompt version ${version.id}`);
+        console.log(`Created Spanish translation for prompt version ${version.id} (slug: ${translationKey})`);
     }
-
-    // Crear traducciones para promptassetversion
     for (const version of promptAssetVersions) {
-        const translation = invoiceTranslations.assets[version.asset.key] || version.value;
-        await prisma.assetTranslation.upsert({
-            where: {
-                versionId_languageCode: {
-                    versionId: version.id,
-                    languageCode: 'es-ES'
-                }
-            },
-            update: {
-                value: translation
-            },
-            create: {
-                versionId: version.id,
-                languageCode: 'es-ES',
-                value: translation
-            }
-        });
-        console.log(`Created Spanish translation for prompt asset version ${version.id}`);
+        if (version.asset && version.asset.key) {
+            const translationText = invoiceTranslations.assets[version.asset.key] || version.value;
+            await prisma.assetTranslation.upsert({
+                where: { versionId_languageCode: { versionId: version.id, languageCode: 'es-ES' } },
+                update: { value: translationText },
+                create: { versionId: version.id, languageCode: 'es-ES', value: translationText }
+            });
+            console.log(`Created Spanish translation for asset version ${version.id} (key: ${version.asset.key})`);
+        } else {
+            console.warn(`Skipping translation for asset version ${version.id} due to missing asset key.`);
+        }
     }
-
     console.log(`Finished creating Spanish translations for project ${projectId}`);
 }
 
@@ -249,293 +212,145 @@ async function main() {
             .map(id => ({ id }));
     };
 
-    // Crear un Prompt padre para los assets comunes de Invoice Extraction
-    const invCommonAssetsPromptSlug = 'invoice-extraction-common-assets';
-    const invCommonAssetsPrompt = await prisma.prompt.upsert({
-        where: {
-            prompt_id_project_unique: {
-                id: invCommonAssetsPromptSlug,
-                projectId: invProjectId,
+    // Definición de los Prompts Temáticos de Invoice Extraction con sus assets locales
+    const invoiceProjectPrompts: {
+        id: string;
+        name: string;
+        description: string;
+        promptText: string;
+        tags: string[];
+        assets?: { key: string; name: string; initialValue: string; initialChangeMessage?: string }[];
+        aiModelId?: string;
+        activeInEnvironments?: { id: string }[];
+    }[] = [
+            {
+                id: toSlug('extract-invoice-data'), // Usar la función toSlug definida en el archivo
+                name: 'Extract Invoice Data',
+                description: 'Extracts structured data from invoice OCR text.',
+                promptText: invoiceTranslations.prompts['extract-invoice-data'] || 'Extract data from {{Invoice OCR Text}}',
+                tags: ['data-extraction', 'ocr', 'json-output'],
+                assets: [
+                    {
+                        key: 'invoice-standard-fields',
+                        name: 'Invoice Standard Fields List',
+                        initialValue: invoiceTranslations.assets['invoice-standard-fields'] || 'Invoice Number\nInvoice Date' // Fallback
+                    },
+                    {
+                        key: 'invoice-json-schema', // Asumiendo que este asset también es necesario
+                        name: 'Invoice JSON Schema Definition',
+                        initialValue: `{ "invoiceNumber": null, "invoiceDate": null, ... }` // Placeholder, el valor real debería estar en invoiceTranslations o definirse aquí
+                    }
+                    // Otros assets como 'invoice-extraction-instructions' podrían ir aquí si son específicos de este prompt
+                ],
+                aiModelId: invGpt4o.id,
+                activeInEnvironments: [{ id: prodEnvironment.id }]
             },
-        },
-        update: { name: 'Invoice Extraction Common Assets' },
-        create: {
-            id: invCommonAssetsPromptSlug,
-            name: 'Invoice Extraction Common Assets',
-            description: 'Common reusable assets for Invoice Extraction prompts.',
-            projectId: invProjectId,
-        },
-        select: { id: true }
-    });
-    console.log(`Upserted Prompt for common Invoice Extraction assets: ${invCommonAssetsPrompt.id}`);
-
-    // 3. Upsert Invoice Extraction Assets and their versions
-    const extractionInstructionsName = 'Invoice Extraction Instructions';
-    const assetExtractionInstructions = await prisma.promptAsset.upsert({
-        where: {
-            prompt_asset_key_unique: {
-                promptId: invCommonAssetsPrompt.id,
-                projectId: invProjectId,
-                key: 'invoice-extraction-instructions'
+            {
+                id: toSlug('validate-invoice'),
+                name: 'Validate Invoice Data',
+                description: 'Validates extracted invoice data based on defined rules.',
+                promptText: invoiceTranslations.prompts['validate-invoice'] || 'Validate: {data}',
+                tags: ['data-extraction', 'validation'],
+                assets: [
+                    {
+                        key: 'invoice-validation-rules',
+                        name: 'Invoice Validation Rules',
+                        initialValue: invoiceTranslations.assets['invoice-validation-rules'] || 'Rule 1: Check something'
+                    },
+                    {
+                        key: 'invoice-error-messages',
+                        name: 'Invoice Error Messages List',
+                        initialValue: invoiceTranslations.assets['invoice-error-messages'] || 'Error: Something is wrong'
+                    }
+                ],
+                aiModelId: invGpt4o.id,
+                activeInEnvironments: [{ id: prodEnvironment.id }]
             }
-        },
-        update: {},
-        create: {
-            key: 'invoice-extraction-instructions',
-            promptId: invCommonAssetsPrompt.id,
-            projectId: invProjectId
+            // ... otros prompts temáticos de Invoice Extraction
+        ];
+
+    for (const promptData of invoiceProjectPrompts) {
+        const prompt = await prisma.prompt.upsert({
+            where: { prompt_id_project_unique: { id: promptData.id, projectId: invProjectId } },
+            update: {
+                name: promptData.name,
+                description: promptData.description,
+                tags: { connect: getInvTagIds(promptData.tags) }
+            },
+            create: {
+                id: promptData.id,
+                name: promptData.name,
+                description: promptData.description,
+                project: { connect: { id: invProjectId } },
+                tags: { connect: getInvTagIds(promptData.tags) },
+            },
+        });
+        console.log(`Upserted Prompt: ${prompt.name} (ID: ${prompt.id}) in project ${invProjectId}`);
+
+        if (promptData.assets) {
+            for (const assetInfo of promptData.assets) {
+                const asset = await prisma.promptAsset.upsert({
+                    where: {
+                        prompt_asset_key_unique: { // Usando el nombre del constraint del schema
+                            promptId: prompt.id,
+                            projectId: invProjectId,
+                            key: assetInfo.key,
+                        }
+                    },
+                    update: {},
+                    create: {
+                        key: assetInfo.key,
+                        promptId: prompt.id,
+                        projectId: invProjectId, // Campo directo en PromptAsset según schema
+                    },
+                    include: { versions: true }
+                });
+
+                let version = asset.versions?.find(v => v.versionTag === 'v1.0.0');
+                if (!version) {
+                    version = await prisma.promptAssetVersion.create({
+                        data: {
+                            assetId: asset.id,
+                            value: assetInfo.initialValue,
+                            versionTag: 'v1.0.0',
+                            status: 'active',
+                            changeMessage: assetInfo.initialChangeMessage || `Initial version of ${assetInfo.name}`
+                        }
+                    });
+                    console.log(`Created initial version for asset ${assetInfo.key} in prompt ${prompt.id}`);
+                } else if (version.value !== assetInfo.initialValue) {
+                    await prisma.promptAssetVersion.update({
+                        where: { id: version.id },
+                        data: { value: assetInfo.initialValue, changeMessage: `Updated initial value for ${assetInfo.name} during seed` }
+                    });
+                    console.log(`Updated initial version for asset ${assetInfo.key} in prompt ${prompt.id}`);
+                }
+            }
         }
-    });
-    const assetExtractionInstructionsV1 = await prisma.promptAssetVersion.upsert({
-        where: {
-            assetId_versionTag: {
-                assetId: assetExtractionInstructions.id,
-                versionTag: 'v1.0.0'
-            }
-        },
-        update: {
-            value: `Extract the following information from the document:\n- Invoice number\n- Date\n- Total amount\n- Vendor details\n- Customer details\n- Line items\n- Taxes\n- Payment terms`,
-            status: 'active',
-            changeMessage: extractionInstructionsName
-        },
-        create: {
-            assetId: assetExtractionInstructions.id,
-            value: `Extract the following information from the document:\n- Invoice number\n- Date\n- Total amount\n- Vendor details\n- Customer details\n- Line items\n- Taxes\n- Payment terms`,
-            versionTag: 'v1.0.0',
-            status: 'active',
-            changeMessage: extractionInstructionsName
-        },
-        select: { id: true }
-    });
 
-    const validationRulesName = 'Invoice Validation Rules';
-    const assetValidationRules = await prisma.promptAsset.upsert({
-        where: {
-            prompt_asset_key_unique: {
-                promptId: invCommonAssetsPrompt.id,
-                projectId: invProjectId,
-                key: 'invoice-validation-rules'
-            }
-        },
-        update: {},
-        create: {
-            key: 'invoice-validation-rules',
-            promptId: invCommonAssetsPrompt.id,
-            projectId: invProjectId
-        }
-    });
-    const assetValidationRulesV1 = await prisma.promptAssetVersion.upsert({
-        where: {
-            assetId_versionTag: {
-                assetId: assetValidationRules.id,
-                versionTag: 'v1.0.0'
-            }
-        },
-        update: {
-            value: `Validation rules:\n1. Invoice number must be unique\n2. Date cannot be in the future\n3. Total amount must match sum of items\n4. All required fields must be present\n5. Amounts must be positive`,
-            status: 'active',
-            changeMessage: validationRulesName
-        },
-        create: {
-            assetId: assetValidationRules.id,
-            value: `Validation rules:\n1. Invoice number must be unique\n2. Date cannot be in the future\n3. Total amount must match sum of items\n4. All required fields must be present\n5. Amounts must be positive`,
-            versionTag: 'v1.0.0',
-            status: 'active',
-            changeMessage: validationRulesName
-        },
-        select: { id: true }
-    });
+        await prisma.promptVersion.upsert({
+            where: { promptId_versionTag: { promptId: prompt.id, versionTag: 'v1.0.0' } },
+            update: {
+                promptText: promptData.promptText,
+                status: 'active',
+                changeMessage: `Initial version for ${promptData.name}. (Updated via upsert)`,
+                activeInEnvironments: { set: promptData.activeInEnvironments || [{ id: prodEnvironment.id }] },
+                aiModelId: promptData.aiModelId || invGpt4o.id
+            },
+            create: {
+                promptId: prompt.id,
+                promptText: promptData.promptText,
+                versionTag: 'v1.0.0', status: 'active',
+                changeMessage: `Initial version for ${promptData.name}.`,
+                activeInEnvironments: { connect: promptData.activeInEnvironments || [{ id: prodEnvironment.id }] },
+                aiModelId: promptData.aiModelId || invGpt4o.id
+            },
+        });
+        console.log(`Upserted PromptVersion for ${prompt.name} V1`);
+    }
 
-    const errorMessagesName = 'Invoice Error Messages';
-    const assetErrorMessages = await prisma.promptAsset.upsert({
-        where: {
-            prompt_asset_key_unique: {
-                promptId: invCommonAssetsPrompt.id,
-                projectId: invProjectId,
-                key: 'invoice-error-messages'
-            }
-        },
-        update: {},
-        create: {
-            key: 'invoice-error-messages',
-            promptId: invCommonAssetsPrompt.id,
-            projectId: invProjectId
-        }
-    });
-    const assetErrorMessagesV1 = await prisma.promptAssetVersion.upsert({
-        where: {
-            assetId_versionTag: {
-                assetId: assetErrorMessages.id,
-                versionTag: 'v1.0.0'
-            }
-        },
-        update: {
-            value: `Error messages:\n- "Duplicate invoice number"\n- "Invalid date"\n- "Total amount mismatch"\n- "Missing required fields"\n- "Negative amount detected"`,
-            status: 'active',
-            changeMessage: errorMessagesName
-        },
-        create: {
-            assetId: assetErrorMessages.id,
-            value: `Error messages:\n- "Duplicate invoice number"\n- "Invalid date"\n- "Total amount mismatch"\n- "Missing required fields"\n- "Negative amount detected"`,
-            versionTag: 'v1.0.0',
-            status: 'active',
-            changeMessage: errorMessagesName
-        },
-        select: { id: true }
-    });
-
-    const standardFieldsName = 'Invoice Standard Fields List';
-    const assetStandardFields = await prisma.promptAsset.upsert({
-        where: {
-            prompt_asset_key_unique: {
-                promptId: invCommonAssetsPrompt.id,
-                projectId: invProjectId,
-                key: 'invoice-standard-fields'
-            }
-        },
-        update: {},
-        create: {
-            key: 'invoice-standard-fields',
-            promptId: invCommonAssetsPrompt.id,
-            projectId: invProjectId
-        }
-    });
-    const assetStandardFieldsV1 = await prisma.promptAssetVersion.upsert({
-        where: {
-            assetId_versionTag: {
-                assetId: assetStandardFields.id,
-                versionTag: 'v1.0.0'
-            }
-        },
-        update: {
-            value: `Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price
-Line Item Total`,
-            status: 'active',
-            changeMessage: standardFieldsName
-        },
-        create: {
-            assetId: assetStandardFields.id,
-            value: `Invoice Number\nInvoice Date\nDue Date\nVendor Name\nVendor Address\nCustomer Name\nCustomer Address\nTotal Amount\nTax Amount\nLine Item Description\nLine Item Quantity\nLine Item Unit Price
-Line Item Total`,
-            versionTag: 'v1.0.0',
-            status: 'active',
-            changeMessage: standardFieldsName
-        },
-        select: { id: true }
-    });
-
-    const jsonSchemaName = 'Invoice JSON Output Schema';
-    const assetJsonSchema = await prisma.promptAsset.upsert({
-        where: {
-            prompt_asset_key_unique: {
-                promptId: invCommonAssetsPrompt.id,
-                projectId: invProjectId,
-                key: 'invoice-json-schema'
-            }
-        },
-        update: {},
-        create: {
-            key: 'invoice-json-schema',
-            promptId: invCommonAssetsPrompt.id,
-            projectId: invProjectId
-        }
-    });
-    const assetJsonSchemaV1 = await prisma.promptAssetVersion.upsert({
-        where: {
-            assetId_versionTag: {
-                assetId: assetJsonSchema.id,
-                versionTag: 'v1.0.0'
-            }
-        },
-        update: {
-            value: JSON.stringify({
-                type: "object",
-                properties: {
-                    invoiceNumber: { type: "string" },
-                    invoiceDate: { type: "string", format: "date" },
-                    dueDate: { type: "string", format: "date" },
-                    vendorName: { type: "string" },
-                    totalAmount: { type: "number" },
-                    taxAmount: { type: ["number", "null"] }
-                    /* Add other fields as needed */
-                },
-                required: ["invoiceNumber", "invoiceDate", "vendorName", "totalAmount"]
-            }, null, 2),
-            status: 'active',
-            changeMessage: jsonSchemaName
-        },
-        create: {
-            assetId: assetJsonSchema.id,
-            value: JSON.stringify({
-                type: "object",
-                properties: {
-                    invoiceNumber: { type: "string" },
-                    invoiceDate: { type: "string", format: "date" },
-                    dueDate: { type: "string", format: "date" },
-                    vendorName: { type: "string" },
-                    totalAmount: { type: "number" },
-                    taxAmount: { type: ["number", "null"] }
-                    /* Add other fields as needed */
-                },
-                required: ["invoiceNumber", "invoiceDate", "vendorName", "totalAmount"]
-            }, null, 2),
-            versionTag: 'v1.0.0',
-            status: 'active',
-            changeMessage: jsonSchemaName
-        },
-        select: { id: true }
-    });
-    console.log('Upserted Invoice Extraction Assets and V1 Versions');
-
-    // 4. Upsert Invoice Extraction Prompt and Version
-    const promptExtractName = 'extract-invoice-data';
-    const promptExtractSlug = toSlug(promptExtractName);
-    const promptExtract = await prisma.prompt.upsert({
-        where: {
-            prompt_id_project_unique: {
-                id: promptExtractSlug,
-                projectId: invProjectId
-            }
-        },
-        update: {
-            name: promptExtractName,
-            description: 'Extract key fields from invoice text (OCR result). Output as JSON.',
-            tags: { set: getInvTagIds(['invoice', 'data-extraction', 'structured-data', 'json-output']) }
-        },
-        create: {
-            id: promptExtractSlug,
-            name: promptExtractName,
-            description: 'Extract key fields from invoice text (OCR result). Output as JSON.',
-            projectId: invProjectId,
-            tags: { connect: getInvTagIds(['invoice', 'data-extraction', 'structured-data', 'json-output']) }
-        },
-        select: { id: true, name: true }
-    });
-
-    const promptExtractV1 = await prisma.promptVersion.upsert({
-        where: { promptId_versionTag: { promptId: promptExtract.id, versionTag: 'v1.0.0' } },
-        update: {
-            promptText: `Given the following text extracted from an invoice via OCR:\n\`\`\`\n{{Invoice OCR Text}}\n\`\`\`\n\nExtract the following fields: {{invoice-standard-fields}}.\n\nFormat the output as a JSON object conforming to this schema:\n{{invoice-json-schema}}\n\nIf a field is not found, use null as the value. Pay close attention to dates and amounts.`,
-            status: 'active',
-            aiModelId: invGpt4o.id, // Connect project-specific AI model
-            activeInEnvironments: { set: [{ id: prodEnvironment.id }] }
-        },
-        create: {
-            promptId: promptExtract.id,
-            promptText: `Given the following text extracted from an invoice via OCR:\n\`\`\`\n{{Invoice OCR Text}}\n\`\`\`\n\nExtract the following fields: {{invoice-standard-fields}}.\n\nFormat the output as a JSON object conforming to this schema:\n{{invoice-json-schema}}\n\nIf a field is not found, use null as the value. Pay close attention to dates and amounts.`,
-            versionTag: 'v1.0.0', status: 'active',
-            changeMessage: 'Initial version for extracting invoice data to JSON using GPT-4o.',
-            aiModelId: invGpt4o.id, // Connect project-specific AI model
-            activeInEnvironments: { connect: [{ id: prodEnvironment.id }] }
-        },
-        select: { id: true }
-    });
-    console.log(`Upserted Prompt ${promptExtract.name} V1`);
-
-    // Crear traducciones es-ES para los assets y prompts
     await createSpanishTranslations(invProjectId);
-
-    console.log(`Invoice Extraction seeding finished.`);
+    console.log(`Finished seeding Invoice Extraction.`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(async () => { await prisma.$disconnect(); });
