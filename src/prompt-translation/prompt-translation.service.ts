@@ -12,6 +12,7 @@ import { Prisma, PromptTranslation, PromptVersion } from '@prisma/client';
 import { CreateOrUpdatePromptTranslationDto } from './dto/create-or-update-prompt-translation.dto';
 import { ServePromptService } from '../serve-prompt/serve-prompt.service';
 import { ResolveAssetsQueryDto } from '../serve-prompt/dto/resolve-assets-query.dto';
+import { PromptVersionService } from '../prompt-version/prompt-version.service';
 
 @Injectable()
 export class PromptTranslationService {
@@ -20,33 +21,8 @@ export class PromptTranslationService {
   constructor(
     private prisma: PrismaService,
     private servePromptService: ServePromptService,
-  ) {}
-
-  // Helper to verify access to the parent prompt version
-  private async verifyVersionAccess(
-    projectId: string,
-    promptId: string,
-    versionTag: string,
-  ): Promise<PromptVersion> {
-    const version = await this.prisma.promptVersion.findUnique({
-      where: {
-        promptId_versionTag: { promptId: promptId, versionTag: versionTag },
-      },
-      include: { prompt: true },
-    });
-
-    if (!version) {
-      throw new NotFoundException(
-        `PromptVersion with tag "${versionTag}" not found for prompt "${promptId}".`,
-      );
-    }
-    if (version.prompt.projectId !== projectId) {
-      throw new ForbiddenException(
-        `Access denied to PromptVersion "${versionTag}" for project "${projectId}".`,
-      );
-    }
-    return version; // Return the found version
-  }
+    private promptVersionService: PromptVersionService,
+  ) { }
 
   async create(
     projectId: string,
@@ -54,11 +30,7 @@ export class PromptTranslationService {
     versionTag: string,
     createDto: CreatePromptTranslationDto,
   ): Promise<PromptTranslation> {
-    const version = await this.verifyVersionAccess(
-      projectId,
-      promptId,
-      versionTag,
-    );
+    const version = await this.promptVersionService.getByTagOrLatest(projectId, promptId, versionTag);
     const { languageCode, promptText } = createDto;
 
     try {
@@ -66,7 +38,7 @@ export class PromptTranslationService {
         data: {
           promptText,
           languageCode,
-          version: { connect: { id: version.id } }, // Connect using the verified version's CUID
+          version: { connect: { id: version.id } },
         },
       });
     } catch (error) {
@@ -78,7 +50,6 @@ export class PromptTranslationService {
           `Translation for language "${languageCode}" already exists for version "${versionTag}" of prompt "${promptId}".`,
         );
       }
-      // P2025 should be caught by verifyVersionAccess
       throw error;
     }
   }
@@ -88,11 +59,7 @@ export class PromptTranslationService {
     promptId: string,
     versionTag: string,
   ): Promise<PromptTranslation[]> {
-    const version = await this.verifyVersionAccess(
-      projectId,
-      promptId,
-      versionTag,
-    );
+    const version = await this.promptVersionService.getByTagOrLatest(projectId, promptId, versionTag);
     return this.prisma.promptTranslation.findMany({
       where: { versionId: version.id },
     });
@@ -105,11 +72,7 @@ export class PromptTranslationService {
     languageCode: string,
     query?: ResolveAssetsQueryDto,
   ): Promise<PromptTranslation> {
-    const version = await this.verifyVersionAccess(
-      projectId,
-      promptId,
-      versionTag,
-    );
+    const version = await this.promptVersionService.getByTagOrLatest(projectId, promptId, versionTag);
     const translation = await this.prisma.promptTranslation.findUnique({
       where: {
         versionId_languageCode: {
@@ -166,8 +129,6 @@ export class PromptTranslationService {
     languageCode: string,
     updateDto: UpdatePromptTranslationDto,
   ): Promise<PromptTranslation> {
-    // Verify access and find the specific translation first
-    // Pass undefined for query to avoid asset resolution during this specific find operation
     const existingTranslation = await this.findOneByLanguage(
       projectId,
       promptId,
@@ -176,16 +137,14 @@ export class PromptTranslationService {
       undefined,
     );
 
-    // updateDto should only contain promptText
     try {
       return await this.prisma.promptTranslation.update({
         where: {
-          id: existingTranslation.id, // Use CUID of the translation
+          id: existingTranslation.id,
         },
         data: updateDto,
       });
     } catch (error) {
-      // P2025 should be caught by findOneByLanguage
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2025'
@@ -202,7 +161,6 @@ export class PromptTranslationService {
     versionTag: string,
     languageCode: string,
   ): Promise<PromptTranslation> {
-    // Verify access and find the specific translation first
     const existingTranslation = await this.findOneByLanguage(
       projectId,
       promptId,
@@ -213,11 +171,10 @@ export class PromptTranslationService {
     try {
       return await this.prisma.promptTranslation.delete({
         where: {
-          id: existingTranslation.id, // Use CUID of the translation
+          id: existingTranslation.id,
         },
       });
     } catch (error) {
-      // P2025 should be caught by findOneByLanguage
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2025'

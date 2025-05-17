@@ -26,7 +26,7 @@ export class PromptVersionService {
     private prisma: PrismaService,
     private tenantService: TenantService,
     private servePromptService: ServePromptService,
-  ) {}
+  ) { }
 
   // Helper to verify prompt access
   private async verifyPromptAccess(
@@ -109,20 +109,36 @@ export class PromptVersionService {
   ): Promise<PromptVersion> {
     await this.verifyPromptAccess(projectId, promptId);
 
-    const version = await this.prisma.promptVersion.findUnique({
-      where: {
-        promptId_versionTag: { promptId: promptId, versionTag: versionTag },
-      },
-      include: {
-        prompt: true,
-        translations: true,
-      },
-    });
-
-    if (!version) {
-      throw new NotFoundException(
-        `PromptVersion with tag "${versionTag}" not found for prompt "${promptId}".`,
-      );
+    let version;
+    if (versionTag === 'latest') {
+      version = await this.prisma.promptVersion.findFirst({
+        where: { promptId: promptId },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          prompt: true,
+          translations: true,
+        },
+      });
+      if (!version) {
+        throw new NotFoundException(
+          `No versions found for prompt "${promptId}" in project "${projectId}".`,
+        );
+      }
+    } else {
+      version = await this.prisma.promptVersion.findUnique({
+        where: {
+          promptId_versionTag: { promptId: promptId, versionTag: versionTag },
+        },
+        include: {
+          prompt: true,
+          translations: true,
+        },
+      });
+      if (!version) {
+        throw new NotFoundException(
+          `PromptVersion with tag "${versionTag}" not found for prompt "${promptId}".`,
+        );
+      }
     }
 
     if (query && query.resolveAssets === 'true') {
@@ -369,6 +385,31 @@ export class PromptVersionService {
       `${loggerCtx} PromptVersion ID ${updatedPromptVersion.id} status set to NOT_PUBLISHED.`,
     );
     return updatedPromptVersion;
+  }
+
+  /**
+   * Devuelve la versión por tag o la más reciente si versionTag === 'latest'.
+   */
+  async getByTagOrLatest(
+    projectId: string,
+    promptId: string,
+    versionTag: string
+  ): Promise<PromptVersion> {
+    await this.verifyPromptAccess(projectId, promptId);
+    if (versionTag === 'latest') {
+      const version = await this.prisma.promptVersion.findFirst({
+        where: { promptId },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!version) throw new NotFoundException(`No versions found for prompt "${promptId}" in project "${projectId}".`);
+      return version;
+    } else {
+      const version = await this.prisma.promptVersion.findUnique({
+        where: { promptId_versionTag: { promptId, versionTag } },
+      });
+      if (!version) throw new NotFoundException(`PromptVersion with tag "${versionTag}" not found for prompt "${promptId}".`);
+      return version;
+    }
   }
 
   // TODO: Métodos para approve, reject, cancel (Fase 2)

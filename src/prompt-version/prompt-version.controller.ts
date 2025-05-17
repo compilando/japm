@@ -36,7 +36,7 @@ import { ResolveAssetsQueryDto } from '../serve-prompt/dto/resolve-assets-query.
 @UseGuards(JwtAuthGuard, ProjectGuard)
 @Controller('projects/:projectId/prompts/:promptId/versions')
 export class PromptVersionController {
-  constructor(private readonly service: PromptVersionService) {}
+  constructor(private readonly service: PromptVersionService) { }
 
   @Post()
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
@@ -94,7 +94,7 @@ export class PromptVersionController {
   })
   @ApiParam({ name: 'projectId', description: 'Project ID' })
   @ApiParam({ name: 'promptId', description: 'Prompt CUID' })
-  @ApiParam({ name: 'versionTag', description: 'Version tag (e.g., v1.0.0)' })
+  @ApiParam({ name: 'versionTag', description: 'Version tag (e.g., v1.0.0) or "latest" to get the most recent version' })
   @ApiQuery({
     name: 'resolveAssets',
     description: 'Whether to resolve asset placeholders. Defaults to false.',

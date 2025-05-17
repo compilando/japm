@@ -2487,7 +2487,7 @@
             "name": "versionTag",
             "required": true,
             "in": "path",
-            "description": "Specific version tag (e.g., \"v1.2.0\")",
+            "description": "Specific version tag (e.g., \"v1.2.0\") or \"latest\" to use the most recent version",
             "schema": {
               "type": "string"
             }
@@ -2579,7 +2579,7 @@
             "name": "versionTag",
             "required": true,
             "in": "path",
-            "description": "Specific version tag (e.g., \"v1.2.0\")",
+            "description": "Specific version tag (e.g., \"v1.2.0\") or \"latest\" to use the most recent version",
             "schema": {
               "type": "string"
             }
@@ -3268,7 +3268,7 @@
             "name": "versionTag",
             "required": true,
             "in": "path",
-            "description": "Version tag (e.g., v1.0.0)",
+            "description": "Version tag (e.g., v1.0.0) or \"latest\" to get the most recent version",
             "schema": {
               "type": "string"
             }
@@ -3859,7 +3859,7 @@
             "name": "versionTag",
             "required": true,
             "in": "path",
-            "description": "Version Tag",
+            "description": "Version Tag (e.g., v1.0.0) or \"latest\" to get the most recent version",
             "schema": {
               "type": "string"
             }
@@ -3937,7 +3937,7 @@
             "name": "versionTag",
             "required": true,
             "in": "path",
-            "description": "Version Tag",
+            "description": "Version Tag (e.g., v1.0.0) or \"latest\" to get the most recent version",
             "schema": {
               "type": "string"
             }
@@ -4004,7 +4004,7 @@
             "name": "versionTag",
             "required": true,
             "in": "path",
-            "description": "Version Tag",
+            "description": "Version Tag (e.g., v1.0.0) or \"latest\" to get the most recent version",
             "schema": {
               "type": "string"
             }
@@ -4115,7 +4115,7 @@
             "name": "versionTag",
             "required": true,
             "in": "path",
-            "description": "Version Tag",
+            "description": "Version Tag (e.g., v1.0.0) or \"latest\" to get the most recent version",
             "schema": {
               "type": "string"
             }
@@ -4199,7 +4199,7 @@
             "name": "versionTag",
             "required": true,
             "in": "path",
-            "description": "Version Tag",
+            "description": "Version Tag (e.g., v1.0.0) or \"latest\" to get the most recent version",
             "schema": {
               "type": "string"
             }

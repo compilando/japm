@@ -30,7 +30,7 @@ import { ExecutePromptBodyDto } from './dto/execute-prompt-body.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('serve-prompt')
 export class ServePromptController {
-  constructor(private readonly service: ServePromptService) {}
+  constructor(private readonly service: ServePromptService) { }
 
   @Post('execute/:projectId/:promptName/:versionTag/base')
   @UseGuards(ProjectGuard)
@@ -52,7 +52,7 @@ export class ServePromptController {
   })
   @ApiParam({
     name: 'versionTag',
-    description: 'Specific version tag (e.g., \"v1.2.0\")',
+    description: 'Specific version tag (e.g., "v1.2.0") or "latest" to use the most recent version',
   })
   @ApiBody({
     type: ExecutePromptBodyDto,
@@ -101,12 +101,12 @@ export class ServePromptController {
   })
   @ApiParam({
     name: 'versionTag',
-    description: 'Specific version tag (e.g., \"v1.2.0\")',
+    description: 'Specific version tag (e.g., "v1.2.0") or "latest" to use the most recent version',
   })
   @ApiParam({
     name: 'languageCode',
     required: true,
-    description: 'Language code for translation (e.g., \"es\")',
+    description: 'Language code for translation (e.g., "es")',
   })
   @ApiBody({
     type: ExecutePromptBodyDto,

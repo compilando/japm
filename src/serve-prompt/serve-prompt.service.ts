@@ -39,7 +39,7 @@ export class ServePromptService {
   constructor(
     private prisma: PrismaService,
     // private templateService: TemplateService // Temporarily commented out
-  ) {}
+  ) { }
 
   /**
    * Resolves asset placeholders in a given text.
@@ -114,11 +114,11 @@ export class ServePromptService {
           const latestVersion = asset.versions[0];
           this.logger.debug(
             `  - Asset Key: "${asset.key}" (for prompt "${promptIdInput}"), ` +
-              `Latest Version ID: "${latestVersion.id}", ` +
-              `Tag: "${latestVersion.versionTag}", ` +
-              `Status: "${latestVersion.status}", ` +
-              `Value: "${latestVersion.value.substring(0, 50)}${latestVersion.value.length > 50 ? '...' : ''}", ` +
-              `Translations: ${latestVersion.translations.length > 0 ? latestVersion.translations.map((t) => t.languageCode).join(', ') : 'none'}`,
+            `Latest Version ID: "${latestVersion.id}", ` +
+            `Tag: "${latestVersion.versionTag}", ` +
+            `Status: "${latestVersion.status}", ` +
+            `Value: "${latestVersion.value.substring(0, 50)}${latestVersion.value.length > 50 ? '...' : ''}", ` +
+            `Translations: ${latestVersion.translations.length > 0 ? latestVersion.translations.map((t) => t.languageCode).join(', ') : 'none'}`,
           );
         } else {
           this.logger.debug(
@@ -151,8 +151,8 @@ export class ServePromptService {
 
         let targetVersion:
           | Prisma.PromptAssetVersionGetPayload<{
-              include: { translations: true };
-            }>
+            include: { translations: true };
+          }>
           | undefined = undefined;
 
         if (spec.versionTag) {
@@ -258,17 +258,37 @@ export class ServePromptService {
       );
     }
 
-    const versionToUse = await this.prisma.promptVersion.findUnique({
-      where: {
-        promptId_versionTag: { promptId: prompt.id, versionTag },
-      },
-      include: { prompt: true, translations: true },
-    });
+    let versionToUse;
+    if (versionTag === 'latest') {
+      // Buscar la versión más reciente ordenada por createdAt
+      versionToUse = await this.prisma.promptVersion.findFirst({
+        where: {
+          promptId: prompt.id,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: { prompt: true, translations: true },
+      });
 
-    if (!versionToUse) {
-      throw new NotFoundException(
-        `Version "${versionTag}" for prompt "${promptName}" (ID: ${prompt.id}) in project "${currentProjectId}" not found.`,
-      );
+      if (!versionToUse) {
+        throw new NotFoundException(
+          `No versions found for prompt "${promptName}" (ID: ${prompt.id}) in project "${currentProjectId}".`,
+        );
+      }
+    } else {
+      versionToUse = await this.prisma.promptVersion.findUnique({
+        where: {
+          promptId_versionTag: { promptId: prompt.id, versionTag },
+        },
+        include: { prompt: true, translations: true },
+      });
+
+      if (!versionToUse) {
+        throw new NotFoundException(
+          `Version "${versionTag}" for prompt "${promptName}" (ID: ${prompt.id}) in project "${currentProjectId}" not found.`,
+        );
+      }
     }
 
     const finalLanguageCode = languageCode;
@@ -303,8 +323,8 @@ export class ServePromptService {
       promptVersionTag: versionToUse.versionTag,
       languageUsed: finalLanguageCode
         ? versionToUse.translations.some(
-            (t) => t.languageCode === finalLanguageCode,
-          )
+          (t) => t.languageCode === finalLanguageCode,
+        )
           ? finalLanguageCode
           : 'base_language_fallback'
         : 'base_language',
