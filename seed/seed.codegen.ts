@@ -173,17 +173,6 @@ async function main() {
     });
     const tenantId = testUser.tenantId;
 
-    // Find relevant environment (should exist from default project)
-    const defaultProjectId = 'default-project'; // ID del proyecto donde buscar los entornos base
-    const devEnvironment = await prisma.environment.findUniqueOrThrow({
-        where: { projectId_name: { projectId: defaultProjectId, name: 'development' } },
-        select: { id: true }
-    });
-    const testEnvironment = await prisma.environment.findUniqueOrThrow({
-        where: { projectId_name: { projectId: defaultProjectId, name: 'testing' } },
-        select: { id: true }
-    });
-
     // --- Create Project Specific Data ---
     // 1. Upsert Code Gen Project
     const codeGenProjectName = 'Developer Tools AI Assistance';
@@ -200,6 +189,27 @@ async function main() {
         },
     });
     console.log(`Upserted Project: ${codeGenProject.name} (ID: ${cgProjectId})`);
+
+    // Crear Environments para el proyecto CodeGen
+    const cgDevEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'development', projectId: cgProjectId } },
+        update: {},
+        create: { name: 'development', projectId: cgProjectId, description: 'Development environment for CodeGen project' },
+        select: { id: true }
+    });
+    const cgStagingEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'staging', projectId: cgProjectId } },
+        update: {},
+        create: { name: 'staging', projectId: cgProjectId, description: 'Staging environment for CodeGen project' },
+        select: { id: true }
+    });
+    const cgProdEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'production', projectId: cgProjectId } },
+        update: {},
+        create: { name: 'production', projectId: cgProjectId, description: 'Production environment for CodeGen project' },
+        select: { id: true }
+    });
+    console.log(`Upserted Environments (dev, staging, prod) for project ${cgProjectId}`);
 
     // Crear región es-ES y datos culturales para el proyecto CodeGen
     await createSpanishRegionAndCulturalData(codeGenProject.id);
@@ -363,7 +373,30 @@ async function main() {
                 }
             }
         }
-    }
+
+        // Upsert PromptVersion for the current prompt
+        await prisma.promptVersion.upsert({
+            where: { promptId_versionTag: { promptId: prompt.id, versionTag: 'v1.0.0' } },
+            update: {
+                promptText: promptData.promptText,
+                status: 'active',
+                changeMessage: `Initial version for ${promptData.name}. (Updated via seed upsert)`,
+                aiModelId: cgGpt4oMini.id,
+                activeInEnvironments: { set: [{ id: cgDevEnv.id }, { id: cgStagingEnv.id }] }
+            },
+            create: {
+                promptId: prompt.id,
+                promptText: promptData.promptText,
+                versionTag: 'v1.0.0',
+                status: 'active',
+                changeMessage: `Initial version for ${promptData.name}. (Created via seed upsert)`,
+                aiModelId: cgGpt4oMini.id,
+                activeInEnvironments: { connect: [{ id: cgDevEnv.id }, { id: cgStagingEnv.id }] }
+            },
+        });
+        console.log(`Upserted PromptVersion for ${prompt.name} V1 (ID: ${prompt.id}) in project ${cgProjectId}`);
+
+    } // End of for (const promptData of pythonPrompts)
 
     // Crear traducciones en español para el proyecto CodeGen
     await createSpanishTranslations(cgProjectId);

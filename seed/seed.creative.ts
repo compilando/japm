@@ -98,12 +98,6 @@ async function main() {
 
     const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS), tenant: { connect: { id: defaultTenant.id } } } });
 
-    const defaultProjectId = 'default-project';
-    const devEnvironment = await prisma.environment.findUniqueOrThrow({
-        where: { projectId_name: { name: 'development', projectId: defaultProjectId } },
-        select: { id: true }
-    });
-
     const creativeProject = await prisma.project.upsert({
         where: { id: 'creative-content-project' },
         update: { name: 'Creative Content Generation', description: 'AI-powered creative content generation and ideation.', ownerUserId: testUser.id },
@@ -117,6 +111,27 @@ async function main() {
     });
     console.log(`Upserted Project: ${creativeProject.name}`);
     const crProjectId = creativeProject.id;
+
+    // Crear Environments para el proyecto Creative
+    const crDevEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'development', projectId: crProjectId } },
+        update: {},
+        create: { name: 'development', projectId: crProjectId, description: 'Development environment for Creative project' },
+        select: { id: true }
+    });
+    const crStagingEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'staging', projectId: crProjectId } },
+        update: {},
+        create: { name: 'staging', projectId: crProjectId, description: 'Staging environment for Creative project' },
+        select: { id: true }
+    });
+    const crProdEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'production', projectId: crProjectId } },
+        update: {},
+        create: { name: 'production', projectId: crProjectId, description: 'Production environment for Creative project' },
+        select: { id: true }
+    });
+    console.log(`Upserted Environments (dev, staging, prod) for project ${crProjectId}`);
 
     await createSpanishRegionAndCulturalData(crProjectId);
     await createUSRegionAndCulturalData(crProjectId);
@@ -193,7 +208,7 @@ async function main() {
                     }
                 ],
                 aiModelId: crGpt4o.id,
-                activeInEnvironments: [{ id: devEnvironment.id }]
+                activeInEnvironments: [{ id: crDevEnv.id }, { id: crStagingEnv.id }]
             },
             {
                 id: slugify('develop-character-story'),
@@ -202,7 +217,7 @@ async function main() {
                 promptText: creativeTranslations.prompts['develop-character'] || 'Develop character: {{name}}',
                 tags: ['creative-writing', 'character-dev'],
                 aiModelId: crGpt4o.id,
-                activeInEnvironments: [{ id: devEnvironment.id }]
+                activeInEnvironments: [{ id: crDevEnv.id }, { id: crStagingEnv.id }]
             },
             {
                 id: slugify('world-building-detail'),
@@ -218,7 +233,7 @@ async function main() {
                     }
                 ],
                 aiModelId: crGpt4o.id,
-                activeInEnvironments: [{ id: devEnvironment.id }]
+                activeInEnvironments: [{ id: crDevEnv.id }, { id: crStagingEnv.id }]
             }
         ];
 
@@ -287,7 +302,7 @@ async function main() {
                 promptText: promptData.promptText,
                 status: 'active',
                 changeMessage: `Initial version for ${promptData.name}. (Updated via upsert)`,
-                activeInEnvironments: { set: promptData.activeInEnvironments || [{ id: devEnvironment.id }] },
+                activeInEnvironments: { set: promptData.activeInEnvironments || [{ id: crDevEnv.id }, { id: crStagingEnv.id }] },
                 aiModelId: promptData.aiModelId || crGpt4o.id
             },
             create: {
@@ -295,7 +310,7 @@ async function main() {
                 promptText: promptData.promptText,
                 versionTag: 'v1.0.0', status: 'active',
                 changeMessage: `Initial version for ${promptData.name}.`,
-                activeInEnvironments: { connect: promptData.activeInEnvironments || [{ id: devEnvironment.id }] },
+                activeInEnvironments: { connect: promptData.activeInEnvironments || [{ id: crDevEnv.id }, { id: crStagingEnv.id }] },
                 aiModelId: promptData.aiModelId || crGpt4o.id
             },
         });

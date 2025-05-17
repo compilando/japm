@@ -165,15 +165,15 @@ async function main() {
 
     const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS), tenant: { connect: { id: defaultTenant.id } } } });
     // Find necessary base data
-    const defaultProjectId = 'default-project'; // Assuming the default project ID
-    const stagingEnvironment = await prisma.environment.findUniqueOrThrow({
-        where: { projectId_name: { name: 'staging', projectId: defaultProjectId } }, // Find env in default project
-        select: { id: true } // Select ID for connecting later
-    });
-    const productionEnvironment = await prisma.environment.findUniqueOrThrow({
-        where: { projectId_name: { name: 'production', projectId: defaultProjectId } }, // Find env in default project
-        select: { id: true } // Select ID for connecting later
-    });
+    // const defaultProjectId = 'default-project'; // Assuming the default project ID
+    // const stagingEnvironment = await prisma.environment.findUniqueOrThrow({
+    //     where: { projectId_name: { name: 'staging', projectId: defaultProjectId } }, // Find env in default project
+    //     select: { id: true } // Select ID for connecting later
+    // });
+    // const productionEnvironment = await prisma.environment.findUniqueOrThrow({
+    //     where: { projectId_name: { name: 'production', projectId: defaultProjectId } }, // Find env in default project
+    //     select: { id: true } // Select ID for connecting later
+    // });
 
     // --- RAG Project ---
     const ragProject = await prisma.project.upsert({
@@ -196,6 +196,28 @@ async function main() {
 
     // Create specific AI models for this project
     const ragProjectId = ragProject.id;
+
+    // Crear Environments para el proyecto RAG
+    const ragDevEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'development', projectId: ragProjectId } },
+        update: {},
+        create: { name: 'development', projectId: ragProjectId, description: 'Development environment for RAG project' },
+        select: { id: true }
+    });
+    const ragStagingEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'staging', projectId: ragProjectId } },
+        update: {},
+        create: { name: 'staging', projectId: ragProjectId, description: 'Staging environment for RAG project' },
+        select: { id: true }
+    });
+    const ragProdEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'production', projectId: ragProjectId } },
+        update: {},
+        create: { name: 'production', projectId: ragProjectId, description: 'Production environment for RAG project' },
+        select: { id: true }
+    });
+    console.log(`Upserted Environments (dev, staging, prod) for project ${ragProjectId}`);
+
     const ragGpt4o = await prisma.aIModel.upsert({
         where: { projectId_name: { projectId: ragProjectId, name: 'gpt-4o-2024-05-13' } },
         update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
@@ -506,7 +528,7 @@ async function main() {
             promptText: `{{rag-system-instruction}}\n\n            Context Documents:\n            --- START CONTEXT ---\n            {{Retrieved Context Chunks}}\n            --- END CONTEXT ---\n\n            User Question: {{User Question}}\n\n            Answer based ONLY on the context above. Use this citation format: {{rag-citation-format}}. If the answer isn't in the context, respond with: {{rag-not-found-response}}.\n
             Answer:`,
             status: 'active',
-            activeInEnvironments: { set: [{ id: productionEnvironment.id }, { id: stagingEnvironment.id }] },
+            activeInEnvironments: { set: [{ id: ragProdEnv.id }, { id: ragStagingEnv.id }] },
             aiModelId: ragGpt4o.id // Assign default AI model
         },
         create: {
@@ -516,7 +538,7 @@ async function main() {
             versionTag: 'v1.0.0',
             status: 'active',
             changeMessage: 'Initial RAG prompt using system instructions and context.',
-            activeInEnvironments: { connect: [{ id: productionEnvironment.id }, { id: stagingEnvironment.id }] },
+            activeInEnvironments: { connect: [{ id: ragProdEnv.id }, { id: ragStagingEnv.id }] },
             aiModelId: ragGpt4o.id // Assign default AI model
         },
         select: { id: true }

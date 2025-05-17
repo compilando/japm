@@ -140,11 +140,7 @@ async function main() {
 
     const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS), tenant: { connect: { id: defaultTenant.id } } } });
 
-    const defaultProjectId = 'default-project'; // ID del proyecto donde buscar los entornos base
-    const prodEnvironment = await prisma.environment.findUniqueOrThrow({
-        where: { projectId_name: { projectId: defaultProjectId, name: 'production' } },
-        select: { id: true }
-    });
+    // const defaultProjectId = 'default-project'; // Esta línea ya no es necesaria aquí directamente
     // Find base AI Model (assuming it exists and is global)
     const gpt4Model = await prisma.aIModel.findFirstOrThrow({
         where: { name: 'gpt-4o-2024-05-13' }, // Assuming name is unique enough *within seed data*
@@ -172,6 +168,27 @@ async function main() {
     await createUSRegionAndCulturalData(invoiceProject.id);
 
     const invProjectId = invoiceProject.id;
+
+    // Crear Environments para el proyecto Invoice Extraction
+    const invDevEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'development', projectId: invProjectId } },
+        update: {},
+        create: { name: 'development', projectId: invProjectId, description: 'Development environment for Invoice Extraction project' },
+        select: { id: true }
+    });
+    const invStagingEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'staging', projectId: invProjectId } },
+        update: {},
+        create: { name: 'staging', projectId: invProjectId, description: 'Staging environment for Invoice Extraction project' },
+        select: { id: true }
+    });
+    const invProdEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'production', projectId: invProjectId } },
+        update: {},
+        create: { name: 'production', projectId: invProjectId, description: 'Production environment for Invoice Extraction project' },
+        select: { id: true }
+    });
+    console.log(`Upserted Environments (dev, staging, prod) for project ${invProjectId}`);
 
     // Create specific AI models for this project
     const invGpt4o = await prisma.aIModel.upsert({
@@ -243,28 +260,28 @@ async function main() {
                     // Otros assets como 'invoice-extraction-instructions' podrían ir aquí si son específicos de este prompt
                 ],
                 aiModelId: invGpt4o.id,
-                activeInEnvironments: [{ id: prodEnvironment.id }]
+                activeInEnvironments: [{ id: invDevEnv.id }, { id: invStagingEnv.id }] // Actualizado
             },
             {
                 id: toSlug('validate-invoice'),
                 name: 'Validate Invoice Data',
-                description: 'Validates extracted invoice data based on defined rules.',
-                promptText: invoiceTranslations.prompts['validate-invoice'] || 'Validate: {data}',
+                description: 'Validates extracted invoice data against a set of rules.',
+                promptText: invoiceTranslations.prompts['validate-invoice'] || 'Validate invoice data: {{data}}',
                 tags: ['data-extraction', 'validation'],
                 assets: [
                     {
                         key: 'invoice-validation-rules',
                         name: 'Invoice Validation Rules',
-                        initialValue: invoiceTranslations.assets['invoice-validation-rules'] || 'Rule 1: Check something'
+                        initialValue: invoiceTranslations.assets['invoice-validation-rules'] || 'Rule 1: ...' // Fallback
                     },
                     {
                         key: 'invoice-error-messages',
-                        name: 'Invoice Error Messages List',
-                        initialValue: invoiceTranslations.assets['invoice-error-messages'] || 'Error: Something is wrong'
+                        name: 'Invoice Error Messages Template',
+                        initialValue: invoiceTranslations.assets['invoice-error-messages'] || 'Error: ...' // Fallback
                     }
                 ],
-                aiModelId: invGpt4o.id,
-                activeInEnvironments: [{ id: prodEnvironment.id }]
+                aiModelId: invGpt4oMini.id, // Usar un modelo más pequeño/rápido para validación
+                activeInEnvironments: [{ id: invDevEnv.id }, { id: invStagingEnv.id }] // Actualizado
             }
             // ... otros prompts temáticos de Invoice Extraction
         ];
@@ -334,7 +351,7 @@ async function main() {
                 promptText: promptData.promptText,
                 status: 'active',
                 changeMessage: `Initial version for ${promptData.name}. (Updated via upsert)`,
-                activeInEnvironments: { set: promptData.activeInEnvironments || [{ id: prodEnvironment.id }] },
+                activeInEnvironments: { set: promptData.activeInEnvironments || [{ id: invDevEnv.id }, { id: invStagingEnv.id }] },
                 aiModelId: promptData.aiModelId || invGpt4o.id
             },
             create: {
@@ -342,7 +359,7 @@ async function main() {
                 promptText: promptData.promptText,
                 versionTag: 'v1.0.0', status: 'active',
                 changeMessage: `Initial version for ${promptData.name}.`,
-                activeInEnvironments: { connect: promptData.activeInEnvironments || [{ id: prodEnvironment.id }] },
+                activeInEnvironments: { connect: promptData.activeInEnvironments || [{ id: invDevEnv.id }, { id: invStagingEnv.id }] },
                 aiModelId: promptData.aiModelId || invGpt4o.id
             },
         });

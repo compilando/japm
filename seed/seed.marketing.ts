@@ -151,12 +151,6 @@ async function main() {
     }
 
     const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: { role: Role.TENANT_ADMIN }, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS), tenant: { connect: { id: defaultTenant.id } }, role: Role.TENANT_ADMIN } });
-    // Find necessary base data
-    const defaultProjectId = 'default-project'; // Assuming the default project ID
-    const devEnvironment = await prisma.environment.findUniqueOrThrow({
-        where: { projectId_name: { name: 'development', projectId: defaultProjectId } }, // Find env in default project
-        select: { id: true } // Select ID for connecting later
-    });
 
     // Upsert Marketing Project
     const marketingProject = await prisma.project.upsert({
@@ -176,6 +170,29 @@ async function main() {
     await createSpanishRegionAndCulturalData(marketingProject.id);
     // Crear región en-US y datos culturales para el proyecto Marketing
     await createUSRegionAndCulturalData(marketingProject.id);
+
+    const mktProjectId = marketingProject.id; // Usar una variable consistente para el ID del proyecto
+
+    // Crear Environments para el proyecto Marketing
+    const mktDevEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'development', projectId: mktProjectId } },
+        update: {},
+        create: { name: 'development', projectId: mktProjectId, description: 'Development environment for Marketing project' },
+        select: { id: true }
+    });
+    const mktStagingEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'staging', projectId: mktProjectId } },
+        update: {},
+        create: { name: 'staging', projectId: mktProjectId, description: 'Staging environment for Marketing project' },
+        select: { id: true }
+    });
+    const mktProdEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'production', projectId: mktProjectId } },
+        update: {},
+        create: { name: 'production', projectId: mktProjectId, description: 'Production environment for Marketing project' },
+        select: { id: true }
+    });
+    console.log(`Upserted Environments (dev, staging, prod) for project ${mktProjectId}`);
 
     // Create specific AI models for this project
     const mktGpt4o = await prisma.aIModel.upsert({
@@ -540,7 +557,7 @@ async function main() {
         update: {
             promptText: `Generate 5 blog post ideas relevant to the following target audience:\n{{target-audience-persona}}\n\nFocus on topics related to: {{Topic Focus}}\n\nEnsure the ideas are engaging and SEO-friendly.`,
             status: 'active',
-            activeInEnvironments: { set: [{ id: devEnvironment.id }] },
+            activeInEnvironments: { set: [{ id: mktDevEnv.id }] },
             aiModelId: mktGpt4o.id // Assign default AI model
         },
         create: {
@@ -548,7 +565,7 @@ async function main() {
             promptText: `Generate 5 blog post ideas relevant to the following target audience:\n{{target-audience-persona}}\n\nFocus on topics related to: {{Topic Focus}}\n\nEnsure the ideas are engaging and SEO-friendly.`,
             versionTag: 'v1.0.0', status: 'active',
             changeMessage: 'Initial version for generating blog post ideas.',
-            activeInEnvironments: { connect: [{ id: devEnvironment.id }] },
+            activeInEnvironments: { connect: [{ id: mktDevEnv.id }] },
             aiModelId: mktGpt4o.id // Assign default AI model
         },
         select: { id: true }

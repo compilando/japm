@@ -276,14 +276,6 @@ async function main() {
     const testUser = await prisma.user.upsert({ where: { email: 'test@example.com' }, update: {}, create: { email: 'test@example.com', name: 'Test User', password: await bcrypt.hash('password123', SALT_ROUNDS), tenant: { connect: { id: defaultTenant.id } } } });
     // Find necessary base data
     const defaultProjectId = 'default-project'; // Assuming the default project ID
-    const stagingEnvironment = await prisma.environment.findUniqueOrThrow({
-        where: { projectId_name: { name: 'staging', projectId: defaultProjectId } }, // Find env in default project
-        select: { id: true } // Select ID for connecting later
-    });
-    const testingEnvironment = await prisma.environment.findUniqueOrThrow({
-        where: { projectId_name: { name: 'testing', projectId: defaultProjectId } }, // Find env in default project
-        select: { id: true } // Select ID for connecting later
-    });
 
     const eduProjectSlug = 'education-content-project'; // Renombrado para claridad
     const educationProject = await prisma.project.upsert({
@@ -319,6 +311,27 @@ async function main() {
         select: { id: true }
     });
     console.log(`Upserted AI Models for project ${eduProjectId}`);
+
+    // Crear Environments para el proyecto Education
+    const devEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'development', projectId: eduProjectId } },
+        update: {},
+        create: { name: 'development', projectId: eduProjectId, description: 'Development environment for Education project' },
+        select: { id: true }
+    });
+    const stagingEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'staging', projectId: eduProjectId } },
+        update: {},
+        create: { name: 'staging', projectId: eduProjectId, description: 'Staging environment for Education project' },
+        select: { id: true }
+    });
+    const prodEnv = await prisma.environment.upsert({
+        where: { projectId_name: { name: 'production', projectId: eduProjectId } },
+        update: {},
+        create: { name: 'production', projectId: eduProjectId, description: 'Production environment for Education project' },
+        select: { id: true }
+    });
+    console.log(`Upserted Environments (dev, staging, prod) for project ${eduProjectId}`);
 
     // Upsert Educational Tags with prefix
     const eduPrefix = 'edu_';
@@ -431,7 +444,7 @@ async function main() {
                     versionTag: versionSeed.versionTag,
                     promptText: versionSeed.promptText || promptSeed.promptContent,
                     aiModelId: versionSeed.aiModelId || eduGpt4oMini.id,
-                    activeInEnvironments: { connect: [{ id: stagingEnvironment.id }, { id: testingEnvironment.id }] },
+                    activeInEnvironments: { connect: [{ id: devEnv.id }, { id: stagingEnv.id }] },
                 },
                 select: { id: true }
             });
