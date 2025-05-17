@@ -52,55 +52,14 @@ interface EducationPromptSeed {
 // Traducciones específicas para el proyecto de educación
 const educationTranslations = {
     assets: {
-        'definition-cell-biology': 'La unidad estructural, funcional y biológica básica de todos los organismos conocidos. Una célula es la unidad más pequeña de vida.',
-        'mcq-template-4-options': `Question:
-{Question Text}
-A) {Option A}
-B) {Option B}
-C) {Option C}
-D) {Option D}
-Correct Answer: {Correct Letter}
-Explanation: {Explanation Text}`,
-        'explanation-style-analogy': 'Explica el concepto de manera clara y concisa. Usa un lenguaje simple adecuado para un estudiante de secundaria. Cuando sea posible, incluye una analogía simple para facilitar la comprensión.'
+        'definition-cell-biology': "La célula es la unidad fundamental y piedra angular de todos los organismos vivos conocidos, sirviendo como el bloque de construcción primario para la estructura, el motor para la función biológica y el recipiente de la información hereditaria de la vida. Representa la entidad más pequeña y autónoma capaz de exhibir todas las características de la vida.",
+        'mcq-template-4-options': `**Pregunta:** {Question Text}\\n\\n*Opciones:*\\nA) {Option A}\\nB) {Option B}\\nC) {Option C}\\nD) {Option D}\\n\\n**Respuesta Correcta:** {Correct Letter}\\n**Explicación Detallada:** {Explanation Text}\\n*Objetivo de Aprendizaje:* {Opcional: Objetivo de aprendizaje específico que esta pregunta evalúa}`,
+        'explanation-style-analogy': "Elabora analogías que sean vívidas, cercanas y que iluminen directamente el mecanismo o principio central del concepto. El lenguaje debe ser sencillo y atractivo para un estudiante de secundaria, asegurando que la analogía aclare en lugar de confundir. El objetivo es un momento '¡ajá!' que haga concreto lo abstracto."
     },
     prompts: {
-        'generate-biology-quiz': `Generate a biology quiz with the following characteristics:
-
-Topic: {topic}
-Level: {level}
-Number of questions: {number}
-
-Include:
-- Multiple choice questions
-- One short answer question
-- One analysis question
-
-Ensure questions are clear and challenging.`,
-        'explain-biology-concept': `Explain the following biology concept:
-
-Concept: {concept}
-Level: {level}
-
-The explanation should include:
-- Clear definition
-- Relevant examples
-- Simple analogies
-- Practical applications
-
-Use language accessible to high school students.`,
-        'create-study-guide': `Create a study guide for the following biology topic:
-
-Topic: {topic}
-Level: {level}
-
-The guide should include:
-- Topic summary
-- Key points
-- Diagrams or visualizations
-- Practice exercises
-- Additional resources
-
-Organize the information in a clear and structured way.`
+        'generate-biology-quiz': `Elabora un cuestionario de biología completo y atractivo para estudiantes de nivel {{level}}, centrado específicamente en las complejidades de {{topic}}. El cuestionario debe incluir exactamente {{number}} preguntas, diseñadas para evaluar la comprensión a través de diversos formatos: \\n- Preguntas de opción múltiple, siguiendo la estructura definida en {{mcq_template_4_options}}.\\n- Una pregunta de respuesta corta que exija recuerdo de hechos y una breve explicación.\\n- Una pregunta de análisis en profundidad que requiera pensamiento crítico y aplicación de conceptos.\\n\\nTodas las preguntas deben ser excepcionalmente claras, adecuadamente desafiantes para el nivel especificado, e incluir explicaciones detalladas y pedagógicamente sólidas para todas las respuestas, con el fin de fomentar el aprendizaje.`,
+        'explain-biology-concept': `Proporciona una explicación nítida y atractiva del concepto biológico fundamental: {{concept}}, adaptada para una audiencia de nivel {{level}}. La explicación debe ser exhaustiva e incorporar:\\n- Una definición precisa y fundamental, potencialmente extraída de {{definition_cell_biology}} si es pertinente, o de una fuente igualmente autorizada para otros conceptos.\\n- Ejemplos esclarecedores y cercanos que demuestren el concepto en acción.\\n- Analogías creativas y sencillas, elaboradas al estilo de {{explanation_style_analogy}}, para que las ideas complejas sean fácilmente asimilables.\\n- Aplicaciones prácticas del mundo real que resalten la importancia y relevancia del {{concept}}.\\n\\nAdopta un tono paciente y alentador, y utiliza un lenguaje que sea perfectamente accesible e inspirador para estudiantes de secundaria, fomentando la curiosidad y una comprensión más profunda.`,
+        'create-study-guide': `Desarrolla una guía de estudio exhaustiva y altamente eficaz para el tema de biología: {{topic}}, meticulosamente adaptada para estudiantes de nivel {{level}}. Esta guía debe servir como una herramienta poderosa para la preparación de exámenes y la comprensión conceptual profunda. Estructúrala lógicamente e incluye las siguientes secciones clave:\\n- **Resumen Conciso del Tema:** Un sumario breve y atractivo de {{topic}}.\\n- **Conceptos Centrales y Puntos Clave:** Lista con viñetas de la información, definiciones y principios más críticos.\\n- **Apoyos Visuales para el Aprendizaje (Descriptivos):** Descripciones detalladas de diagramas, organigramas o modelos esenciales que aclararían visualmente aspectos complejos de {{topic}}. (ej., 'Un diagrama que ilustre las etapas de la mitosis, etiquetando claramente cada fase y las estructuras clave involucradas.')\\n- **Ejercicios Prácticos para Desarrollar Habilidades:** Un conjunto de ejercicios variados, que incluyan opción múltiple, respuesta corta y un escenario de resolución de problemas, diseñados para reforzar el aprendizaje y evaluar la comprensión.\\n- **Recursos Adicionales Seleccionados:** Una lista de 2-3 recursos externos de alta calidad (ej., sitios web educativos específicos, videos relevantes o enlaces a simulaciones) para exploración adicional.\\n\\nPrioriza la claridad, la precisión y el valor pedagógico en toda la guía.`
     }
 };
 
@@ -191,10 +150,10 @@ async function createSpanishTranslations(projectId: string) {
 const educationPrompts: EducationPromptSeed[] = [
     {
         promptSlug: 'generate-biology-quiz',
-        promptName: 'Generate Biology Quiz',
-        promptDescription: 'Generates a biology quiz based on specified topic, level, and number of questions.',
-        promptContent: `Generate a biology quiz with the following characteristics:\\n\\nTopic: {{topic}}\\nLevel: {{level}}\\nNumber of questions: {{number}}\\n\\nInclude:\\n- Multiple choice questions using the template: {{mcq_template_4_options}}\\n- One short answer question\\n- One analysis question\\n\\nEnsure questions are clear and challenging. Explain all answers.`,
-        promptTags: ['biology', 'quiz', 'assessment', 'high-school'],
+        promptName: 'Generate Engaging Biology Quiz',
+        promptDescription: 'Generates a comprehensive and engaging biology quiz with varied question types, tailored to specific topics and student levels, including detailed explanations to foster learning.',
+        promptContent: `Craft a comprehensive and engaging biology quiz for {{level}} students, specifically focusing on the intricacies of {{topic}}. The quiz must feature exactly {{number}} questions, designed to assess understanding through a variety of formats: \\n- Multiple-choice questions, adhering to the structure defined in {{mcq_template_4_options}}.\\n- One concise short-answer question demanding factual recall and brief explanation.\\n- One in-depth analysis question requiring critical thinking and application of concepts.\\n\\nAll questions must be exceptionally clear, appropriately challenging for the specified level, and include detailed, pedagogically sound explanations for all answers to foster learning.`,
+        promptTags: ['biology', 'quiz', 'assessment', 'critical-thinking', 'high-school', 'education-excellence'],
         assets: [
             { key: 'mcq-template-4-options' },
         ],
@@ -205,10 +164,10 @@ const educationPrompts: EducationPromptSeed[] = [
                     {
                         assetKey: 'mcq-template-4-options',
                         versionTag: 'v1.0.0',
-                        name: 'MCQ Template (4 options)',
+                        name: 'Advanced MCQ Template (4 options with Learning Objective)',
                         type: 'text',
-                        description: 'Template for multiple-choice questions with four options.',
-                        value: 'Question:\\n{Question Text}\\nA) {Option A}\\nB) {Option B}\\nC) {Option C}\\nD) {Option D}\\nCorrect Answer: {Correct Letter}\\nExplanation: {Explanation Text}'
+                        description: 'Enhanced template for multiple-choice questions with four options, correct answer, detailed explanation, and an optional learning objective.',
+                        value: `**Question:** {Question Text}\\n\\n*Choices:*\\nA) {Option A}\\nB) {Option B}\\nC) {Option C}\\nD) {Option D}\\n\\n**Correct Answer:** {Correct Letter}\\n**Detailed Explanation:** {Explanation Text}\\n*Learning Objective:* {Optional: Specific learning objective this question assesses}`
                     }
                 ]
             }
@@ -216,10 +175,10 @@ const educationPrompts: EducationPromptSeed[] = [
     },
     {
         promptSlug: 'explain-biology-concept',
-        promptName: 'Explain Biology Concept',
-        promptDescription: 'Explains a biology concept with definitions, examples, analogies, and applications.',
-        promptContent: `Explain the following biology concept:\\n\\nConcept: {{concept}}\\nLevel: {{level}}\\n\\nThe explanation should include:\\n- Clear definition from: {{definition_cell_biology}}\\n- Relevant examples\\n- Simple analogies following style: {{explanation_style_analogy}}\\n- Practical applications\\n\\nUse language accessible to high school students.`,
-        promptTags: ['biology', 'explanation', 'tutoring', 'high-school'],
+        promptName: 'Explain Biology Concept In-Depth',
+        promptDescription: 'Provides a crystal-clear, engaging, and in-depth explanation of biological concepts for high school students, using definitions, examples, powerful analogies, and real-world applications to foster deep understanding and curiosity.',
+        promptContent: `Provide a crystal-clear and engaging explanation of the core biological concept: {{concept}}, tailored for a {{level}} audience. The explanation must be comprehensive, incorporating:\\n- A precise and foundational definition, potentially drawing from {{definition_cell_biology}} if relevant, or a similarly authoritative source for other concepts.\\n- Illuminating and relatable examples that demonstrate the concept in action.\\n- Creative and simple analogies, crafted in the style of {{explanation_style_analogy}}, to make complex ideas easily digestible.\\n- Real-world practical applications that highlight the significance and relevance of the {{concept}}.\\n\\nAdopt a patient, encouraging tone and use language that is perfectly accessible and inspiring for high school students, fostering curiosity and deeper understanding.`,
+        promptTags: ['biology', 'explanation', 'tutoring', 'conceptual-understanding', 'high-school', 'science-communication'],
         assets: [
             { key: 'definition-cell-biology' },
             { key: 'explanation-style-analogy' },
@@ -231,18 +190,18 @@ const educationPrompts: EducationPromptSeed[] = [
                     {
                         assetKey: 'definition-cell-biology',
                         versionTag: 'v1.0.0',
-                        name: 'Definition - Cell Biology',
+                        name: 'Foundational Definition - Cell Biology',
                         type: 'text',
-                        description: 'Standard definition of a cell in biology.',
-                        value: 'The basic structural, functional, and biological unit of all known organisms. A cell is the smallest unit of life.'
+                        description: 'A comprehensive and foundational definition of a cell, emphasizing its role as the cornerstone of life.',
+                        value: "The cell is the fundamental, cornerstone unit of all known living organisms, serving as the primary building block for structure, the engine for biological function, and the vessel for life\\'s hereditary information. It represents the smallest, self-contained entity capable of exhibiting all the characteristics of life."
                     },
                     {
                         assetKey: 'explanation-style-analogy',
                         versionTag: 'v1.0.0',
-                        name: 'Explanation Style with Analogy',
+                        name: 'Guideline for Crafting Potent Analogies',
                         type: 'text',
-                        description: 'Guideline for styling explanations with analogies.',
-                        value: 'Explain the concept clearly and concisely. Use simple language suitable for a high school student. Where possible, include a simple analogy to aid understanding.'
+                        description: "Guideline for creating vivid, relatable analogies that simplify complex concepts for high school students, aiming for 'aha!' moments.",
+                        value: "Craft analogies that are vivid, relatable, and directly illuminate the core mechanism or principle of the concept. The language should be simple and engaging for a high school student, ensuring the analogy clarifies rather than confuses. The goal is an \\'aha!\\' moment that makes the abstract concrete."
                     }
                 ]
             }
@@ -250,10 +209,10 @@ const educationPrompts: EducationPromptSeed[] = [
     },
     {
         promptSlug: 'create-study-guide',
-        promptName: 'Create Biology Study Guide',
-        promptDescription: 'Creates a study guide for a biology topic including summary, key points, and exercises.',
-        promptContent: `Create a study guide for the following biology topic:\\n\\nTopic: {{topic}}\\nLevel: {{level}}\\n\\nThe guide should include:\\n- Topic summary\\n- Key points\\n- Diagrams or visualizations (describe if text-only)\\n- Practice exercises\\n- Additional resources\\n\\nOrganize the information in a clear and structured way.`,
-        promptTags: ['biology', 'education', 'tutoring'],
+        promptName: 'Create Comprehensive Biology Study Guide',
+        promptDescription: 'Develops a highly effective and comprehensive study guide for biology topics, tailored for specific student levels, to aid exam preparation and ensure deep conceptual understanding.',
+        promptContent: `Develop a comprehensive and highly effective study guide for the biology topic: {{topic}}, meticulously tailored for {{level}} learners. This guide should serve as a powerful tool for exam preparation and deep conceptual understanding. Structure it logically and include the following key sections:\\n- **Concise Topic Overview:** A brief, engaging summary of {{topic}}.\\n- **Core Concepts & Key Takeaways:** Bulleted list of the most critical information, definitions, and principles.\\n- **Visual Learning Aids (Descriptive):** Detailed descriptions of essential diagrams, flowcharts, or models that would visually clarify complex aspects of {{topic}}. (e.g., 'A diagram illustrating the stages of mitosis, clearly labeling each phase and key structures involved.')\\n- **Skill-Building Practice Exercises:** A set of varied exercises, including multiple-choice, short answer, and a problem-solving scenario, designed to reinforce learning and test comprehension.\\n- **Curated Additional Resources:** A list of 2-3 high-quality external resources (e.g., specific educational websites, relevant videos, or simulation links) for further exploration.\\n\\nPrioritize clarity, accuracy, and pedagogical value throughout the guide.`,
+        promptTags: ['biology', 'education', 'tutoring', 'study-guide', 'exam-preparation', 'self-learning'],
         assets: [],
         versions: [
             {

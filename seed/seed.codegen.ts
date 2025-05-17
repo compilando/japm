@@ -9,60 +9,118 @@ const SALT_ROUNDS = 10;
 // Traducciones específicas para el proyecto de generación de código
 const codegenTranslations = {
     assets: {
-        'python-standard-imports': `import os
+        'python-standard-imports': `# Importaciones de la biblioteca estándar de Python
+import os
 import sys
 import json
 import datetime
-import math`,
+import math
+import logging
+import re
+import collections
+import functools
+import itertools
+from pathlib import Path
+from typing import Any, List, Dict, Tuple, Optional, Union, Callable
+
+# Configurar logging básico (opcional, puede ser personalizado por el usuario)
+# logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')`,
         'python-try-except-template': `try:
-    # Your code here
-    pass
+    # --- Su lógica principal aquí ---
+    # Ejemplo: resultado = operacion_arriesgada()
+    pass # Reemplace con su código
+except FileNotFoundError as fnf_error:
+    logging.error(f"Error: Archivo requerido no encontrado - {fnf_error}")
+    # Opcionalmente, relanzar o devolver un código/mensaje de error específico
+    # raise
+except ValueError as val_error:
+    logging.error(f"Error: Se encontró un valor inválido - {val_error}")
+    # Manejar errores de valor específicos
+except TypeError as type_error:
+    logging.error(f"Error: Discrepancia de tipos - {type_error}")
+    # Manejar errores de tipo específicos
 except Exception as e:
-    print(f"An error occurred: {e}")
-    # Add specific error handling or logging`,
+    logging.exception(f"Ocurrió un error inesperado: {e}") # logging.exception incluye el rastreo de pila
+    # Fallback general, considere relanzar o manejo específico
+    # raise CustomApplicationError(f"La operación falló debido a: {e}") from e
+else:
+    # Código a ejecutar si el bloque try se completa con éxito (sin excepciones)
+    # print("Operación completada exitosamente.")
+    pass
+finally:
+    # Código que se ejecutará sin importar qué (ej., limpieza)
+    # print("Ejecución finalizada.")
+    pass`,
         'python-unittest-structure': `import unittest
+from unittest.mock import patch, MagicMock
 
-# Assume function_to_test is imported from your module
-# from my_module import function_to_test
+# --- Asumir que el SUT (Sistema Bajo Prueba) está importado ---
+# from su_modulo import funcion_a_probar, ClaseAProbar
 
-class TestMyFunction(unittest.TestCase):
+class TestMiCodigo(unittest.TestCase):
 
-    def test_case_1(self):
-        # Arrange
-        input_data = ...
-        expected_output = ...
-        # Act
-        actual_output = function_to_test(input_data)
-        # Assert
-        self.assertEqual(actual_output, expected_output)
+    def setUp(self):
+        \"\"\"Configurar fixtures o variables comunes de prueba antes de cada método de prueba.\"\"\"
+        # print("Configurando prueba...")
+        # self.instancia = ClaseAProbar() # Ejemplo para pruebas de clase
+        pass
 
-    # Add more test methods
+    def tearDown(self):
+        \"\"\"Limpiar después de cada método de prueba si es necesario.\"\"\"
+        # print("Desmontando prueba...")
+        pass
+
+    # @patch(\'su_modulo.dependencia_a_mockear\') # Ejemplo de parcheo de una dependencia
+    # def test_funcion_con_dependencia_mockeada(self, mock_dependencia):
+    #     # Preparar (Arrange)
+    #     mock_dependencia.return_value = "resultado_mockeado"
+    #     datos_entrada = "alguna_entrada"
+    #     salida_esperada = "esperado_basado_en_mock"
+    #     # Actuar (Act)
+    #     salida_real = funcion_a_probar(datos_entrada)
+    #     # Afirmar (Assert)
+    #     self.assertEqual(salida_real, salida_esperada)
+    #     mock_dependencia.assert_called_once_with("arg_esperado_para_dependencia")
+
+    def test_escenario_basico_para_funcion_a_probar(self):
+        \"\"\"Probar funcion_a_probar con una entrada válida típica.\"\"\"
+        # Preparar (Arrange)
+        datos_entrada = "entrada_valida"
+        salida_esperada = "salida_valida_esperada"
+        # Actuar (Act)
+        # salida_real = funcion_a_probar(datos_entrada)
+        salida_real = "placeholder_eliminar_esto" # Reemplazar con llamada real
+        # Afirmar (Assert)
+        self.assertEqual(salida_real, salida_esperada)
+
+    def test_caso_limite_para_funcion_a_probar(self):
+        \"\"\"Probar funcion_a_probar con una entrada de caso límite.\"\"\"
+        # Preparar (Arrange)
+        datos_entrada = "entrada_caso_limite"
+        salida_esperada = "salida_caso_limite_esperada"
+        # Actuar (Act)
+        # salida_real = funcion_a_probar(datos_entrada)
+        salida_real = "placeholder_eliminar_esto" # Reemplazar con llamada real
+        # Afirmar (Assert)
+        self.assertEqual(salida_real, salida_esperada)
+
+    def test_manejo_errores_para_funcion_a_probar(self):
+        \"\"\"Probar funcion_a_probar para el manejo de errores esperado.\"\"\"
+        # Preparar (Arrange)
+        entrada_invalida = None # O algún otro dato inválido
+        # Actuar (Act) & Afirmar (Assert)
+        with self.assertRaises(TypeError): # O ValueError, CustomError, etc.
+            # funcion_a_probar(entrada_invalida)
+            pass # Reemplazar con llamada real que debería lanzar error
+
+    # Añadir más métodos de prueba para diferentes escenarios y otras funciones/clases
 
 if __name__ == '__main__':
-    unittest.main()`,
+    unittest.main(verbosity=2) # Verbosidad aumentada`,
     },
     prompts: {
-        'generate-python-function': `Generate a Python function that performs the following task: {{Task Description}}.
-            Requirements:
-            - Input arguments: {{Input Arguments}}
-            - Return value: {{Return Value}}
-            - Include standard imports: {{python-standard-imports}}
-            - Implement basic error handling using this template: {{python-try-except-template}}
-            - Include type hints.
-            - Add a concise docstring explaining what the function does, its arguments, and what it returns.`,
-        'generate-python-unittest': `Generate a Python unit test class using the 'unittest' module for the following function:
-
-\`\`\`python
-{{Function Code}}
-\`\`\`
-
-Use this structure:
-{{python-unittest-structure}}
-
-Create test cases covering:
-- {{Test Case 1 Description}}
-- {{Test Case 2 Description}}
-- (Optional) Edge cases: {{Edge Cases Description}}`
+        'generate-python-function': `Genera una función de Python robusta y bien documentada para realizar la siguiente tarea: {{Task Description}}.\n            Requisitos Esenciales:\n            - Argumentos de Entrada Claramente Definidos: {{Input Arguments}} (especificar nombres, tipos esperados y si son opcionales).\n            - Valor de Retorno Explícito: {{Return Value}} (especificar tipo y lo que representa).\n            - Importaciones Estándar Sugeridas: Utiliza el siguiente bloque como base para las importaciones necesarias: {{python-standard-imports}}.\n            - Manejo de Errores Proactivo: Implementa un manejo de errores exhaustivo utilizando la plantilla proporcionada en {{python-try-except-template}}, adaptándola para capturar excepciones específicas relevantes a la tarea.\n            - Tipado Estricto (Type Hints): Incluye anotaciones de tipo para todos los argumentos de la función y el valor de retorno.\n            - Documentación (Docstring) Completa: Añade un docstring conciso y claro que explique el propósito de la función, sus parámetros (con tipos y descripciones), lo que retorna, y cualquier excepción que pueda lanzar explícitamente. Sigue el formato PEP 257.\n            - Considerar Eficiencia y Legibilidad: El código generado debe ser eficiente para la tarea descrita y fácil de entender.`,
+        'generate-python-unittest': `Genera una suite de pruebas unitarias exhaustiva en Python utilizando el módulo \'unittest\' para la siguiente función/clase:\n\n            Código Bajo Prueba:\n            \`\`\`python\n            {{Function Code}}\n            \`\`\`\n\n            Estructura de Pruebas Base:\n            Utiliza la siguiente estructura como plantilla para la clase de prueba:\n            {{python-unittest-structure}}\n\n            Casos de Prueba Requeridos:\n            Desarrolla casos de prueba específicos que cubran meticulosamente:\n            - Escenario Principal 1: {{Test Case 1 Description}} (incluir datos de entrada, salida esperada y lógica de la prueba).\n            - Escenario Principal 2: {{Test Case 2 Description}} (incluir datos de entrada, salida esperada y lógica de la prueba).\n            - (Opcional pero Recomendado) Casos Límite y Entradas Inválidas: {{Edge Cases Description}} (ej., entradas vacías, tipos incorrectos, valores nulos, números muy grandes/pequeños, etc., y cómo la función debería manejarlos, incluyendo excepciones esperadas).\n\n            Consideraciones Adicionales para Pruebas:\n            - Si la función tiene efectos secundarios (ej., modificación de archivos, llamadas a API), considera cómo mockearlos o aislarlos.\n            - Asegura una buena cobertura de las diferentes rutas lógicas dentro del código proporcionado.\n            - Cada prueba debe ser independiente.`
     }
 };
 
