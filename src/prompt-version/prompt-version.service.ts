@@ -64,6 +64,7 @@ export class PromptVersionService {
       return await this.prisma.promptVersion.create({
         data: {
           ...createDto, // Usar todos los campos de createDto
+          languageCode: process.env.DEFAULT_LANGUAGE_CODE || 'en-US',
           versionTag: newVersionTag,
           prompt: { connect: { id: promptId } }, // Connect using the prompt CUID
         },

@@ -59,6 +59,7 @@ CREATE TABLE "PromptVersion" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "prompt" TEXT NOT NULL,
     "promptText" TEXT NOT NULL DEFAULT '',
+    "languageCode" TEXT NOT NULL DEFAULT 'en-US',
     "versionTag" TEXT NOT NULL DEFAULT 'v1.0.0',
     "changeMessage" TEXT,
     "status" TEXT NOT NULL DEFAULT 'draft',
@@ -72,7 +73,7 @@ CREATE TABLE "PromptVersion" (
     "marketplaceRejectionReason" TEXT,
     "marketplaceRequesterId" TEXT,
     "marketplaceApproverId" TEXT,
-    CONSTRAINT "PromptVersion_prompt_fkey" FOREIGN KEY ("prompt") REFERENCES "Prompt" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "PromptVersion_prompt_fkey" FOREIGN KEY ("prompt") REFERENCES "Prompt" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "PromptVersion_aiModelId_fkey" FOREIGN KEY ("aiModelId") REFERENCES "AIModel" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "PromptVersion_marketplaceRequesterId_fkey" FOREIGN KEY ("marketplaceRequesterId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "PromptVersion_marketplaceApproverId_fkey" FOREIGN KEY ("marketplaceApproverId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE

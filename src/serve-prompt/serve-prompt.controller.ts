@@ -21,7 +21,6 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ProjectGuard } from '../common/guards/project.guard';
-import { ExecutePromptParamsDto } from './dto/execute-prompt-params.dto';
 import { ExecutePromptQueryDto } from './dto/execute-prompt-query.dto';
 import { ExecutePromptBodyDto } from './dto/execute-prompt-body.dto';
 
@@ -74,11 +73,13 @@ export class ServePromptController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
   async executePromptWithoutLanguage(
-    @Param() params: ExecutePromptParamsDto,
+    @Param('projectId') projectId: string,
+    @Param('promptName') promptName: string,
+    @Param('versionTag') versionTag: string,
     @Body() body: ExecutePromptBodyDto,
     @Request() req,
   ): Promise<{ processedPrompt: string; metadata: any }> {
-    return this.service.executePromptVersion(params, body);
+    return this.service.executePromptVersion({ projectId, promptName, versionTag }, body);
   }
 
   @Post('execute/:projectId/:promptName/:versionTag/lang/:languageCode')
@@ -107,6 +108,7 @@ export class ServePromptController {
     name: 'languageCode',
     required: true,
     description: 'Language code for translation (e.g., "es")',
+    type: String,
   })
   @ApiBody({
     type: ExecutePromptBodyDto,
@@ -128,10 +130,13 @@ export class ServePromptController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden Access to Project.' })
   async executePromptWithLanguage(
-    @Param() params: ExecutePromptParamsDto,
+    @Param('projectId') projectId: string,
+    @Param('promptName') promptName: string,
+    @Param('versionTag') versionTag: string,
+    @Param('languageCode') languageCode: string,
     @Body() body: ExecutePromptBodyDto,
     @Request() req,
   ): Promise<{ processedPrompt: string; metadata: any }> {
-    return this.service.executePromptVersion(params, body);
+    return this.service.executePromptVersion({ projectId, promptName, versionTag, languageCode }, body);
   }
 }

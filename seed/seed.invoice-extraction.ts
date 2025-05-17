@@ -124,22 +124,37 @@ Use {{invoice-error-messages}} as a reference for common error phrasing if appli
 // Función para crear traducciones en español
 async function createSpanishTranslations(projectId: string) {
     console.log(`Creating Spanish translations for project ${projectId}...`);
+    const targetLanguageCode = 'es-ES'; // Definir el idioma objetivo
+
     const promptVersions = await prisma.promptVersion.findMany({
         where: { prompt: { projectId: projectId } },
-        include: { prompt: { select: { id: true } } }
+        // @ts-ignore // Quitar cuando languageCode esté en el tipo y en el include
+        include: {
+            prompt: { select: { id: true } },
+            // languageCode: true // Asegúrate de que tu cliente Prisma está actualizado
+        }
     });
     const promptAssetVersions = await prisma.promptAssetVersion.findMany({
         where: { asset: { prompt: { projectId: projectId } } },
         include: { asset: { select: { key: true } } }
     });
     for (const version of promptVersions) {
+        // @ts-ignore // Quitar cuando languageCode esté en el tipo y en el include
+        if (version.languageCode === targetLanguageCode) {
+            // @ts-ignore
+            console.log(`PromptVersion ${version.id} (Prompt: ${version.prompt.id}) is already in ${targetLanguageCode}. Skipping Spanish translation.`);
+            continue;
+        }
+        // @ts-ignore
         const translationKey = version.prompt.id;
+        // @ts-ignore
         const translationText = invoiceTranslations.prompts[translationKey] || version.promptText;
         await prisma.promptTranslation.upsert({
-            where: { versionId_languageCode: { versionId: version.id, languageCode: 'es-ES' } },
+            where: { versionId_languageCode: { versionId: version.id, languageCode: targetLanguageCode } },
             update: { promptText: translationText },
-            create: { versionId: version.id, languageCode: 'es-ES', promptText: translationText }
+            create: { versionId: version.id, languageCode: targetLanguageCode, promptText: translationText }
         });
+        // @ts-ignore
         console.log(`Created Spanish translation for prompt version ${version.id} (slug: ${translationKey})`);
     }
     for (const version of promptAssetVersions) {
@@ -162,6 +177,9 @@ async function main() {
     console.log(`-----------------------------------`);
     console.log(`Start seeding for Invoice Extraction...`);
     console.log(`Assuming base seed (user, envs, models, regions) already ran...`);
+
+    const defaultLanguageCode = process.env.DEFAULT_LANGUAGE_CODE || 'en-US';
+    console.log(`Using default language code: ${defaultLanguageCode}`);
 
     // --- Find necessary base data ---
     let defaultTenant = await prisma.tenant.findFirst({ where: { name: 'Default Tenant' } });
@@ -260,267 +278,123 @@ async function main() {
             .map(id => ({ id }));
     };
 
-    // Definición de los Prompts Temáticos de Invoice Extraction con sus assets locales
-    const invoiceProjectPrompts: {
-        id: string;
+    // 3. Upsert Prompts and their versions/assets for Invoice Extraction
+    const invoiceExtractionPrompts: {
+        id: string; // This will be the slug
         name: string;
         description: string;
         promptText: string;
         tags: string[];
-        assets?: { key: string; name: string; initialValue: string; initialChangeMessage?: string }[];
+        assets?: { key: string; initialValue: string; initialChangeMessage?: string }[]; // Name no se persiste para assets
         aiModelId?: string;
-        activeInEnvironments?: { id: string }[];
     }[] = [
             {
-                id: toSlug('extract-invoice-data'),
-                name: 'Precise Invoice Data Extraction',
-                description: 'Performs high-accuracy extraction of structured data from OCR invoice text, adhering to a detailed field list and JSON schema.',
-                promptText: `CRITICAL TASK: Accurately extract structured data from the provided OCR text of an invoice.
-OCR Input:
-\`\`\`
-{{Invoice OCR Text}}
-\`\`\`
-
-Extraction Mandate:
-1.  Identify and extract all pertinent information corresponding to the fields detailed in the asset: {{invoice-standard-fields}}.
-2.  Prioritize accuracy, especially for financial figures (amounts, totals, taxes) and critical identifiers (invoice numbers, dates).
-3.  For dates (IssueDate, DueDate), normalize to YYYY-MM-DD format if possible. If original format is ambiguous or different, extract as found and add a note if necessary.
-4.  Handle complex cases like multiple tax rates or detailed line items by populating the respective array structures as defined in the schema.
-5.  If a field is genuinely absent from the invoice text, represent its value as \`null\` in the output. Do not infer or invent data.
-
-Output Format:
-Strictly adhere to the JSON schema defined in the asset {{invoice-json-schema}}. Ensure the output is a single, valid JSON object.
-
-Example Focus Areas:
-- Distinguish clearly between Vendor and Client information.
-- Correctly parse line items, including quantity, unit price, and total for each.
-- Identify all components of the total amount (subtotal, discounts, taxes).`,
-                tags: ['data-extraction', 'ocr', 'json-output', 'invoice-processing', 'accuracy-focused'],
+                id: toSlug('Extract Structured Invoice Data'),
+                name: 'Extract Structured Invoice Data',
+                description: 'Comprehensive prompt to extract all relevant fields from an invoice OCR text, outputting structured JSON.',
+                promptText: invoiceTranslations.prompts['extract-invoice-data'], // Usar la traducción como base
+                tags: ['invoice', 'data-extraction', 'ocr', 'json-output'],
                 assets: [
-                    {
-                        key: 'invoice-standard-fields',
-                        name: 'Comprehensive Invoice Field Definitions & Examples',
-                        initialValue: `- InvoiceID (e.g., INV-2023-001, #12345, Factura N°: 9876)
-- IssueDate (Format: YYYY-MM-DD, e.g., Invoice Date, Fecha de Emisión)
-- DueDate (Format: YYYY-MM-DD, e.g., Payment Due, Fecha de Vencimiento)
-- VendorName (e.g., Supplier Inc., Nombre del Proveedor)
-- VendorAddress (Full address of the seller)
-- VendorTaxID (Optional, e.g., VAT ID, CIF)
-- ClientName (e.g., Buyer Corp., Nombre del Cliente, Bill To)
-- ClientAddress (Full address of the buyer)
-- ClientTaxID (Optional, e.g., Customer VAT ID)
-- SubtotalAmount (Total before taxes and discounts)
-- DiscountAmount (Optional, total discount applied)
-- TaxDetails: [ { TaxRatePercentage: number, TaxAmount: number, TaxType: string (e.g., VAT, IVA, Sales Tax) } ] (Array of tax objects if multiple)
-- TotalAmount (The final amount due, e.g., Grand Total, Importe Total)
-- Currency (ISO 4217 code, e.g., USD, EUR, GBP)
-- LineItems: [ { Description: string, Quantity: number, UnitPrice: number, ItemTotal: number, ProductCode: string (optional) } ] (Array of line item objects)
-- PaymentInstructions (Optional, e.g., Bank details, payment terms like "Net 30")`
-                    },
-                    {
-                        key: 'invoice-json-schema',
-                        name: 'Detailed Invoice JSON Output Schema',
-                        initialValue: `{
-  "type": "object",
-  "properties": {
-    "InvoiceID": { "type": ["string", "null"], "description": "Unique invoice identifier (e.g., INV-2023-001, #12345) }
-    "IssueDate": { "type": ["string", "null"], "format": "date", "description": "Date of issue (YYYY-MM-DD) }
-    "DueDate": { "type": ["string", "null"], "format": "date", "description": "Payment due date (YYYY-MM-DD) }
-    "VendorName": { "type": ["string", "null"] }
-    "VendorAddress": { "type": ["string", "null"] }
-    "VendorTaxID": { "type": ["string", "null"] }
-    "ClientName": { "type": ["string", "null"] }
-    "ClientAddress": { "type": ["string", "null"] }
-    "ClientTaxID": { "type": ["string", "null"] }
-    "SubtotalAmount": { "type": ["number", "null"] }
-    "DiscountAmount": { "type": ["number", "null"] }
-    "TaxDetails": {
-      "type": ["array", "null"],
-      "items": {
-        "type": "object",
-        "properties": {
-          "TaxRatePercentage": { "type": ["number", "null"] }
-          "TaxAmount": { "type": ["number", "null"] }
-          "TaxType": { "type": ["string", "null"] }
-        },
-        "required": ["TaxAmount"]
-      }
-    },
-    "TotalAmount": { "type": ["number", "null"] }
-    "Currency": { "type": ["string", "null"], "pattern": "^[A-Z]{3}$" }
-    "LineItems": {
-      "type": ["array", "null"],
-      "items": {
-        "type": "object",
-        "properties": {
-          "Description": { "type": ["string", "null"] }
-          "Quantity": { "type": ["number", "null"] }
-          "UnitPrice": { "type": ["number", "null"] }
-          "ItemTotal": { "type": ["number", "null"] }
-          "ProductCode": { "type": ["string", "null"] }
-        },
-        "required": ["Description", "ItemTotal"]
-      }
-    },
-    "PaymentInstructions": { "type": ["string", "null"] }
-  },
-  "required": ["InvoiceID", "IssueDate", "VendorName", "ClientName", "TotalAmount", "Currency"]
-}`
-                    }
+                    { key: 'invoice-standard-fields', initialValue: invoiceTranslations.assets['invoice-standard-fields'], initialChangeMessage: 'Initial version of standard fields asset' },
+                    { key: 'invoice-json-schema', initialValue: '{\"$schema\": \"http://json-schema.org/draft-07/schema#\", \"title\": \"ExtractedInvoiceData\", \"description\": \"Schema for structured data extracted from an invoice.\", \"type\": \"object\", \"properties\": {\"invoiceId\": {\"type\": [\"string\", \"null\"], \"description\": \"Unique invoice identifier.\"}, \"issueDate\": {\"type\": [\"string\", \"null\"], \"format\": \"date\", \"description\": \"Date the invoice was issued (YYYY-MM-DD).\"}, \"dueDate\": {\"type\": [\"string\", \"null\"], \"format\": \"date\", \"description\": \"Date payment is due (YYYY-MM-DD).\"}, \"vendorName\": {\"type\": [\"string\", \"null\"]}, \"vendorAddress\": {\"type\": [\"string\", \"null\"]}, \"vendorTaxId\": {\"type\": [\"string\", \"null\"]}, \"clientName\": {\"type\": [\"string\", \"null\"]}, \"clientAddress\": {\"type\": [\"string\", \"null\"]}, \"clientTaxId\": {\"type\": [\"string\", \"null\"]}, \"subtotalAmount\": {\"type\": [\"number\", \"null\"]}, \"discountAmount\": {\"type\": [\"number\", \"null\"]}, \"taxDetails\": {\"type\": \"array\", \"items\": {\"type\": \"object\", \"properties\": {\"taxRatePercentage\": {\"type\": \"number\"}, \"taxAmount\": {\"type\": \"number\"}, \"taxType\": {\"type\": \"string\"}}, \"required\": [\"taxAmount\"]}}, \"totalAmount\": {\"type\": [\"number\", \"null\"]}, \"currency\": {\"type\": [\"string\", \"null\"], \"pattern\": \"^[A-Z]{3}$\"}, \"lineItems\": {\"type\": \"array\", \"items\": {\"type\": \"object\", \"properties\": {\"description\": {\"type\": \"string\"}, \"quantity\": {\"type\": \"number\"}, \"unitPrice\": {\"type\": \"number\"}, \"itemTotal\": {\"type\": \"number\"}, \"productCode\": {\"type\": [\"string\", \"null\"]}}, \"required\": [\"description\", \"itemTotal\"]}}}, \"required\": [\"invoiceId\", \"issueDate\", \"vendorName\", \"clientName\", \"totalAmount\", \"currency\"]}}', initialChangeMessage: 'Initial version of invoice JSON schema' }
                 ],
-                aiModelId: invGpt4o.id,
-                activeInEnvironments: [{ id: invDevEnv.id }, { id: invStagingEnv.id }]
+                aiModelId: invGpt4o.id
             },
             {
-                id: toSlug('validate-invoice'),
-                name: 'Meticulous Invoice Data Validation',
-                description: 'Performs a meticulous validation of extracted invoice data against a comprehensive set of rules, providing a structured report of any discrepancies.',
-                promptText: `Perform a meticulous validation of the extracted invoice data provided below, cross-referencing against the comprehensive {{invoice-validation-rules}}.
-
-Extracted Invoice Data (JSON):
-\`\`\`json
-{{data}}
-\`\`\`
-
-Validation Protocol:
-Execute all checks outlined in {{invoice-validation-rules}}. For each potential discrepancy, provide:
-1.  **Field(s) Involved:** Clearly state the JSON path(s) to the problematic field(s).
-2.  **Rule Violated:** Specify the exact rule number and description from {{invoice-validation-rules}} that was breached.
-3.  **Observed Value(s):** Show the actual data found in the field(s).
-4.  **Expected Value/Condition:** Explain what the rule expected.
-5.  **Severity:** (e.g., Critical, Warning, Info)
-6.  **Suggested Action/Clarification Needed:** (e.g., "Verify invoice number with issuing system", "Confirm calculation with source document", "Missing required field: ClientTaxID")
-
-Output:
-Return a structured report (e.g., an array of validation issue objects, or a clear textual summary). If no issues are found, explicitly state: "Invoice data passed all validation checks."
-Use {{invoice-error-messages}} as a reference for common error phrasing if applicable, but provide specific details for each issue.`,
-                tags: ['data-extraction', 'validation', 'invoice-processing', 'data-integrity', 'quality-assurance'],
+                id: toSlug('Validate Extracted Invoice Data'),
+                name: 'Validate Extracted Invoice Data',
+                description: 'Validates extracted invoice data against a set of predefined business rules.',
+                promptText: invoiceTranslations.prompts['validate-invoice'], // Usar la traducción como base
+                tags: ['invoice', 'validation', 'data-integrity', 'business-rules'],
                 assets: [
-                    {
-                        key: 'invoice-validation-rules',
-                        name: 'Comprehensive Invoice Validation Protocol',
-                        initialValue: `**Comprehensive Invoice Data Validation Protocol:**
-1.  **Uniqueness & Integrity:**
-    *   \`InvoiceID\`: Must be unique within the system (requires external check capabilities). Format consistency check (e.g., alphanumeric, specific prefixes).
-    *   \`IssueDate\`: Must be a valid date, not in the future. Must be before or same as \`DueDate\` if both present.
-    *   \`DueDate\`: Must be a valid date.
-2.  **Financial Accuracy:**
-    *   \`LineItems\`: For each item, \`Quantity * UnitPrice\` should closely match \`ItemTotal\` (allow for minor rounding differences, e.g., +/- 0.01).
-    *   \`SubtotalAmount\`: Sum of all \`LineItems.ItemTotal\` should match \`SubtotalAmount\`.
-    *   \`TotalAmount\`: \`SubtotalAmount\` - \`DiscountAmount\` (if present) + Sum of all \`TaxDetails.TaxAmount\` should equal \`TotalAmount\`.
-    *   All monetary amounts (\`UnitPrice\`, \`ItemTotal\`, \`SubtotalAmount\`, \`DiscountAmount\`, \`TaxAmount\`, \`TotalAmount\`) must be non-negative.
-3.  **Completeness (Core Fields based on Schema):**
-    *   Ensure all fields marked as \'required\' in {{invoice-json-schema}} are present and not null (e.g., InvoiceID, IssueDate, VendorName, ClientName, TotalAmount, Currency).
-4.  **Relational Consistency:**
-    *   If \`TaxDetails\` are present, \`TaxAmount\` for each should be plausible given \`SubtotalAmount\` and \`TaxRatePercentage\`.
-    *   \`Currency\`: Must be a valid ISO 4217 code.
-5.  **Plausibility (Advanced):**
-    *   \`VendorName\` / \`ClientName\`: Check against known entity lists if available.
-    *   Unusually high \`DiscountAmount\` or \`TaxAmount\` might warrant a flag.`
-                    },
-                    {
-                        key: 'invoice-error-messages',
-                        name: 'Standardized Invoice Error Message Templates',
-                        initialValue: `Error messages:
-- "[Critical] Duplicate Invoice ID: {{InvoiceID}} already exists in system."
-- "[Error] Invalid IssueDate: {{IssueDate}} is in the future or invalid format."
-- "[Error] DueDate {{DueDate}} cannot be before IssueDate {{IssueDate}}."
-- "[Warning] Line Item Discrepancy (Item: {{ItemDescription}}): Calculated total {{CalcTotal}} does not match reported ItemTotal {{ItemTotal}}."
-- "[Error] Subtotal Mismatch: Sum of line items {{SumLineItems}} does not match SubtotalAmount {{SubtotalAmount}}."
-- "[Critical] Grand Total Mismatch: Calculated grand total {{CalcGrandTotal}} does not match reported TotalAmount {{TotalAmount}}."
-- "[Error] Missing Required Field: {{FieldName}}."
-- "[Error] Negative Monetary Amount: {{FieldName}} has value {{FieldValue}}."
-- "[Warning] Currency code {{Currency}} might be invalid or non-standard."
-- "[Info] Payment term '{{Term}}' extracted. Requires verification if unusual."`
-                    }
+                    { key: 'invoice-validation-rules', initialValue: invoiceTranslations.assets['invoice-validation-rules'], initialChangeMessage: 'Initial version of validation rules' },
+                    { key: 'invoice-error-messages', initialValue: invoiceTranslations.assets['invoice-error-messages'], initialChangeMessage: 'Initial version of error messages' }
                 ],
-                aiModelId: invGpt4oMini.id,
-                activeInEnvironments: [{ id: invDevEnv.id }, { id: invStagingEnv.id }]
+                aiModelId: invGpt4oMini.id // Could use a smaller model for validation logic
             }
         ];
 
-    for (const promptData of invoiceProjectPrompts) {
+    for (const promptSeed of invoiceExtractionPrompts) {
         const prompt = await prisma.prompt.upsert({
-            where: { prompt_id_project_unique: { id: promptData.id, projectId: invProjectId } },
+            where: { prompt_id_project_unique: { id: promptSeed.id, projectId: invProjectId } },
             update: {
-                name: promptData.name,
-                description: promptData.description,
-                tags: { connect: getInvTagIds(promptData.tags) }
+                name: promptSeed.name,
+                description: promptSeed.description,
+                tags: { connect: getInvTagIds(promptSeed.tags) },
             },
             create: {
-                id: promptData.id,
-                name: promptData.name,
-                description: promptData.description,
-                project: { connect: { id: invProjectId } },
-                tags: { connect: getInvTagIds(promptData.tags) },
+                id: promptSeed.id,
+                name: promptSeed.name,
+                description: promptSeed.description,
+                tags: { connect: getInvTagIds(promptSeed.tags) },
+                projectId: invProjectId,
             },
+            select: { id: true }
         });
-        console.log(`Upserted Prompt: ${prompt.name} (ID: ${prompt.id}) in project ${invProjectId}`);
+        console.log(`Upserted Prompt: ${promptSeed.name} (ID: ${prompt.id})`);
 
-        if (promptData.assets) {
-            for (const assetInfo of promptData.assets) {
+        if (promptSeed.assets) {
+            for (const assetSeed of promptSeed.assets) {
                 const asset = await prisma.promptAsset.upsert({
-                    where: {
-                        prompt_asset_key_unique: { // Usando el nombre del constraint del schema
-                            promptId: prompt.id,
-                            projectId: invProjectId,
-                            key: assetInfo.key,
-                        }
-                    },
-                    update: {},
+                    where: { prompt_asset_key_unique: { key: assetSeed.key, promptId: prompt.id, projectId: invProjectId } },
+                    update: {}, // No 'name' field in PromptAsset
                     create: {
-                        key: assetInfo.key,
+                        key: assetSeed.key,
                         promptId: prompt.id,
-                        projectId: invProjectId, // Campo directo en PromptAsset según schema
+                        projectId: invProjectId,
                     },
-                    include: { versions: true }
+                    select: { id: true }
                 });
 
-                let version = asset.versions?.find(v => v.versionTag === 'v1.0.0');
-                if (!version) {
-                    version = await prisma.promptAssetVersion.create({
-                        data: {
-                            assetId: asset.id,
-                            value: assetInfo.initialValue,
-                            versionTag: 'v1.0.0',
-                            status: 'active',
-                            changeMessage: assetInfo.initialChangeMessage || `Initial version of ${assetInfo.name}`
-                        }
-                    });
-                    console.log(`Created initial version for asset ${assetInfo.key} in prompt ${prompt.id}`);
-                } else if (version.value !== assetInfo.initialValue) {
-                    await prisma.promptAssetVersion.update({
-                        where: { id: version.id },
-                        data: { value: assetInfo.initialValue, changeMessage: `Updated initial value for ${assetInfo.name} during seed` }
-                    });
-                    console.log(`Updated initial version for asset ${assetInfo.key} in prompt ${prompt.id}`);
-                }
+                await prisma.promptAssetVersion.upsert({
+                    where: { assetId_versionTag: { assetId: asset.id, versionTag: 'v1.0.0' } },
+                    update: {
+                        value: assetSeed.initialValue,
+                        changeMessage: assetSeed.initialChangeMessage || `Initial version for asset ${assetSeed.key}`, // No assetSeed.name
+                    },
+                    create: {
+                        assetId: asset.id,
+                        versionTag: 'v1.0.0',
+                        value: assetSeed.initialValue,
+                        changeMessage: assetSeed.initialChangeMessage || `Initial version for asset ${assetSeed.key}`, // No assetSeed.name
+                        status: 'active',
+                    },
+                    select: { id: true }
+                });
+                console.log(`Upserted Asset & Version: ${assetSeed.key} for prompt ${promptSeed.name}`);
             }
         }
 
-        await prisma.promptVersion.upsert({
+        // Create PromptVersion
+        const promptVersion = await prisma.promptVersion.upsert({
             where: { promptId_versionTag: { promptId: prompt.id, versionTag: 'v1.0.0' } },
             update: {
-                promptText: promptData.promptText,
+                promptText: promptSeed.promptText,
+                aiModelId: promptSeed.aiModelId || invGpt4o.id, // Default to invGpt4o if not specified
                 status: 'active',
-                changeMessage: `Initial version for ${promptData.name}. (Updated via upsert)`,
-                activeInEnvironments: { set: promptData.activeInEnvironments || [{ id: invDevEnv.id }, { id: invStagingEnv.id }] },
-                aiModelId: promptData.aiModelId || invGpt4o.id
+                changeMessage: `Initial version of ${promptSeed.name}`,
+                languageCode: defaultLanguageCode, // <--- AÑADIDO languageCode
+                activeInEnvironments: { set: [{ id: invDevEnv.id }, { id: invStagingEnv.id }] } // Default active environments
             },
             create: {
                 promptId: prompt.id,
-                promptText: promptData.promptText,
-                versionTag: 'v1.0.0', status: 'active',
-                changeMessage: `Initial version for ${promptData.name}.`,
-                activeInEnvironments: { connect: promptData.activeInEnvironments || [{ id: invDevEnv.id }, { id: invStagingEnv.id }] },
-                aiModelId: promptData.aiModelId || invGpt4o.id
+                promptText: promptSeed.promptText,
+                versionTag: 'v1.0.0',
+                aiModelId: promptSeed.aiModelId || invGpt4o.id,
+                status: 'active',
+                changeMessage: `Initial version of ${promptSeed.name}`,
+                languageCode: defaultLanguageCode, // <--- AÑADIDO languageCode
+                activeInEnvironments: { connect: [{ id: invDevEnv.id }, { id: invStagingEnv.id }] }
             },
+            select: { id: true, languageCode: true } // Asegurar que se selecciona languageCode
         });
-        console.log(`Upserted PromptVersion for ${prompt.name} V1`);
+        console.log(`Upserted PromptVersion ${promptVersion.id} (Lang: ${promptVersion.languageCode}) for prompt ${promptSeed.name}`);
     }
 
+    // Crear traducciones en español
     await createSpanishTranslations(invProjectId);
-    console.log(`Finished seeding Invoice Extraction.`);
+
+    console.log('Invoice Extraction seeding finished.');
 }
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(async () => { await prisma.$disconnect(); });

@@ -36,6 +36,10 @@ import {
   'Asset Translations (Project > Prompt > Asset > Version > Translation)',
 )
 @ApiBearerAuth()
+@ApiParam({ name: 'projectId', description: 'ID of the Project', required: true, type: String })
+@ApiParam({ name: 'promptId', description: 'ID (slug) of the Prompt', required: true, type: String })
+@ApiParam({ name: 'assetKey', description: 'Key of the PromptAsset', required: true, type: String })
+@ApiParam({ name: 'versionTag', description: 'Tag of the PromptAssetVersion', required: true, type: String })
 @Controller(
   'projects/:projectId/prompts/:promptId/assets/:assetKey/versions/:versionTag/translations',
 )
@@ -44,15 +48,6 @@ export class AssetTranslationController {
 
   constructor(private readonly service: AssetTranslationService) {
     this.logger.log('[AssetTranslationController] Constructor called');
-  }
-
-  @All('debug-catch-all')
-  catchAllHandler(@Param() params: any, @Request() req: any): string {
-    const routeParams = JSON.stringify(params);
-    this.logger.log(
-      `[AssetTranslationController] CATCH-ALL HANDLER (debug-catch-all) invoked. Params: ${routeParams}. Request path: ${req.path}. Method: ${req.method}`,
-    );
-    return `AssetTranslationController CATCH-ALL (debug-catch-all) reached. Path: ${req.path}. Params: ${routeParams}`;
   }
 
   @Post()
@@ -174,6 +169,7 @@ export class AssetTranslationController {
     name: 'languageCode',
     description: 'Language code (e.g., es-ES)',
     required: true,
+    type: String,
   })
   @ApiResponse({
     status: 200,
@@ -230,6 +226,7 @@ export class AssetTranslationController {
     name: 'languageCode',
     description: 'Language code of the translation to update',
     required: true,
+    type: String,
   })
   @ApiBody({ type: UpdateAssetTranslationDto })
   @ApiResponse({
@@ -286,6 +283,7 @@ export class AssetTranslationController {
     name: 'languageCode',
     description: 'Language code of the translation to delete',
     required: true,
+    type: String,
   })
   @ApiResponse({ status: 200, description: 'Translation deleted.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })

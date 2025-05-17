@@ -20,6 +20,7 @@ const creativeTranslations = {
 // Función para crear traducciones en español
 async function createSpanishTranslations(projectId: string) {
     console.log(`Creating Spanish translations for project ${projectId}...`);
+    const targetLanguageCode = 'es-ES'; // Definir el idioma objetivo
 
     const promptVersions = await prisma.promptVersion.findMany({
         where: {
@@ -28,8 +29,11 @@ async function createSpanishTranslations(projectId: string) {
             }
         },
         include: {
-            prompt: { select: { id: true } } // Solo necesitamos el id (slug) del prompt padre
+            prompt: { select: { id: true } }, // Solo necesitamos el id (slug) del prompt padre
+            // languageCode: true // Asumiendo que languageCode está directamente en PromptVersion
         }
+        // DEBES ASEGURARTE DE QUE EL CLIENTE PRISMA ESTÁ ACTUALIZADO Y languageCode ES UN CAMPO VÁLIDO PARA INCLUIR/SELECCIONAR
+        // Si PromptVersion type no lo tiene, la query fallará.
     });
 
     const promptAssetVersions = await prisma.promptAssetVersion.findMany({
@@ -46,13 +50,22 @@ async function createSpanishTranslations(projectId: string) {
     });
 
     for (const version of promptVersions) {
+        // @ts-ignore // Quitar cuando languageCode esté en el tipo y en el include
+        if (version.languageCode === targetLanguageCode) {
+            // @ts-ignore
+            console.log(`PromptVersion ${version.id} (Prompt: ${version.prompt.id}) is already in ${targetLanguageCode}. Skipping Spanish translation.`);
+            continue;
+        }
+        // @ts-ignore
         const translationKey = version.prompt.id; // Este es el slug del prompt, ej: 'generate-scene'
+        // @ts-ignore
         const translationText = creativeTranslations.prompts[translationKey] || version.promptText;
         await prisma.promptTranslation.upsert({
-            where: { versionId_languageCode: { versionId: version.id, languageCode: 'es-ES' } },
+            where: { versionId_languageCode: { versionId: version.id, languageCode: targetLanguageCode } },
             update: { promptText: translationText },
-            create: { versionId: version.id, languageCode: 'es-ES', promptText: translationText }
+            create: { versionId: version.id, languageCode: targetLanguageCode, promptText: translationText }
         });
+        // @ts-ignore
         console.log(`Created Spanish translation for prompt version ${version.id} (prompt slug: ${translationKey})`);
     }
 
@@ -90,6 +103,9 @@ async function main() {
     console.log(`-----------------------------------`);
     console.log(`Start seeding for Creative Writing & Adaptation...`);
     console.log('Assuming prior cleanup...');
+
+    const defaultLanguageCode = process.env.DEFAULT_LANGUAGE_CODE || 'en-US';
+    console.log(`Using default language code: ${defaultLanguageCode}`);
 
     let defaultTenant = await prisma.tenant.findFirst({ where: { name: 'Default Tenant' } });
     if (!defaultTenant) {
@@ -249,76 +265,69 @@ async function main() {
                 id: promptData.id,
                 name: promptData.name,
                 description: promptData.description,
-                project: { connect: { id: crProjectId } },
                 tags: { connect: getCrTagIds(promptData.tags) },
+                projectId: crProjectId
             },
+            select: { id: true, name: true }
         });
-        console.log(`Upserted Prompt: ${prompt.name} (ID: ${prompt.id}) in project ${crProjectId}`);
+        console.log(`Upserted Prompt: ${prompt.name}`);
 
         if (promptData.assets) {
-            for (const assetInfo of promptData.assets) {
+            for (const assetSeed of promptData.assets) {
                 const asset = await prisma.promptAsset.upsert({
-                    where: {
-                        prompt_asset_key_unique: {
-                            promptId: prompt.id,
-                            projectId: crProjectId,
-                            key: assetInfo.key,
-                        }
-                    },
+                    where: { prompt_asset_key_unique: { key: assetSeed.key, promptId: prompt.id, projectId: crProjectId } },
                     update: {},
                     create: {
-                        key: assetInfo.key,
+                        key: assetSeed.key,
                         promptId: prompt.id,
-                        projectId: crProjectId,
+                        projectId: crProjectId
                     },
-                    include: { versions: true }
+                    select: { id: true }
                 });
 
-                let version = asset.versions?.find(v => v.versionTag === 'v1.0.0');
-                if (!version) {
-                    version = await prisma.promptAssetVersion.create({
-                        data: {
-                            assetId: asset.id,
-                            value: assetInfo.initialValue,
-                            versionTag: 'v1.0.0',
-                            status: 'active',
-                            changeMessage: assetInfo.initialChangeMessage || `Initial version of ${assetInfo.name}`
-                        }
-                    });
-                    console.log(`Created initial version for asset ${asset.key} in prompt ${prompt.id}`);
-                } else if (version.value !== assetInfo.initialValue) {
-                    await prisma.promptAssetVersion.update({
-                        where: { id: version.id },
-                        data: { value: assetInfo.initialValue, changeMessage: `Updated initial value for ${assetInfo.name} during seed` }
-                    });
-                    console.log(`Updated initial version for asset ${asset.key} in prompt ${prompt.id}`);
-                }
+                await prisma.promptAssetVersion.upsert({
+                    where: { assetId_versionTag: { assetId: asset.id, versionTag: 'v1.0.0' } }, // Asumiendo v1.0.0 para el seed
+                    update: {
+                        value: assetSeed.initialValue,
+                        changeMessage: assetSeed.initialChangeMessage || `Initial version for asset ${assetSeed.key}`
+                    },
+                    create: {
+                        assetId: asset.id,
+                        versionTag: 'v1.0.0',
+                        value: assetSeed.initialValue,
+                        changeMessage: assetSeed.initialChangeMessage || `Initial version for asset ${assetSeed.key}`,
+                        status: 'active'
+                    }
+                });
+                console.log(`Upserted PromptAsset & Version: ${assetSeed.key} for Prompt ${prompt.name}`);
             }
         }
 
+        const promptVersionData = {
+            promptId: prompt.id,
+            promptText: promptData.promptText,
+            versionTag: 'v1.0.0',
+            changeMessage: 'Initial version of the prompt',
+            status: 'active',
+            aiModelId: promptData.aiModelId || crGpt4oMini.id,
+            languageCode: defaultLanguageCode,
+            activeInEnvironments: { connect: promptData.activeInEnvironments || [{ id: crDevEnv.id }, { id: crStagingEnv.id }] }
+        };
+
+        // Upsert PromptVersion
         await prisma.promptVersion.upsert({
-            where: { promptId_versionTag: { promptId: prompt.id, versionTag: 'v1.0.0' } },
-            update: {
-                promptText: promptData.promptText,
-                status: 'active',
-                changeMessage: `Initial version for ${promptData.name}. (Updated via upsert)`,
-                activeInEnvironments: { set: promptData.activeInEnvironments || [{ id: crDevEnv.id }, { id: crStagingEnv.id }] },
-                aiModelId: promptData.aiModelId || crGpt4o.id
-            },
-            create: {
-                promptId: prompt.id,
-                promptText: promptData.promptText,
-                versionTag: 'v1.0.0', status: 'active',
-                changeMessage: `Initial version for ${promptData.name}.`,
-                activeInEnvironments: { connect: promptData.activeInEnvironments || [{ id: crDevEnv.id }, { id: crStagingEnv.id }] },
-                aiModelId: promptData.aiModelId || crGpt4o.id
-            },
+            where: { promptId_versionTag: { promptId: prompt.id, versionTag: 'v1.0.0' } }, // Asumiendo v1.0.0 para el seed
+            update: promptVersionData, // Usar el objeto definido arriba
+            create: promptVersionData, // Usar el objeto definido arriba
+            select: { id: true, languageCode: true } // Asegurar que se selecciona languageCode
         });
-        console.log(`Upserted PromptVersion for ${prompt.name} V1`);
+        console.log(`Upserted PromptVersion for ${prompt.name} (Lang: ${defaultLanguageCode})`);
     }
 
+    // Crear traducciones en español
     await createSpanishTranslations(crProjectId);
-    console.log(`Finished seeding Creative Writing & Adaptation.`);
+
+    console.log('Creative Writing & Adaptation seeding finished.');
 }
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(async () => { await prisma.$disconnect(); });

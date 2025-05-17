@@ -66,6 +66,7 @@ const educationTranslations = {
 // Función para crear traducciones en español
 async function createSpanishTranslations(projectId: string) {
     console.log(`Creating Spanish translations for project ${projectId}...`);
+    const targetLanguageCode = 'es-ES'; // Definir el idioma objetivo
 
     const promptVersions = await prisma.promptVersion.findMany({
         where: {
@@ -74,8 +75,12 @@ async function createSpanishTranslations(projectId: string) {
             }
         },
         include: {
-            prompt: true
-        }
+            prompt: { select: { id: true } }, // Asegurar que el id del prompt se incluye
+            // languageCode: true // Asumiendo que languageCode está directamente en PromptVersion
+        },
+        // DEBES ASEGURARTE DE QUE EL CLIENTE PRISMA ESTÁ ACTUALIZADO Y languageCode ES UN CAMPO VÁLIDO PARA INCLUIR/SELECCIONAR
+        // Si PromptVersion type no lo tiene, la query fallará.
+        // Por ahora, lo consultaremos y accederemos como si existiera.
     });
 
     const promptAssetVersions = await prisma.promptAssetVersion.findMany({
@@ -91,28 +96,39 @@ async function createSpanishTranslations(projectId: string) {
 
     // Crear traducciones para promptversion
     for (const version of promptVersions) {
+        // @ts-ignore // Quitar esto cuando languageCode esté en el tipo PromptVersion y en el include de la consulta
+        if (version.languageCode === targetLanguageCode) {
+            // @ts-ignore
+            console.log(`PromptVersion ${version.id} (Prompt: ${version.prompt.id}) is already in ${targetLanguageCode}. Skipping Spanish translation.`);
+            continue;
+        }
+
         // Usar el slug del prompt como clave para la traducción
-        const translation = educationTranslations.prompts[version.prompt.id] || version.promptText;
-        if (translation) {
+        // @ts-ignore
+        const translationText = educationTranslations.prompts[version.prompt.id]; // Acceder al ID del prompt
+
+        if (translationText) {
             await prisma.promptTranslation.upsert({
                 where: {
                     versionId_languageCode: {
                         versionId: version.id,
-                        languageCode: 'es-ES'
+                        languageCode: targetLanguageCode
                     }
                 },
                 update: {
-                    promptText: translation
+                    promptText: translationText
                 },
                 create: {
                     versionId: version.id,
-                    languageCode: 'es-ES',
-                    promptText: translation
+                    languageCode: targetLanguageCode,
+                    promptText: translationText
                 }
             });
+            // @ts-ignore
             console.log(`Created/Updated Spanish translation for prompt version ${version.id} (Prompt: ${version.prompt.id})`);
         } else {
-            console.warn(`No Spanish translation found for prompt: ${version.prompt.id}`);
+            // @ts-ignore
+            console.warn(`No Spanish translation found in educationTranslations.prompts for prompt: ${version.prompt.id}`);
         }
     }
 
@@ -226,6 +242,9 @@ async function main() {
     console.log(`-----------------------------------`);
     console.log(`Start seeding for Educational Content & Tutoring...`);
     console.log('Assuming prior cleanup...');
+
+    const defaultLanguageCode = process.env.DEFAULT_LANGUAGE_CODE || 'en-US';
+    console.log(`Using default language code: ${defaultLanguageCode}`);
 
     let defaultTenant = await prisma.tenant.findFirst({ where: { name: 'Default Tenant' } });
     if (!defaultTenant) {
@@ -402,12 +421,13 @@ async function main() {
                     promptId: prompt.id,
                     versionTag: versionSeed.versionTag,
                     promptText: versionSeed.promptText || promptSeed.promptContent,
+                    languageCode: defaultLanguageCode,
                     aiModelId: versionSeed.aiModelId || eduGpt4oMini.id,
                     activeInEnvironments: { connect: [{ id: devEnv.id }, { id: stagingEnv.id }] },
                 },
-                select: { id: true }
+                select: { id: true, languageCode: true }
             });
-            console.log(`Created PromptVersion ${newPromptVersion.id} (Tag: ${versionSeed.versionTag}) for Prompt ${prompt.id}`);
+            console.log(`Created PromptVersion ${newPromptVersion.id} (Tag: ${versionSeed.versionTag}, Lang: ${newPromptVersion.languageCode}) for Prompt ${prompt.id}`);
             if (connectAssetVersionIds.length > 0) {
                 console.warn(`PromptVersion ${newPromptVersion.id} created, but associated asset versions ([${connectAssetVersionIds.map(obj => obj.id).join(', ')}]) were NOT LINKED due to schema constraints. Link them manually if needed.`);
             }

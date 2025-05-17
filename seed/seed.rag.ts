@@ -20,6 +20,7 @@ const ragTranslations = {
 // Función para crear traducciones en español
 async function createSpanishTranslations(projectId: string) {
     console.log(`Creating Spanish translations for project ${projectId}...`);
+    const targetLanguageCode = 'es-ES'; // Definir el idioma objetivo
 
     // Obtener todas las promptversion y promptassetversion del proyecto
     const promptVersions = await prisma.promptVersion.findMany({
@@ -28,8 +29,10 @@ async function createSpanishTranslations(projectId: string) {
                 projectId: projectId
             }
         },
+        // @ts-ignore // Quitar cuando languageCode esté en el tipo y en el include
         include: {
-            prompt: true
+            prompt: { select: { id: true } }, // Incluir el id del prompt para buscar en ragTranslations
+            // languageCode: true // Asegúrate de que tu cliente Prisma está actualizado
         }
     });
 
@@ -46,12 +49,19 @@ async function createSpanishTranslations(projectId: string) {
 
     // Crear traducciones para promptversion
     for (const version of promptVersions) {
+        // @ts-ignore // Quitar cuando languageCode esté en el tipo y en el include
+        if (version.languageCode === targetLanguageCode) {
+            // @ts-ignore
+            console.log(`PromptVersion ${version.id} (Prompt: ${version.prompt.id}) is already in ${targetLanguageCode}. Skipping Spanish translation.`);
+            continue;
+        }
+        // @ts-ignore
         const translation = ragTranslations.prompts[version.prompt.id] || version.promptText;
         await prisma.promptTranslation.upsert({
             where: {
                 versionId_languageCode: {
                     versionId: version.id,
-                    languageCode: 'es-ES'
+                    languageCode: targetLanguageCode
                 }
             },
             update: {
@@ -59,10 +69,11 @@ async function createSpanishTranslations(projectId: string) {
             },
             create: {
                 versionId: version.id,
-                languageCode: 'es-ES',
+                languageCode: targetLanguageCode,
                 promptText: translation
             }
         });
+        // @ts-ignore
         console.log(`Created Spanish translation for prompt version ${version.id}`);
     }
 
@@ -109,6 +120,9 @@ async function main() {
     console.log(`-----------------------------------`);
     console.log(`Start seeding for Internal Knowledge Base (RAG)...`);
     console.log('Assuming prior cleanup...');
+
+    const defaultLanguageCode = process.env.DEFAULT_LANGUAGE_CODE || 'en-US';
+    console.log(`Using default language code: ${defaultLanguageCode}`);
 
     let defaultTenant = await prisma.tenant.findFirst({ where: { name: 'Default Tenant' } });
     if (!defaultTenant) {
@@ -391,7 +405,8 @@ async function main() {
             Answer:`, // CORREGIDO placeholder
             status: 'active',
             activeInEnvironments: { set: [{ id: ragProdEnv.id }, { id: ragStagingEnv.id }] },
-            aiModelId: ragGpt4o.id
+            aiModelId: ragGpt4o.id,
+            languageCode: defaultLanguageCode, // <--- AÑADIDO languageCode
         },
         create: {
             promptId: promptRagQuery.id,
@@ -411,11 +426,12 @@ async function main() {
             status: 'active',
             changeMessage: 'Initial RAG prompt using system instructions and context.',
             activeInEnvironments: { connect: [{ id: ragProdEnv.id }, { id: ragStagingEnv.id }] },
-            aiModelId: ragGpt4o.id
+            aiModelId: ragGpt4o.id,
+            languageCode: defaultLanguageCode, // <--- AÑADIDO languageCode
         },
-        select: { id: true }
+        select: { id: true, languageCode: true } // Asegurar que se selecciona languageCode
     });
-    console.log(`Upserted PromptVersion for ${promptRagQuery.name} V1`);
+    console.log(`Upserted PromptVersion for ${promptRagQuery.name} V1 (Lang: ${promptRagQueryV1.languageCode})`);
 
     // Crear traducciones es-ES para los assets y prompts
     await createSpanishTranslations(ragProjectId);

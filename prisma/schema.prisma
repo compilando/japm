@@ -128,6 +128,7 @@ model PromptVersion {
   prompt               Prompt               @relation("PromptVersion_prompt", fields: [promptId], references: [id], onDelete: Cascade)
   promptId             String               @map("prompt")
   promptText           String               @default("")
+  languageCode         String               @default("en-US")
   versionTag           String               @default("v1.0.0")
   changeMessage        String?
   status               String               @default("draft")

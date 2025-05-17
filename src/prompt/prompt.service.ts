@@ -151,6 +151,7 @@ export class PromptService {
             promptId: slug,
             promptText: promptText,
             versionTag: 'v1.0.0',
+            languageCode: process.env.DEFAULT_LANGUAGE_CODE || 'en-US',
             changeMessage: 'Initial version created automatically.',
             translations:
               initialTranslations && initialTranslations.length > 0
@@ -375,6 +376,7 @@ export class PromptService {
           promptId: prompt.id, // prompt.id es el slug
           versionTag: versionTag, // Usar el tag del DTO
           promptText: promptText,
+          languageCode: process.env.DEFAULT_LANGUAGE_CODE || 'en-US',
           changeMessage: changeMessage || `Version ${versionTag} created.`, // Mensaje por defecto si no se provee
           translations: initialTranslations && initialTranslations.length > 0
             ? {
@@ -701,6 +703,7 @@ export class PromptService {
         data: {
           promptId: prompt.id, // slug del prompt padre
           promptText: versionData.promptText,
+          languageCode: process.env.DEFAULT_LANGUAGE_CODE || 'en-US',
           changeMessage:
             versionData.changeMessage ||
             'Initial version from loaded structure.',
