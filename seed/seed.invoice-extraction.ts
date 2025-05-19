@@ -321,13 +321,17 @@ async function main() {
                 name: promptSeed.name,
                 description: promptSeed.description,
                 tags: { connect: getInvTagIds(promptSeed.tags) },
+                content: 'Texto base del prompt',
+                tenantId: defaultTenant.id,
             },
             create: {
                 id: promptSeed.id,
                 name: promptSeed.name,
                 description: promptSeed.description,
-                tags: { connect: getInvTagIds(promptSeed.tags) },
                 projectId: invProjectId,
+                content: 'Texto base del prompt',
+                tenantId: defaultTenant.id,
+                tags: { connect: getInvTagIds(promptSeed.tags) },
             },
             select: { id: true }
         });

@@ -3,66 +3,117 @@
   "paths": {
     "/api/admin-check": {
       "get": {
+        "description": "Endpoint para verificar si el usuario tiene rol de administrador",
         "operationId": "AppController_adminCheck",
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Acceso concedido como administrador"
+          },
+          "401": {
+            "description": "No autorizado"
+          },
+          "403": {
+            "description": "Acceso denegado - Se requiere rol de administrador"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verificar acceso de administrador",
         "tags": [
-          "App"
+          "Autenticación y Roles"
         ]
       }
     },
     "/api/tenant-admin-check": {
       "get": {
+        "description": "Endpoint para verificar si el usuario tiene rol de administrador de tenant",
         "operationId": "AppController_tenantAdminCheck",
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Acceso concedido como administrador de tenant"
+          },
+          "401": {
+            "description": "No autorizado"
+          },
+          "403": {
+            "description": "Acceso denegado - Se requiere rol de administrador de tenant"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verificar acceso de administrador de tenant",
         "tags": [
-          "App"
+          "Autenticación y Roles"
         ]
       }
     },
     "/api/user-check": {
       "get": {
+        "description": "Endpoint para verificar si el usuario tiene rol de usuario básico",
         "operationId": "AppController_userCheck",
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Acceso concedido como usuario"
+          },
+          "401": {
+            "description": "No autorizado"
+          },
+          "403": {
+            "description": "Acceso denegado - Se requiere rol de usuario"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verificar acceso de usuario",
         "tags": [
-          "App"
+          "Autenticación y Roles"
         ]
       }
     },
     "/api/any-authenticated-check": {
       "get": {
+        "description": "Endpoint para verificar si el usuario está autenticado (sin requerir rol específico)",
         "operationId": "AppController_anyAuthenticatedCheck",
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Acceso concedido - Usuario autenticado"
+          },
+          "401": {
+            "description": "No autorizado"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verificar autenticación",
         "tags": [
-          "App"
+          "Autenticación y Roles"
         ]
       }
     },
     "/api/users": {
       "post": {
+        "description": "Creates a new user within the authenticated admin's tenant. Requires admin privileges.",
         "operationId": "UserController_create",
         "parameters": [],
         "requestBody": {
           "required": true,
+          "description": "User data to create",
           "content": {
             "application/json": {
               "schema": {
@@ -73,13 +124,23 @@
         },
         "responses": {
           "201": {
-            "description": "User created successfully."
+            "description": "User successfully created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateUserDto"
+                }
+              }
+            }
           },
           "400": {
-            "description": "Invalid input data."
+            "description": "Invalid input data - Check the request body format"
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Admin role required"
           }
         },
         "security": [
@@ -87,17 +148,18 @@
             "bearer": []
           }
         ],
-        "summary": "Create a new user (within the authenticated admin user's tenant)",
+        "summary": "Create new user",
         "tags": [
           "Users"
         ]
       },
       "get": {
+        "description": "Retrieves a list of all users in the system. Requires admin privileges.",
         "operationId": "UserController_findAll",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "List of users.",
+            "description": "List of users retrieved successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -108,8 +170,19 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Admin role required"
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Get all users",
         "tags": [
           "Users"
@@ -118,13 +191,14 @@
     },
     "/api/users/{id}": {
       "get": {
+        "description": "Retrieves a specific user by their unique ID. Requires admin privileges.",
         "operationId": "UserController_findOne",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "User ID",
+            "description": "Unique user identifier (CUID)",
             "schema": {
               "type": "string"
             }
@@ -132,7 +206,7 @@
         ],
         "responses": {
           "200": {
-            "description": "User found.",
+            "description": "User found successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -141,23 +215,35 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Admin role required"
+          },
           "404": {
-            "description": "User not found."
+            "description": "User not found - The specified ID does not exist"
           }
         },
-        "summary": "Get a user by ID",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get user by ID",
         "tags": [
           "Users"
         ]
       },
       "patch": {
+        "description": "Updates an existing user's information. Requires admin privileges.",
         "operationId": "UserController_update",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "ID of the user to update",
+            "description": "Unique user identifier to update (CUID)",
             "schema": {
               "type": "string"
             }
@@ -165,6 +251,7 @@
         ],
         "requestBody": {
           "required": true,
+          "description": "User data to update",
           "content": {
             "application/json": {
               "schema": {
@@ -175,7 +262,7 @@
         },
         "responses": {
           "200": {
-            "description": "User updated successfully.",
+            "description": "User updated successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -185,25 +272,37 @@
             }
           },
           "400": {
-            "description": "Invalid input data."
+            "description": "Invalid input data - Check the request body format"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Admin role required"
           },
           "404": {
-            "description": "User not found."
+            "description": "User not found - The specified ID does not exist"
           }
         },
-        "summary": "Update a user by ID",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update user",
         "tags": [
           "Users"
         ]
       },
       "delete": {
+        "description": "Permanently deletes a user from the system. Requires admin privileges.",
         "operationId": "UserController_remove",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "ID of the user to delete",
+            "description": "Unique user identifier to delete (CUID)",
             "schema": {
               "type": "string"
             }
@@ -211,13 +310,31 @@
         ],
         "responses": {
           "200": {
-            "description": "User deleted successfully."
+            "description": "User deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateUserDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Admin role required"
           },
           "404": {
-            "description": "User not found."
+            "description": "User not found - The specified ID does not exist"
           }
         },
-        "summary": "Delete a user by ID",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete user",
         "tags": [
           "Users"
         ]
@@ -225,6 +342,7 @@
     },
     "/api/auth/register": {
       "post": {
+        "description": "Creates a new user account in the system. This endpoint is publicly accessible.",
         "operationId": "AuthController_register",
         "parameters": [],
         "requestBody": {
@@ -239,7 +357,7 @@
         },
         "responses": {
           "201": {
-            "description": "User successfully registered.",
+            "description": "User successfully registered",
             "content": {
               "application/json": {
                 "schema": {
@@ -249,13 +367,13 @@
             }
           },
           "400": {
-            "description": "Invalid input data."
+            "description": "Invalid input data - Check the request body format"
           },
           "409": {
-            "description": "Email already exists."
+            "description": "Email already exists - The provided email is already registered"
           }
         },
-        "summary": "Register a new user",
+        "summary": "Register new user",
         "tags": [
           "Authentication"
         ]
@@ -263,10 +381,12 @@
     },
     "/api/auth/login": {
       "post": {
+        "description": "Authenticates a user and returns a JWT token for subsequent API calls",
         "operationId": "AuthController_login",
         "parameters": [],
         "requestBody": {
           "required": true,
+          "description": "User credentials for authentication",
           "content": {
             "application/json": {
               "schema": {
@@ -277,7 +397,7 @@
         },
         "responses": {
           "200": {
-            "description": "Login successful, returns JWT token.",
+            "description": "Login successful - Returns JWT token",
             "content": {
               "application/json": {
                 "schema": {
@@ -287,10 +407,10 @@
             }
           },
           "401": {
-            "description": "Unauthorized (Invalid Credentials)."
+            "description": "Invalid credentials - Email or password is incorrect"
           }
         },
-        "summary": "Log in a user",
+        "summary": "User login",
         "tags": [
           "Authentication"
         ]
@@ -298,11 +418,12 @@
     },
     "/api/auth/profile": {
       "get": {
+        "description": "Retrieves the profile information of the currently authenticated user",
         "operationId": "AuthController_getProfile",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "User profile data.",
+            "description": "User profile retrieved successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -312,7 +433,7 @@
             }
           },
           "401": {
-            "description": "Unauthorized (Invalid or missing token)."
+            "description": "Unauthorized - Invalid or expired token"
           }
         },
         "security": [
@@ -320,7 +441,7 @@
             "bearer": []
           }
         ],
-        "summary": "Get current user profile",
+        "summary": "Get user profile",
         "tags": [
           "Authentication"
         ]
@@ -328,13 +449,14 @@
     },
     "/api/projects/{projectId}/regions": {
       "post": {
+        "description": "Creates a new region for the current tenant. Accessible by global admins or tenant admins.",
         "operationId": "RegionController_create",
         "parameters": [
           {
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "Project ID",
+            "description": "ID of the project",
             "schema": {
               "type": "string"
             }
@@ -352,23 +474,26 @@
         },
         "responses": {
           "201": {
-            "description": "Region created.",
+            "description": "Region successfully created",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateRegionDto"
+                  "$ref": "#/components/schemas/RegionDto"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid data."
+            "description": "Invalid input data - Check the request body format"
           },
-          "404": {
-            "description": "Parent region not found."
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions to create regions"
           },
           "409": {
-            "description": "languageCode already exists."
+            "description": "Region already exists - A region with this language code already exists for this tenant"
           }
         },
         "security": [
@@ -376,19 +501,20 @@
             "bearer": []
           }
         ],
-        "summary": "Creates a new region for a specific project",
+        "summary": "Create new region",
         "tags": [
           "Regions"
         ]
       },
       "get": {
+        "description": "Retrieves a list of all regions for the current tenant. Results are cached for 1 hour.",
         "operationId": "RegionController_findAll",
         "parameters": [
           {
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "Project ID",
+            "description": "ID of the project",
             "schema": {
               "type": "string"
             }
@@ -396,17 +522,23 @@
         ],
         "responses": {
           "200": {
-            "description": "List of regions.",
+            "description": "List of regions retrieved successfully",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/CreateRegionDto"
+                    "$ref": "#/components/schemas/RegionDto"
                   }
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "404": {
+            "description": "Project not found"
           }
         },
         "security": [
@@ -414,21 +546,22 @@
             "bearer": []
           }
         ],
-        "summary": "Gets all regions for a specific project",
+        "summary": "Get all regions",
         "tags": [
           "Regions"
         ]
       }
     },
-    "/api/projects/{projectId}/regions/{languageCode}": {
+    "/api/projects/{projectId}/regions/{langCode}": {
       "get": {
+        "description": "Retrieves a specific region by its language code (e.g., en-US, es-ES). Results are cached for 1 hour.",
         "operationId": "RegionController_findOne",
         "parameters": [
           {
-            "name": "languageCode",
+            "name": "langCode",
             "required": true,
             "in": "path",
-            "description": "Language code (ID) of the region",
+            "description": "Language code of the region (e.g., en-US, es-ES)",
             "schema": {
               "type": "string"
             }
@@ -437,7 +570,7 @@
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "Project ID",
+            "description": "ID of the project",
             "schema": {
               "type": "string"
             }
@@ -445,17 +578,20 @@
         ],
         "responses": {
           "200": {
-            "description": "Region found.",
+            "description": "Region found successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateRegionDto"
+                  "$ref": "#/components/schemas/RegionDto"
                 }
               }
             }
           },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
           "404": {
-            "description": "Project or Region not found."
+            "description": "Region not found - The specified language code does not exist for this tenant"
           }
         },
         "security": [
@@ -463,19 +599,20 @@
             "bearer": []
           }
         ],
-        "summary": "Gets a specific region within a project",
+        "summary": "Get region by language code",
         "tags": [
           "Regions"
         ]
       },
       "patch": {
+        "description": "Updates an existing region's information. Accessible by global admins or tenant admins.",
         "operationId": "RegionController_update",
         "parameters": [
           {
-            "name": "languageCode",
+            "name": "langCode",
             "required": true,
             "in": "path",
-            "description": "Language code (ID) of the region to update",
+            "description": "Language code of the region to update (e.g., en-US, es-ES)",
             "schema": {
               "type": "string"
             }
@@ -484,7 +621,7 @@
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "Project ID",
+            "description": "ID of the project",
             "schema": {
               "type": "string"
             }
@@ -502,20 +639,26 @@
         },
         "responses": {
           "200": {
-            "description": "Region updated.",
+            "description": "Region updated successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateRegionDto"
+                  "$ref": "#/components/schemas/RegionDto"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid data (languageCode cannot be changed)."
+            "description": "Invalid input data - Check the request body format"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions to update regions"
           },
           "404": {
-            "description": "Project or Region not found."
+            "description": "Region not found - The specified language code does not exist for this tenant"
           }
         },
         "security": [
@@ -523,19 +666,20 @@
             "bearer": []
           }
         ],
-        "summary": "Updates a specific region within a project",
+        "summary": "Update region",
         "tags": [
           "Regions"
         ]
       },
       "delete": {
+        "description": "Permanently deletes a region. This is a destructive operation that requires admin privileges.",
         "operationId": "RegionController_remove",
         "parameters": [
           {
-            "name": "languageCode",
+            "name": "langCode",
             "required": true,
             "in": "path",
-            "description": "Language code (ID) of the region to delete",
+            "description": "Language code of the region to delete (e.g., en-US, es-ES)",
             "schema": {
               "type": "string"
             }
@@ -544,7 +688,7 @@
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "Project ID",
+            "description": "ID of the project",
             "schema": {
               "type": "string"
             }
@@ -552,10 +696,19 @@
         ],
         "responses": {
           "200": {
-            "description": "Region deleted."
+            "description": ""
+          },
+          "204": {
+            "description": "Region successfully deleted"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions to delete regions"
           },
           "404": {
-            "description": "Project or Region not found."
+            "description": "Region not found - The specified language code does not exist for this tenant"
           }
         },
         "security": [
@@ -563,7 +716,7 @@
             "bearer": []
           }
         ],
-        "summary": "Deletes a specific region within a project",
+        "summary": "Delete region",
         "tags": [
           "Regions"
         ]
@@ -815,19 +968,11 @@
         ]
       }
     },
-    "/api/projects/{projectId}/prompts": {
+    "/api/prompts": {
       "post": {
+        "description": "Creates a new prompt for the current tenant. Accessible by global admins or tenant admins.",
         "operationId": "PromptController_create",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -840,7 +985,7 @@
         },
         "responses": {
           "201": {
-            "description": "The prompt has been successfully created.",
+            "description": "Prompt successfully created",
             "content": {
               "application/json": {
                 "schema": {
@@ -850,13 +995,16 @@
             }
           },
           "400": {
-            "description": "Bad Request."
+            "description": "Invalid input data - Check the request body format"
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "Unauthorized - Invalid or expired token"
           },
-          "404": {
-            "description": "Project not found."
+          "403": {
+            "description": "Forbidden - Insufficient permissions to create prompts"
+          },
+          "409": {
+            "description": "Prompt already exists - A prompt with this name already exists for this tenant"
           }
         },
         "security": [
@@ -864,26 +1012,18 @@
             "bearer": []
           }
         ],
-        "summary": "Create a new prompt within a project",
+        "summary": "Create new prompt",
         "tags": [
           "Prompts"
         ]
       },
       "get": {
-        "operationId": "PromptController_findAllByProject",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "description": "Retrieves a list of all prompts for the current tenant. Results are cached for 1 hour.",
+        "operationId": "PromptController_findAll",
+        "parameters": [],
         "responses": {
           "200": {
-            "description": "Array of prompts for the project.",
+            "description": "List of prompts retrieved successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -896,10 +1036,7 @@
             }
           },
           "401": {
-            "description": "Unauthorized."
-          },
-          "404": {
-            "description": "Project not found."
+            "description": "Unauthorized - Invalid or expired token"
           }
         },
         "security": [
@@ -907,38 +1044,31 @@
             "bearer": []
           }
         ],
-        "summary": "Get all prompts for a project",
+        "summary": "Get all prompts",
         "tags": [
           "Prompts"
         ]
       }
     },
-    "/api/projects/{projectId}/prompts/{promptId}": {
+    "/api/prompts/{id}": {
       "get": {
+        "description": "Retrieves a specific prompt by its unique ID. Results are cached for 1 hour.",
         "operationId": "PromptController_findOne",
         "parameters": [
           {
-            "name": "projectId",
+            "name": "id",
             "required": true,
             "in": "path",
-            "description": "The ID of the project.",
+            "description": "Unique prompt identifier (UUID)",
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "promptId",
-            "required": true,
-            "in": "path",
-            "description": "The ID (slug) of the prompt.",
-            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "The prompt object.",
+            "description": "Prompt found successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -948,10 +1078,10 @@
             }
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "Unauthorized - Invalid or expired token"
           },
           "404": {
-            "description": "Project or Prompt not found."
+            "description": "Prompt not found - The specified ID does not exist for this tenant"
           }
         },
         "security": [
@@ -959,31 +1089,22 @@
             "bearer": []
           }
         ],
-        "summary": "Get a specific prompt by its ID (slug) for a project",
+        "summary": "Get prompt by ID",
         "tags": [
           "Prompts"
         ]
-      }
-    },
-    "/api/projects/{projectId}/prompts/{promptIdSlug}": {
+      },
       "patch": {
+        "description": "Updates an existing prompt's information. Accessible by global admins or tenant admins.",
         "operationId": "PromptController_update",
         "parameters": [
           {
-            "name": "projectId",
+            "name": "id",
             "required": true,
             "in": "path",
-            "description": "The ID of the project.",
+            "description": "Unique prompt identifier to update (UUID)",
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "promptIdSlug",
-            "required": true,
-            "in": "path",
-            "description": "The ID (slug) of the prompt to update.",
-            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           }
@@ -1000,7 +1121,7 @@
         },
         "responses": {
           "200": {
-            "description": "The prompt has been successfully updated.",
+            "description": "Prompt updated successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -1010,13 +1131,19 @@
             }
           },
           "400": {
-            "description": "Bad Request."
+            "description": "Invalid input data - Check the request body format"
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions to update prompts"
           },
           "404": {
-            "description": "Prompt or Project not found."
+            "description": "Prompt not found - The specified ID does not exist for this tenant"
+          },
+          "409": {
+            "description": "Prompt name already exists - The provided name is already in use"
           }
         },
         "security": [
@@ -1024,43 +1151,38 @@
             "bearer": []
           }
         ],
-        "summary": "Update an existing prompt by its ID (slug)",
+        "summary": "Update prompt",
         "tags": [
           "Prompts"
         ]
       },
       "delete": {
+        "description": "Permanently deletes a prompt. This is a destructive operation that requires admin privileges.",
         "operationId": "PromptController_remove",
         "parameters": [
           {
-            "name": "projectId",
+            "name": "id",
             "required": true,
             "in": "path",
+            "description": "Unique prompt identifier to delete (UUID)",
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "promptIdSlug",
-            "required": true,
-            "in": "path",
-            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           }
         ],
         "responses": {
           "204": {
-            "description": "The prompt has been successfully deleted."
+            "description": "Prompt successfully deleted"
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "Unauthorized - Invalid or expired token"
           },
           "403": {
-            "description": "Forbidden. Project does not belong to tenant or prompt does not belong to project."
+            "description": "Forbidden - Insufficient permissions to delete prompts"
           },
           "404": {
-            "description": "Project or Prompt not found."
+            "description": "Prompt not found - The specified ID does not exist for this tenant"
           }
         },
         "security": [
@@ -1068,21 +1190,22 @@
             "bearer": []
           }
         ],
-        "summary": "Delete a prompt by its slug within a project",
+        "summary": "Delete prompt",
         "tags": [
           "Prompts"
         ]
       }
     },
-    "/api/projects/{projectId}/prompts/generate-structure": {
+    "/api/prompts/generate-structure": {
       "post": {
+        "description": "Analiza un prompt de usuario usando un LLM y sugiere una estructura basada en las entidades del proyecto.",
         "operationId": "PromptController_generateStructure",
         "parameters": [
           {
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "The ID of the project.",
+            "description": "ID del proyecto",
             "schema": {
               "type": "string"
             }
@@ -1100,51 +1223,33 @@
         },
         "responses": {
           "200": {
-            "description": "Returns the suggested JSON structure.",
+            "description": "Estructura JSON sugerida para el prompt",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "example": {
-                    "prompt": {
-                      "name": "Suggested Prompt Name",
-                      "description": "..."
+                  "properties": {
+                    "structure": {
+                      "type": "object",
+                      "description": "Estructura sugerida para el prompt"
                     },
-                    "version": {
-                      "semanticVersion": "1.0.0"
-                    },
-                    "assets": [
-                      {
-                        "name": "Greeting Text",
-                        "description": "Main greeting text",
-                        "translations": [
-                          {
-                            "regionCode": "en-US",
-                            "text": "Hello World"
-                          },
-                          {
-                            "regionCode": "es-ES",
-                            "text": "Hola Mundo"
-                          }
-                        ]
-                      }
-                    ]
+                    "explanation": {
+                      "type": "string",
+                      "description": "Explicación de la estructura sugerida"
+                    }
                   }
                 }
               }
             }
           },
           "400": {
-            "description": "Bad Request (e.g., missing user prompt)."
+            "description": "Datos de entrada inválidos"
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "No autorizado"
           },
           "404": {
-            "description": "Project not found."
-          },
-          "500": {
-            "description": "Internal Server Error (LLM failure, file read error, etc.)."
+            "description": "Proyecto no encontrado"
           }
         },
         "security": [
@@ -1152,20 +1257,22 @@
             "bearer": []
           }
         ],
-        "summary": "Analyzes a user prompt using an LLM and suggests a structure based on project entities.",
+        "summary": "Genera estructura de prompt",
         "tags": [
           "Prompts"
         ]
       }
     },
-    "/api/projects/{projectId}/prompts/load-structure": {
+    "/api/prompts/load-structure": {
       "post": {
+        "description": "Carga una estructura de prompt predefinida en el proyecto",
         "operationId": "PromptController_loadStructure",
         "parameters": [
           {
             "name": "projectId",
             "required": true,
             "in": "path",
+            "description": "ID del proyecto",
             "schema": {
               "type": "string"
             }
@@ -1183,7 +1290,7 @@
         },
         "responses": {
           "201": {
-            "description": "Prompt structure successfully loaded and entities created.",
+            "description": "Prompt creado exitosamente con la estructura cargada",
             "content": {
               "application/json": {
                 "schema": {
@@ -1193,16 +1300,13 @@
             }
           },
           "400": {
-            "description": "Bad Request - Invalid JSON structure or data."
+            "description": "Datos de entrada inválidos"
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "No autorizado"
           },
           "404": {
-            "description": "Project not found."
-          },
-          "409": {
-            "description": "Conflict - A prompt with the same identifier already exists or an asset key conflict."
+            "description": "Proyecto no encontrado"
           }
         },
         "security": [
@@ -1210,21 +1314,22 @@
             "bearer": []
           }
         ],
-        "summary": "Load a generated prompt structure and create all related entities in the database.",
+        "summary": "Carga estructura de prompt",
         "tags": [
           "Prompts"
         ]
       }
     },
-    "/api/projects/{projectId}/prompts/{promptId}/versions": {
+    "/api/prompts/{promptId}/versions": {
       "post": {
-        "operationId": "PromptVersionController_create",
+        "description": "Crea una nueva versión de un prompt existente",
+        "operationId": "PromptController_createVersion",
         "parameters": [
           {
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "Project ID",
+            "description": "ID del proyecto",
             "schema": {
               "type": "string"
             }
@@ -1233,7 +1338,7 @@
             "name": "promptId",
             "required": true,
             "in": "path",
-            "description": "Prompt CUID",
+            "description": "ID (slug) del prompt",
             "schema": {
               "type": "string"
             }
@@ -1251,7 +1356,7 @@
         },
         "responses": {
           "201": {
-            "description": "Version created.",
+            "description": "Nueva versión de prompt creada exitosamente",
             "content": {
               "application/json": {
                 "schema": {
@@ -1261,16 +1366,13 @@
             }
           },
           "400": {
-            "description": "Invalid data (e.g., duplicate versionTag)."
+            "description": "Datos de entrada inválidos"
           },
           "401": {
-            "description": "Unauthorized."
-          },
-          "403": {
-            "description": "Forbidden Access to Project."
+            "description": "No autorizado"
           },
           "404": {
-            "description": "Project or Prompt not found."
+            "description": "Proyecto o Prompt no encontrado"
           }
         },
         "security": [
@@ -1278,75 +1380,20 @@
             "bearer": []
           }
         ],
-        "summary": "Create a new version for a specific prompt within a project",
+        "summary": "Crea una nueva versión de prompt",
         "tags": [
-          "Prompt Versions (within Project/Prompt)"
-        ]
-      },
-      "get": {
-        "operationId": "PromptVersionController_findAll",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "Project ID",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "promptId",
-            "required": true,
-            "in": "path",
-            "description": "Prompt CUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of versions.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CreatePromptVersionDto"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized."
-          },
-          "403": {
-            "description": "Forbidden Access to Project."
-          },
-          "404": {
-            "description": "Project or Prompt not found."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get all versions for a specific prompt within a project",
-        "tags": [
-          "Prompt Versions (within Project/Prompt)"
+          "Prompts"
         ]
       }
     },
     "/api/projects/mine": {
       "get": {
+        "description": "Retorna todos los proyectos a los que tiene acceso el usuario autenticado",
         "operationId": "ProjectController_findMine",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "List of user projects.",
+            "description": "Lista de proyectos del usuario",
             "content": {
               "application/json": {
                 "schema": {
@@ -1359,15 +1406,21 @@
             }
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "No autorizado - Token inválido o expirado"
+          },
+          "403": {
+            "description": "Acceso denegado - Información de tenant no disponible"
           }
         },
         "security": [
           {
             "bearer": []
+          },
+          {
+            "bearer": []
           }
         ],
-        "summary": "Get projects accessible by the current user",
+        "summary": "Obtener proyectos del usuario actual",
         "tags": [
           "Projects"
         ]
@@ -1375,6 +1428,7 @@
     },
     "/api/projects": {
       "post": {
+        "description": "Creates a new project for the current tenant. Accessible by global admins or tenant admins.",
         "operationId": "ProjectController_create",
         "parameters": [],
         "requestBody": {
@@ -1389,20 +1443,26 @@
         },
         "responses": {
           "201": {
-            "description": "The project has been successfully created.",
+            "description": "Project successfully created",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateProjectDto"
+                  "$ref": "#/components/schemas/ProjectDto"
                 }
               }
             }
           },
           "400": {
-            "description": "Bad Request."
+            "description": "Invalid input data - Check the request body format"
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions to create projects"
+          },
+          "409": {
+            "description": "Project already exists - A project with this name already exists for this tenant"
           }
         },
         "security": [
@@ -1410,23 +1470,42 @@
             "bearer": []
           }
         ],
-        "summary": "Create a new project",
+        "summary": "Create new project",
         "tags": [
           "Projects"
         ]
       },
       "get": {
+        "description": "Retrieves a list of all projects for the current tenant. Results are cached for 1 hour.",
         "operationId": "ProjectController_findAll",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "List of projects"
+            "description": "List of projects retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectDto"
+                  }
+                }
+              }
+            }
           },
           "401": {
-            "description": "Unauthorized"
+            "description": "Unauthorized - Invalid or expired token"
           }
         },
-        "summary": "Get all projects for the authenticated user's tenant",
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all projects",
         "tags": [
           "Projects"
         ]
@@ -1434,31 +1513,36 @@
     },
     "/api/projects/{id}": {
       "get": {
+        "description": "Retrieves a specific project by its unique ID. Results are cached for 1 hour.",
         "operationId": "ProjectController_findOne",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "Project CUID",
+            "description": "Unique project identifier (UUID)",
             "schema": {
+              "format": "uuid",
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "The found project record",
+            "description": "Project found successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateProjectDto"
+                  "$ref": "#/components/schemas/ProjectDto"
                 }
               }
             }
           },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
           "404": {
-            "description": "Project not found."
+            "description": "Project not found - The specified ID does not exist for this tenant"
           }
         },
         "security": [
@@ -1466,20 +1550,22 @@
             "bearer": []
           }
         ],
-        "summary": "Get a project by ID",
+        "summary": "Get project by ID",
         "tags": [
           "Projects"
         ]
       },
       "patch": {
+        "description": "Updates an existing project's information. Accessible by global admins or tenant admins.",
         "operationId": "ProjectController_update",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "Project CUID",
+            "description": "Unique project identifier to update (UUID)",
             "schema": {
+              "format": "uuid",
               "type": "string"
             }
           }
@@ -1496,20 +1582,29 @@
         },
         "responses": {
           "200": {
-            "description": "The project has been successfully updated.",
+            "description": "Project updated successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateProjectDto"
+                  "$ref": "#/components/schemas/ProjectDto"
                 }
               }
             }
           },
           "400": {
-            "description": "Bad Request."
+            "description": "Invalid input data - Check the request body format"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions to update projects"
           },
           "404": {
-            "description": "Project not found."
+            "description": "Project not found - The specified ID does not exist for this tenant"
+          },
+          "409": {
+            "description": "Project name already exists - The provided name is already in use"
           }
         },
         "security": [
@@ -1517,37 +1612,38 @@
             "bearer": []
           }
         ],
-        "summary": "Update a project by ID",
+        "summary": "Update project",
         "tags": [
           "Projects"
         ]
       },
       "delete": {
+        "description": "Permanently deletes a project. This is a destructive operation that requires admin privileges.",
         "operationId": "ProjectController_remove",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "Project CUID",
+            "description": "Unique project identifier to delete (UUID)",
             "schema": {
+              "format": "uuid",
               "type": "string"
             }
           }
         ],
         "responses": {
-          "200": {
-            "description": "The project has been successfully deleted.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateProjectDto"
-                }
-              }
-            }
+          "204": {
+            "description": "Project successfully deleted"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions to delete projects"
           },
           "404": {
-            "description": "Project not found."
+            "description": "Project not found - The specified ID does not exist for this tenant"
           }
         },
         "security": [
@@ -1555,7 +1651,7 @@
             "bearer": []
           }
         ],
-        "summary": "Delete a project by ID",
+        "summary": "Delete project",
         "tags": [
           "Projects"
         ]
@@ -3234,6 +3330,130 @@
         ]
       }
     },
+    "/api/projects/{projectId}/prompts/{promptId}/versions": {
+      "post": {
+        "operationId": "PromptVersionController_create",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePromptVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Version created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePromptVersionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid data (e.g., duplicate versionTag)."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
+          "404": {
+            "description": "Project or Prompt not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new version for a specific prompt within a project",
+        "tags": [
+          "Prompt Versions (within Project/Prompt)"
+        ]
+      },
+      "get": {
+        "operationId": "PromptVersionController_findAll",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of versions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CreatePromptVersionDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
+          "404": {
+            "description": "Project or Prompt not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all versions for a specific prompt within a project",
+        "tags": [
+          "Prompt Versions (within Project/Prompt)"
+        ]
+      }
+    },
     "/api/projects/{projectId}/prompts/{promptId}/versions/{versionTag}": {
       "get": {
         "operationId": "PromptVersionController_findOneByTag",
@@ -3598,6 +3818,7 @@
     },
     "/api/tenants": {
       "post": {
+        "description": "Creates a new tenant in the system. This operation requires global admin privileges.",
         "operationId": "TenantController_create",
         "parameters": [],
         "requestBody": {
@@ -3612,7 +3833,7 @@
         },
         "responses": {
           "201": {
-            "description": "Tenant created successfully.",
+            "description": "Tenant successfully created",
             "content": {
               "application/json": {
                 "schema": {
@@ -3622,16 +3843,16 @@
             }
           },
           "400": {
-            "description": "Invalid input."
+            "description": "Invalid input data - Check the request body format"
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "Unauthorized - Invalid or expired token"
           },
           "403": {
-            "description": "Forbidden resource."
+            "description": "Forbidden - Global admin role required"
           },
           "409": {
-            "description": "Tenant name already exists."
+            "description": "Tenant name already exists - The provided name is already in use"
           }
         },
         "security": [
@@ -3639,17 +3860,18 @@
             "bearer": []
           }
         ],
-        "summary": "Create a new tenant",
+        "summary": "Create new tenant",
         "tags": [
           "Tenants"
         ]
       },
       "get": {
+        "description": "Retrieves a list of all tenants in the system. This operation requires global admin privileges.",
         "operationId": "TenantController_findAll",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Array of tenants.",
+            "description": "List of tenants retrieved successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -3662,10 +3884,10 @@
             }
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "Unauthorized - Invalid or expired token"
           },
           "403": {
-            "description": "Forbidden resource."
+            "description": "Forbidden - Global admin role required"
           }
         },
         "security": [
@@ -3681,13 +3903,14 @@
     },
     "/api/tenants/{tenantId}": {
       "get": {
+        "description": "Retrieves a specific tenant by their unique ID. Accessible by global admins or tenant admins of the specified tenant.",
         "operationId": "TenantController_findOne",
         "parameters": [
           {
             "name": "tenantId",
             "required": true,
             "in": "path",
-            "description": "The ID of the tenant",
+            "description": "Unique tenant identifier (UUID)",
             "schema": {
               "format": "uuid",
               "type": "string"
@@ -3696,7 +3919,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Tenant object.",
+            "description": "Tenant found successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -3706,13 +3929,13 @@
             }
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "Unauthorized - Invalid or expired token"
           },
           "403": {
-            "description": "Forbidden resource."
+            "description": "Forbidden - Insufficient permissions to access this tenant"
           },
           "404": {
-            "description": "Tenant not found."
+            "description": "Tenant not found - The specified ID does not exist"
           }
         },
         "security": [
@@ -3720,19 +3943,20 @@
             "bearer": []
           }
         ],
-        "summary": "Get a specific tenant by ID",
+        "summary": "Get tenant by ID",
         "tags": [
           "Tenants"
         ]
       },
       "patch": {
+        "description": "Updates an existing tenant's information. Accessible by global admins or tenant admins of the specified tenant.",
         "operationId": "TenantController_update",
         "parameters": [
           {
             "name": "tenantId",
             "required": true,
             "in": "path",
-            "description": "The ID of the tenant",
+            "description": "Unique tenant identifier to update (UUID)",
             "schema": {
               "format": "uuid",
               "type": "string"
@@ -3751,7 +3975,7 @@
         },
         "responses": {
           "200": {
-            "description": "Tenant updated successfully.",
+            "description": "Tenant updated successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -3761,19 +3985,19 @@
             }
           },
           "400": {
-            "description": "Invalid input."
+            "description": "Invalid input data - Check the request body format"
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "Unauthorized - Invalid or expired token"
           },
           "403": {
-            "description": "Forbidden resource."
+            "description": "Forbidden - Insufficient permissions to update this tenant"
           },
           "404": {
-            "description": "Tenant not found."
+            "description": "Tenant not found - The specified ID does not exist"
           },
           "409": {
-            "description": "Tenant name already exists."
+            "description": "Tenant name already exists - The provided name is already in use"
           }
         },
         "security": [
@@ -3781,19 +4005,20 @@
             "bearer": []
           }
         ],
-        "summary": "Update a tenant by ID",
+        "summary": "Update tenant",
         "tags": [
           "Tenants"
         ]
       },
       "delete": {
+        "description": "Permanently deletes a tenant from the system. This is a destructive operation that requires global admin privileges.",
         "operationId": "TenantController_remove",
         "parameters": [
           {
             "name": "tenantId",
             "required": true,
             "in": "path",
-            "description": "The ID of the tenant",
+            "description": "Unique tenant identifier to delete (UUID)",
             "schema": {
               "format": "uuid",
               "type": "string"
@@ -3802,16 +4027,16 @@
         ],
         "responses": {
           "204": {
-            "description": "Tenant deleted successfully."
+            "description": "Tenant successfully deleted"
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "Unauthorized - Invalid or expired token"
           },
           "403": {
-            "description": "Forbidden resource."
+            "description": "Forbidden - Global admin role required"
           },
           "404": {
-            "description": "Tenant not found."
+            "description": "Tenant not found - The specified ID does not exist"
           }
         },
         "security": [
@@ -3819,7 +4044,7 @@
             "bearer": []
           }
         ],
-        "summary": "Delete a tenant by ID (Caution: Destructive operation)",
+        "summary": "Delete tenant",
         "tags": [
           "Tenants"
         ]
@@ -5514,68 +5739,74 @@
     },
     "/api/marketplace/prompts": {
       "get": {
+        "description": "Retrieves a paginated list of published prompts for the current tenant. Results can be filtered, sorted and searched.",
         "operationId": "MarketplaceController_getPublishedPrompts",
         "parameters": [
           {
-            "name": "sortOrder",
+            "name": "search",
             "required": false,
             "in": "query",
-            "description": "Sort order",
+            "description": "Search term to filter prompts by name or description",
             "schema": {
-              "enum": [
-                "asc",
-                "desc"
-              ],
               "type": "string"
-            }
-          },
-          {
-            "name": "sortBy",
-            "required": false,
-            "in": "query",
-            "description": "Sort by field",
-            "schema": {
-              "enum": [
-                "createdAt",
-                "name"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Items per page",
-            "schema": {
-              "type": "number"
             }
           },
           {
             "name": "page",
             "required": false,
             "in": "query",
-            "description": "Page number for pagination",
+            "description": "Page number for pagination (starts at 1)",
             "schema": {
+              "default": 1,
+              "example": 1,
               "type": "number"
             }
           },
           {
-            "name": "search",
+            "name": "limit",
             "required": false,
             "in": "query",
-            "description": "Search term for prompt name or description",
+            "description": "Number of items per page",
             "schema": {
+              "default": 10,
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "Field to sort by (e.g. name, createdAt)",
+            "schema": {
+              "default": "createdAt",
+              "example": "createdAt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "Sort order direction",
+            "schema": {
+              "enum": [
+                "ASC",
+                "DESC"
+              ],
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "List of published prompts."
+            "description": "List of published prompts retrieved successfully"
+          },
+          "400": {
+            "description": "Invalid query parameters - Check the provided values"
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "Unauthorized - Invalid or expired token"
           }
         },
         "security": [
@@ -5583,7 +5814,7 @@
             "bearer": []
           }
         ],
-        "summary": "Get published prompts from the marketplace for the current tenant",
+        "summary": "Get published prompts",
         "tags": [
           "Marketplace"
         ]
@@ -5591,68 +5822,74 @@
     },
     "/api/marketplace/assets": {
       "get": {
+        "description": "Retrieves a paginated list of published assets for the current tenant. Results can be filtered, sorted and searched.",
         "operationId": "MarketplaceController_getPublishedAssets",
         "parameters": [
           {
-            "name": "sortOrder",
+            "name": "search",
             "required": false,
             "in": "query",
-            "description": "Sort order",
+            "description": "Search term to filter assets by name or description",
             "schema": {
-              "enum": [
-                "asc",
-                "desc"
-              ],
               "type": "string"
-            }
-          },
-          {
-            "name": "sortBy",
-            "required": false,
-            "in": "query",
-            "description": "Sort by field",
-            "schema": {
-              "enum": [
-                "createdAt",
-                "name"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Items per page",
-            "schema": {
-              "type": "number"
             }
           },
           {
             "name": "page",
             "required": false,
             "in": "query",
-            "description": "Page number for pagination",
+            "description": "Page number for pagination (starts at 1)",
             "schema": {
+              "default": 1,
+              "example": 1,
               "type": "number"
             }
           },
           {
-            "name": "search",
+            "name": "limit",
             "required": false,
             "in": "query",
-            "description": "Search term for asset key",
+            "description": "Number of items per page",
             "schema": {
+              "default": 10,
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "Field to sort by (e.g. name, createdAt)",
+            "schema": {
+              "default": "createdAt",
+              "example": "createdAt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "Sort order direction",
+            "schema": {
+              "enum": [
+                "ASC",
+                "DESC"
+              ],
               "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "List of published assets."
+            "description": "List of published assets retrieved successfully"
+          },
+          "400": {
+            "description": "Invalid query parameters - Check the provided values"
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "Unauthorized - Invalid or expired token"
           }
         },
         "security": [
@@ -5660,9 +5897,23 @@
             "bearer": []
           }
         ],
-        "summary": "Get published assets from the marketplace for the current tenant",
+        "summary": "Get published assets",
         "tags": [
           "Marketplace"
+        ]
+      }
+    },
+    "/api/assets": {
+      "get": {
+        "operationId": "AssetController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Asset"
         ]
       }
     }
@@ -5759,17 +6010,25 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "Unique user identifier",
+            "example": "clg123xyz"
           },
           "email": {
-            "type": "string"
+            "type": "string",
+            "description": "User's email address",
+            "example": "user@example.com"
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "User's full name",
+            "example": "John Doe"
           },
           "createdAt": {
             "format": "date-time",
-            "type": "string"
+            "type": "string",
+            "description": "Account creation timestamp",
+            "example": "2024-03-20T10:30:00Z"
           }
         },
         "required": [
@@ -5803,7 +6062,9 @@
         "type": "object",
         "properties": {
           "access_token": {
-            "type": "string"
+            "type": "string",
+            "description": "JWT access token for authentication",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
           }
         },
         "required": [
@@ -5848,6 +6109,57 @@
         "required": [
           "languageCode",
           "name"
+        ]
+      },
+      "RegionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Unique identifier of the region",
+            "example": "1"
+          },
+          "languageCode": {
+            "type": "string",
+            "description": "Language code of the region (e.g., en-US, es-ES)",
+            "example": "en-US"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the region",
+            "example": "United States"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the region",
+            "example": "English (United States)"
+          },
+          "tenantId": {
+            "type": "string",
+            "description": "ID of the tenant this region belongs to",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Creation timestamp",
+            "example": "2024-01-01T00:00:00Z"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Last update timestamp",
+            "example": "2024-01-01T00:00:00Z"
+          }
+        },
+        "required": [
+          "id",
+          "languageCode",
+          "name",
+          "description",
+          "tenantId",
+          "createdAt",
+          "updatedAt"
         ]
       },
       "UpdateRegionDto": {
@@ -6339,6 +6651,58 @@
         },
         "required": [
           "name"
+        ]
+      },
+      "ProjectDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier of the project",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the project",
+            "example": "My Project"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Description of the project",
+            "example": "A detailed description of the project"
+          },
+          "tenantId": {
+            "type": "string",
+            "description": "ID of the tenant this project belongs to",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "ownerUserId": {
+            "type": "string",
+            "description": "ID of the user who owns this project",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Creation timestamp",
+            "example": "2024-01-01T00:00:00Z"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Last update timestamp",
+            "example": "2024-01-01T00:00:00Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "tenantId",
+          "ownerUserId",
+          "createdAt",
+          "updatedAt"
         ]
       },
       "UpdateProjectDto": {

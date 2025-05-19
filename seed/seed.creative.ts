@@ -259,14 +259,18 @@ async function main() {
             update: {
                 name: promptData.name,
                 description: promptData.description,
-                tags: { connect: getCrTagIds(promptData.tags) }
+                tags: { connect: getCrTagIds(promptData.tags) },
+                content: 'Texto base del prompt',
+                tenantId: defaultTenant.id
             },
             create: {
                 id: promptData.id,
                 name: promptData.name,
                 description: promptData.description,
-                tags: { connect: getCrTagIds(promptData.tags) },
-                projectId: crProjectId
+                projectId: crProjectId,
+                content: 'Texto base del prompt',
+                tenantId: defaultTenant.id,
+                tags: { connect: getCrTagIds(promptData.tags) }
             },
             select: { id: true, name: true }
         });

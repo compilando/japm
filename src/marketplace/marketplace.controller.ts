@@ -6,6 +6,9 @@ import {
   Request,
   ValidationPipe,
   UsePipes,
+  Req,
+  HttpStatus,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,6 +23,15 @@ import {
 } from './marketplace.service';
 import { PromptVersion, PromptAssetVersion } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { GetPublishedPromptsQueryDto, GetPublishedAssetsQueryDto } from './dto';
+import { Request as ExpressRequest } from 'express';
+import { Logger } from '@nestjs/common';
+
+interface RequestWithUser extends ExpressRequest {
+  user: {
+    tenantId: string;
+  };
+}
 
 // DTO para validar y tipar los query params (opcional pero recomendado para robustez)
 // Por ahora, usaremos MarketplaceQueryParams directamente, pero un DTO con class-validator sería mejor.
@@ -30,110 +42,166 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('marketplace')
 export class MarketplaceController {
-  constructor(private readonly marketplaceService: MarketplaceService) {}
+  private readonly logger = new Logger(MarketplaceController.name);
+
+  constructor(private readonly marketplaceService: MarketplaceService) { }
 
   @Get('prompts')
   @ApiOperation({
-    summary:
-      'Get published prompts from the marketplace for the current tenant',
+    summary: 'Get published prompts',
+    description: 'Retrieves a paginated list of published prompts for the current tenant. Results can be filtered, sorted and searched.'
   })
   @ApiQuery({
     name: 'search',
     required: false,
     type: String,
-    description: 'Search term for prompt name or description',
+    description: 'Search term to filter prompts by name or description'
   })
   @ApiQuery({
     name: 'page',
     required: false,
     type: Number,
-    description: 'Page number for pagination',
+    description: 'Page number for pagination (starts at 1)',
+    example: 1
   })
   @ApiQuery({
     name: 'limit',
     required: false,
     type: Number,
-    description: 'Items per page',
+    description: 'Number of items per page',
+    example: 10
   })
   @ApiQuery({
     name: 'sortBy',
     required: false,
-    enum: ['createdAt', 'name'],
-    description: 'Sort by field',
-  }) // 'popularity' requeriría más lógica
+    type: String,
+    description: 'Field to sort by (e.g. name, createdAt)',
+    example: 'createdAt'
+  })
   @ApiQuery({
     name: 'sortOrder',
     required: false,
-    enum: ['asc', 'desc'],
-    description: 'Sort order',
+    enum: ['ASC', 'DESC'],
+    description: 'Sort order direction',
+    example: 'DESC'
   })
-  // TODO: ApiQuery para tags cuando se implemente el filtro
+  @ApiQuery({
+    name: 'languageCode',
+    required: false,
+    type: String,
+  })
   @ApiResponse({
-    status: 200,
-    description: 'List of published prompts.' /* type: [PromptVersionDto] */,
+    status: HttpStatus.OK,
+    description: 'List of published prompts retrieved successfully'
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized - Invalid or expired token'
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid query parameters - Check the provided values'
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'No autorizado - Token inválido o expirado'
+  })
   // @UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true })) // Activar si se usa un DTO para queryParams
   async getPublishedPrompts(
-    @Request() req: any,
-    @Query() queryParams: MarketplaceQueryParams, // Usar DTO validado aquí sería mejor
+    @Query() query: GetPublishedPromptsQueryDto,
+    @Req() req: RequestWithUser,
   ): Promise<PromptVersion[]> {
-    const tenantId = req.user.tenantId;
-    // Convertir page y limit a números si vienen como string del query
-    if (queryParams.page) queryParams.page = Number(queryParams.page);
-    if (queryParams.limit) queryParams.limit = Number(queryParams.limit);
-    return this.marketplaceService.getPublishedPrompts(tenantId, queryParams);
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) {
+      throw new UnauthorizedException('User tenant information is missing');
+    }
+    if (query.page) query.page = Number(query.page);
+    if (query.limit) query.limit = Number(query.limit);
+    const params: MarketplaceQueryParams = {
+      search: query.search,
+      page: query.page,
+      limit: query.limit,
+      sortBy: query.sortBy as 'createdAt' | 'name' | 'popularity',
+      sortOrder: query.sortOrder?.toLowerCase() as 'asc' | 'desc'
+    };
+    return this.marketplaceService.getPublishedPrompts(tenantId, params);
   }
 
   @Get('assets')
   @ApiOperation({
-    summary: 'Get published assets from the marketplace for the current tenant',
+    summary: 'Get published assets',
+    description: 'Retrieves a paginated list of published assets for the current tenant. Results can be filtered, sorted and searched.'
   })
   @ApiQuery({
     name: 'search',
     required: false,
     type: String,
-    description: 'Search term for asset key',
+    description: 'Search term to filter assets by name or description'
   })
   @ApiQuery({
     name: 'page',
     required: false,
     type: Number,
-    description: 'Page number for pagination',
+    description: 'Page number for pagination (starts at 1)',
+    example: 1
   })
   @ApiQuery({
     name: 'limit',
     required: false,
     type: Number,
-    description: 'Items per page',
+    description: 'Number of items per page',
+    example: 10
   })
   @ApiQuery({
     name: 'sortBy',
     required: false,
-    enum: ['createdAt', 'name'],
-    description: 'Sort by field',
+    type: String,
+    description: 'Field to sort by (e.g. name, createdAt)',
+    example: 'createdAt'
   })
   @ApiQuery({
     name: 'sortOrder',
     required: false,
-    enum: ['asc', 'desc'],
-    description: 'Sort order',
+    enum: ['ASC', 'DESC'],
+    description: 'Sort order direction',
+    example: 'DESC'
+  })
+  @ApiQuery({
+    name: 'languageCode',
+    required: false,
+    type: String,
   })
   // TODO: ApiQuery para category cuando se implemente el filtro
   @ApiResponse({
-    status: 200,
-    description:
-      'List of published assets.' /* type: [PromptAssetVersionDto] */,
+    status: HttpStatus.OK,
+    description: 'List of published assets retrieved successfully'
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized - Invalid or expired token'
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid query parameters - Check the provided values'
+  })
   // @UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
   async getPublishedAssets(
-    @Request() req: any,
-    @Query() queryParams: MarketplaceQueryParams,
+    @Query() query: GetPublishedAssetsQueryDto,
+    @Req() req: RequestWithUser,
   ): Promise<PromptAssetVersion[]> {
-    const tenantId = req.user.tenantId;
-    if (queryParams.page) queryParams.page = Number(queryParams.page);
-    if (queryParams.limit) queryParams.limit = Number(queryParams.limit);
-    return this.marketplaceService.getPublishedAssets(tenantId, queryParams);
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) {
+      throw new UnauthorizedException('User tenant information is missing');
+    }
+    if (query.page) query.page = Number(query.page);
+    if (query.limit) query.limit = Number(query.limit);
+    const params: MarketplaceQueryParams = {
+      search: query.search,
+      page: query.page,
+      limit: query.limit,
+      sortBy: query.sortBy as 'createdAt' | 'name' | 'popularity',
+      sortOrder: query.sortOrder?.toLowerCase() as 'asc' | 'desc'
+    };
+    return this.marketplaceService.getPublishedAssets(tenantId, params);
   }
 }

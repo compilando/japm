@@ -25,38 +25,41 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard'; // Asumiendo que existe
 import { Roles } from '../auth/decorators/roles.decorator'; // Asumiendo que existe
-import { Role } from '@prisma/client';
+import { Role } from '../common/enums/role.enum';
 
 @ApiTags('Tenants')
 @ApiBearerAuth()
 @Controller('tenants')
 export class TenantController {
-  constructor(private readonly tenantService: TenantService) {}
+  constructor(private readonly tenantService: TenantService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN) // Solo ADMIN global puede crear tenants
-  @ApiOperation({ summary: 'Create a new tenant' })
+  @Roles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Create new tenant',
+    description: 'Creates a new tenant in the system. This operation requires global admin privileges.'
+  })
   @ApiResponse({
     status: HttpStatus.CREATED,
-    description: 'Tenant created successfully.',
-    type: TenantDto,
+    description: 'Tenant successfully created',
+    type: TenantDto
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid input.',
+    description: 'Invalid input data - Check the request body format'
   })
   @ApiResponse({
     status: HttpStatus.CONFLICT,
-    description: 'Tenant name already exists.',
+    description: 'Tenant name already exists - The provided name is already in use'
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
+    description: 'Unauthorized - Invalid or expired token'
   })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
-    description: 'Forbidden resource.',
+    description: 'Forbidden - Global admin role required'
   })
   create(@Body() createTenantDto: CreateTenantDto): Promise<TenantDto> {
     return this.tenantService.create(createTenantDto);
@@ -64,61 +67,66 @@ export class TenantController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN) // Solo ADMIN global puede listar todos los tenants
-  @ApiOperation({ summary: 'Get all tenants' })
+  @Roles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Get all tenants',
+    description: 'Retrieves a list of all tenants in the system. This operation requires global admin privileges.'
+  })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Array of tenants.',
-    type: [TenantDto],
+    description: 'List of tenants retrieved successfully',
+    type: [TenantDto]
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
+    description: 'Unauthorized - Invalid or expired token'
   })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
-    description: 'Forbidden resource.',
+    description: 'Forbidden - Global admin role required'
   })
   findAll(): Promise<TenantDto[]> {
     return this.tenantService.findAll();
   }
 
   @Get(':tenantId')
-  @UseGuards(JwtAuthGuard, RolesGuard) // RolesGuard verificará si es ADMIN o TENANT_ADMIN del tenantId solicitado
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.TENANT_ADMIN)
-  @ApiOperation({ summary: 'Get a specific tenant by ID' })
+  @ApiOperation({
+    summary: 'Get tenant by ID',
+    description: 'Retrieves a specific tenant by their unique ID. Accessible by global admins or tenant admins of the specified tenant.'
+  })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Tenant object.',
-    type: TenantDto,
+    description: 'Tenant found successfully',
+    type: TenantDto
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Tenant not found.',
+    description: 'Tenant not found - The specified ID does not exist'
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
+    description: 'Unauthorized - Invalid or expired token'
   })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
-    description: 'Forbidden resource.',
+    description: 'Forbidden - Insufficient permissions to access this tenant'
   })
   @ApiParam({
     name: 'tenantId',
     type: 'string',
     format: 'uuid',
-    description: 'The ID of the tenant',
+    description: 'Unique tenant identifier (UUID)',
+    required: true
   })
   async findOne(
     @Param('tenantId', ParseUUIDPipe) tenantId: string,
     @Req() req: any,
   ): Promise<TenantDto> {
-    // RolesGuard debería manejar la lógica de si el TENANT_ADMIN puede acceder a este tenantId.
-    // Si req.user.role es TENANT_ADMIN, nos aseguramos que solo acceda a su propio tenant.
     if (req.user.role === Role.TENANT_ADMIN && req.user.tenantId !== tenantId) {
       throw new ForbiddenException(
-        'You are not authorized to access this tenant.',
+        'You are not authorized to access this tenant.'
       );
     }
     return this.tenantService.findOne(tenantId);
@@ -127,37 +135,41 @@ export class TenantController {
   @Patch(':tenantId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.TENANT_ADMIN)
-  @ApiOperation({ summary: 'Update a tenant by ID' })
+  @ApiOperation({
+    summary: 'Update tenant',
+    description: 'Updates an existing tenant\'s information. Accessible by global admins or tenant admins of the specified tenant.'
+  })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Tenant updated successfully.',
-    type: TenantDto,
+    description: 'Tenant updated successfully',
+    type: TenantDto
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Tenant not found.',
+    description: 'Tenant not found - The specified ID does not exist'
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid input.',
+    description: 'Invalid input data - Check the request body format'
   })
   @ApiResponse({
     status: HttpStatus.CONFLICT,
-    description: 'Tenant name already exists.',
+    description: 'Tenant name already exists - The provided name is already in use'
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
+    description: 'Unauthorized - Invalid or expired token'
   })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
-    description: 'Forbidden resource.',
+    description: 'Forbidden - Insufficient permissions to update this tenant'
   })
   @ApiParam({
     name: 'tenantId',
     type: 'string',
     format: 'uuid',
-    description: 'The ID of the tenant',
+    description: 'Unique tenant identifier to update (UUID)',
+    required: true
   })
   async update(
     @Param('tenantId', ParseUUIDPipe) tenantId: string,
@@ -166,43 +178,42 @@ export class TenantController {
   ): Promise<TenantDto> {
     if (req.user.role === Role.TENANT_ADMIN && req.user.tenantId !== tenantId) {
       throw new ForbiddenException(
-        'You are not authorized to update this tenant.',
+        'You are not authorized to update this tenant.'
       );
     }
-    // Un TENANT_ADMIN no debería poder cambiar el nombre de su tenant si eso tiene implicaciones mayores.
-    // Opcionalmente, se podría restringir qué campos puede actualizar un TENANT_ADMIN.
-    // Por ahora, permitimos la actualización de los campos definidos en UpdateTenantDto.
     return this.tenantService.update(tenantId, updateTenantDto);
   }
 
   @Delete(':tenantId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN) // Solo ADMIN global puede eliminar tenants
+  @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Delete a tenant by ID (Caution: Destructive operation)',
+    summary: 'Delete tenant',
+    description: 'Permanently deletes a tenant from the system. This is a destructive operation that requires global admin privileges.'
   })
   @ApiResponse({
     status: HttpStatus.NO_CONTENT,
-    description: 'Tenant deleted successfully.',
+    description: 'Tenant successfully deleted'
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Tenant not found.',
+    description: 'Tenant not found - The specified ID does not exist'
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
+    description: 'Unauthorized - Invalid or expired token'
   })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
-    description: 'Forbidden resource.',
+    description: 'Forbidden - Global admin role required'
   })
   @ApiParam({
     name: 'tenantId',
     type: 'string',
     format: 'uuid',
-    description: 'The ID of the tenant',
+    description: 'Unique tenant identifier to delete (UUID)',
+    required: true
   })
   async remove(
     @Param('tenantId', ParseUUIDPipe) tenantId: string,

@@ -353,6 +353,8 @@ async function main() {
                 name: promptSeed.promptName,
                 description: promptSeed.promptDescription,
                 projectId: eduProjectId,
+                content: promptSeed.promptContent,
+                tenantId: defaultTenant.id,
                 tags: promptSeed.promptTags ? { connect: getEduTagIds(promptSeed.promptTags) } : undefined,
             },
             select: { id: true }

@@ -27,36 +27,63 @@ import { User } from '@prisma/client';
 
 // DTO for Login response
 class LoginResponse {
-  @ApiProperty()
+  @ApiProperty({
+    description: 'JWT access token for authentication',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+  })
   access_token: string;
 }
 
 // DTO for Register/Profile response (without password)
 class UserProfileResponse {
-  @ApiProperty()
+  @ApiProperty({
+    description: 'Unique user identifier',
+    example: 'clg123xyz'
+  })
   id: string;
-  @ApiProperty()
+
+  @ApiProperty({
+    description: 'User\'s email address',
+    example: 'user@example.com'
+  })
   email: string;
-  @ApiProperty()
+
+  @ApiProperty({
+    description: 'User\'s full name',
+    example: 'John Doe'
+  })
   name: string;
-  @ApiProperty()
+
+  @ApiProperty({
+    description: 'Account creation timestamp',
+    example: '2024-03-20T10:30:00Z'
+  })
   createdAt: Date;
 }
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Post('register')
-  @ApiOperation({ summary: 'Register a new user' })
+  @ApiOperation({
+    summary: 'Register new user',
+    description: 'Creates a new user account in the system. This endpoint is publicly accessible.'
+  })
   @ApiResponse({
     status: 201,
-    description: 'User successfully registered.',
-    type: UserProfileResponse,
+    description: 'User successfully registered',
+    type: UserProfileResponse
   })
-  @ApiResponse({ status: 400, description: 'Invalid input data.' })
-  @ApiResponse({ status: 409, description: 'Email already exists.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data - Check the request body format'
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Email already exists - The provided email is already registered'
+  })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   @HttpCode(HttpStatus.CREATED)
   async register(
@@ -68,16 +95,22 @@ export class AuthController {
   // Use LocalAuthGuard to activate LocalStrategy
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  @ApiOperation({ summary: 'Log in a user' })
-  @ApiBody({ type: LoginDto })
+  @ApiOperation({
+    summary: 'User login',
+    description: 'Authenticates a user and returns a JWT token for subsequent API calls'
+  })
+  @ApiBody({
+    type: LoginDto,
+    description: 'User credentials for authentication'
+  })
   @ApiResponse({
     status: 200,
-    description: 'Login successful, returns JWT token.',
-    type: LoginResponse,
+    description: 'Login successful - Returns JWT token',
+    type: LoginResponse
   })
   @ApiResponse({
     status: 401,
-    description: 'Unauthorized (Invalid Credentials).',
+    description: 'Invalid credentials - Email or password is incorrect'
   })
   @HttpCode(HttpStatus.OK) // Change from 201 to 200 for login
   async login(@Request() req): Promise<{ access_token: string }> {
@@ -88,16 +121,19 @@ export class AuthController {
   // Protected by JwtAuthGuard
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiOperation({
+    summary: 'Get user profile',
+    description: 'Retrieves the profile information of the currently authenticated user'
+  })
   @ApiBearerAuth() // Indicates Bearer token required in Swagger
   @ApiResponse({
     status: 200,
-    description: 'User profile data.',
-    type: UserProfileResponse,
+    description: 'User profile retrieved successfully',
+    type: UserProfileResponse
   })
   @ApiResponse({
     status: 401,
-    description: 'Unauthorized (Invalid or missing token).',
+    description: 'Unauthorized - Invalid or expired token'
   })
   getProfile(@Request() req): Promise<Omit<User, 'password'>> {
     // JwtAuthGuard (via JwtStrategy) validated the token and attached data to req.user

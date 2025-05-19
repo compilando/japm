@@ -106,6 +106,7 @@ export class PromptService {
   async create(
     createDto: CreatePromptDto,
     projectId: string,
+    tenantId: string,
   ): Promise<PromptWithInitialVersionAndTags> {
     const {
       name,
@@ -141,6 +142,8 @@ export class PromptService {
             name: name,
             description: description,
             projectId: projectId,
+            content: promptText,
+            tenantId: tenantId,
             tags: tagsToConnect ? { connect: tagsToConnect } : undefined,
             ...restData,
           },
@@ -308,41 +311,11 @@ export class PromptService {
     }
   }
 
-  async remove(promptIdSlug: string, projectId: string): Promise<Prompt> {
-    // Primero, asegurar que el prompt existe y pertenece al proyecto.
-    // findOne ya usa prompt_id_project_unique y lanza NotFoundException si no se encuentra.
-    await this.findOne(promptIdSlug, projectId);
-
-    try {
-      return await this.prisma.prompt.delete({
-        where: {
-          prompt_id_project_unique: {
-            // Usar el constraint @@unique
-            id: promptIdSlug,
-            projectId: projectId,
-          },
-        },
-      });
-    } catch (error) {
-      // P2025 podría ocurrir si el prompt ya no existe (condición de carrera) o una FK lo impide.
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
-      ) {
-        this.logger.error(
-          `Error P2025 deleting prompt '${promptIdSlug}' in project '${projectId}': ${error.message}`,
-          error.meta,
-        );
-        throw new NotFoundException(
-          `Delete failed. Prompt with ID "${promptIdSlug}" in project "${projectId}" not found or a related entity prevents deletion.`,
-        );
-      }
-      this.logger.error(
-        `Error deleting prompt '${promptIdSlug}' in project '${projectId}': ${error.message}`,
-        error.stack,
-      );
-      throw error; // Re-lanzar otros errores
-    }
+  async remove(id: string, tenantId: string): Promise<void> {
+    const prompt = await this.findOne(id, tenantId);
+    await this.prisma.prompt.delete({
+      where: { id: prompt.id },
+    });
   }
 
   // --- Version and Translation Methods --- //
@@ -571,6 +544,7 @@ export class PromptService {
   async loadStructure(
     projectId: string,
     dto: LoadPromptStructureDto,
+    tenantId: string,
   ): Promise<Prompt> {
     this.logger.log(
       `Attempting to load prompt structure for project: ${projectId} with DTO: ${JSON.stringify(dto)}`,
@@ -608,6 +582,8 @@ export class PromptService {
           name: promptMeta.name,
           description: promptMeta.description,
           projectId: projectId,
+          content: versionData.promptText,
+          tenantId: tenantId,
         },
       });
       this.logger.debug(`Created Prompt: ${prompt.name} (ID: ${prompt.id})`);

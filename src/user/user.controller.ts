@@ -27,27 +27,42 @@ import { User } from '@prisma/client'; // Import User type from Prisma
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Importar JwtAuthGuard
 import { Logger } from '@nestjs/common'; // Import Logger
 
-@ApiTags('Users') // Tag for grouping in Swagger
-@Controller('users') // Base path for this controller
+@ApiTags('Users')
+@Controller('users')
 export class UserController {
-  private readonly logger = new Logger(UserController.name); // Add Logger instance
+  private readonly logger = new Logger(UserController.name);
 
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   @Post()
-  @UseGuards(JwtAuthGuard) // <-- Añadir Guardia
-  @ApiBearerAuth() // <-- Añadir anotación Swagger
-  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) // Enable validation
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   @ApiOperation({
-    summary: "Create a new user (within the authenticated admin user's tenant)",
+    summary: 'Create new user',
+    description: 'Creates a new user within the authenticated admin\'s tenant. Requires admin privileges.'
   })
-  @ApiBody({ type: CreateUserDto })
+  @ApiBody({
+    type: CreateUserDto,
+    description: 'User data to create'
+  })
   @ApiResponse({
     status: 201,
-    description: 'User created successfully.' /* type: UserDto */,
+    description: 'User successfully created',
+    type: CreateUserDto
   })
-  @ApiResponse({ status: 400, description: 'Invalid input data.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data - Check the request body format'
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or expired token'
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin role required'
+  })
   create(@Request() req, @Body() createUserDto: CreateUserDto): Promise<User> {
     this.logger.debug(
       `[create] Received POST request. Body: ${JSON.stringify(createUserDto, null, 2)}`,
@@ -66,47 +81,108 @@ export class UserController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all users' })
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get all users',
+    description: 'Retrieves a list of all users in the system. Requires admin privileges.'
+  })
   @ApiResponse({
     status: 200,
-    description: 'List of users.',
-    type: [CreateUserDto],
-  }) // Adjust type if needed
+    description: 'List of users retrieved successfully',
+    type: [CreateUserDto]
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or expired token'
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin role required'
+  })
   findAll(): Promise<User[]> {
     return this.userService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a user by ID' })
-  @ApiParam({ name: 'id', description: 'User ID', type: String })
-  @ApiResponse({ status: 200, description: 'User found.', type: CreateUserDto })
-  @ApiResponse({ status: 404, description: 'User not found.' })
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get user by ID',
+    description: 'Retrieves a specific user by their unique ID. Requires admin privileges.'
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Unique user identifier (CUID)',
+    type: String,
+    required: true
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User found successfully',
+    type: CreateUserDto
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or expired token'
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin role required'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found - The specified ID does not exist'
+  })
   findOne(@Param('id') id: string): Promise<User> {
     return this.userService.findOneById(id);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @UsePipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       skipMissingProperties: true,
-    }),
-  ) // Validate only present fields
-  @ApiOperation({ summary: 'Update a user by ID' })
+    })
+  )
+  @ApiOperation({
+    summary: 'Update user',
+    description: 'Updates an existing user\'s information. Requires admin privileges.'
+  })
   @ApiParam({
     name: 'id',
-    description: 'ID of the user to update',
+    description: 'Unique user identifier to update (CUID)',
     type: String,
+    required: true
   })
-  @ApiBody({ type: UpdateUserDto })
+  @ApiBody({
+    type: UpdateUserDto,
+    description: 'User data to update'
+  })
   @ApiResponse({
     status: 200,
-    description: 'User updated successfully.',
-    type: CreateUserDto,
+    description: 'User updated successfully',
+    type: CreateUserDto
   })
-  @ApiResponse({ status: 404, description: 'User not found.' })
-  @ApiResponse({ status: 400, description: 'Invalid input data.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data - Check the request body format'
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or expired token'
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin role required'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found - The specified ID does not exist'
+  })
   update(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
@@ -118,14 +194,35 @@ export class UserController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a user by ID' })
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Delete user',
+    description: 'Permanently deletes a user from the system. Requires admin privileges.'
+  })
   @ApiParam({
     name: 'id',
-    description: 'ID of the user to delete',
+    description: 'Unique user identifier to delete (CUID)',
     type: String,
+    required: true
   })
-  @ApiResponse({ status: 200, description: 'User deleted successfully.' }) // Can return the deleted user if desired
-  @ApiResponse({ status: 404, description: 'User not found.' })
+  @ApiResponse({
+    status: 200,
+    description: 'User deleted successfully',
+    type: CreateUserDto
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or expired token'
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin role required'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found - The specified ID does not exist'
+  })
   remove(@Param('id') id: string): Promise<User> {
     return this.userService.remove(id);
   }

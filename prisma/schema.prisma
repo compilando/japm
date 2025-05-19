@@ -108,19 +108,23 @@ model CulturalData {
 }
 
 model Prompt {
-  id          String          @id // Este es el slug
+  id          String   @id @default(uuid())
   name        String
-  description String          @default("")
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  description String?
+  content     String
+  projectId   String
+  project     Project  @relation("ProjectPrompts", fields: [projectId], references: [id])
+  tenantId    String
+  tenant      Tenant   @relation("TenantPrompts", fields: [tenantId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   versions    PromptVersion[] @relation("PromptVersion_prompt")
   tags        Tag[]           @relation("PromptTags")
-  project     Project         @relation("ProjectPrompts", fields: [projectId], references: [id], onDelete: Cascade)
-  projectId   String          @map("project")
-  assets      PromptAsset[]   @relation("PromptOwnedAssets") // Added inverse relation
+  assets      PromptAsset[]   @relation("PromptOwnedAssets")
 
-  @@unique([id, projectId], name: "prompt_id_project_unique") // Slug (id) único por proyecto
-  @@index([projectId])
+  @@unique([id, projectId], name: "prompt_id_project_unique")
+  @@map("prompts")
 }
 
 model PromptVersion {
@@ -177,19 +181,19 @@ model PromptTranslation {
 model PromptAsset {
   id        String   @id @default(cuid())
 
-  promptId         String  // Corresponds to Prompt.id (slug)
-  projectId  String  // Corresponds to Prompt.projectId (CUID of the project the prompt belongs to)
-  prompt           Prompt  @relation("PromptOwnedAssets", fields: [promptId, projectId], references: [id, projectId], onDelete: Cascade)
+  promptId  String
+  projectId String
+  prompt    Prompt  @relation("PromptOwnedAssets", fields: [promptId, projectId], references: [id, projectId], onDelete: Cascade)
 
-  key       String // User-defined key for the asset, e.g., "company-bio", "product-list"
-  enabled   Boolean  @default(true) // Campo para activar/desactivar el asset
+  key       String
+  enabled   Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   versions PromptAssetVersion[] @relation("AssetVersions")
 
-  @@unique([promptId, projectId, key], name: "prompt_asset_key_unique") // NEW unique constraint: key is unique per prompt
-  @@index([promptId, projectId]) // Index for the new foreign key fields
+  @@unique([promptId, projectId, key], name: "prompt_asset_key_unique")
+  @@index([promptId, projectId])
 }
 
 model PromptAssetVersion {
@@ -383,13 +387,30 @@ model SystemPrompt {
 }
 
 model Tenant {
-  id        String   @id @default(cuid())
-  name      String   @default("")
+  id        String   @id @default(uuid())
+  name      String
+  users     User[]
+  projects  Project[]
+  prompts   Prompt[] @relation("TenantPrompts")
+  assets    Asset[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   marketplaceRequiresApproval Boolean @default(true)
 
-  users    User[]
-  projects Project[]
+  @@map("tenants")
+}
+
+model Asset {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  type        String
+  url         String
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("assets")
 }

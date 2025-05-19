@@ -6,8 +6,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
-import { Project, Prisma } from '@prisma/client';
+import { ProjectDto } from './dto/project.dto';
 import { Logger } from '@nestjs/common';
+import { Project, Prisma } from '@prisma/client';
 
 // Función simple para generar slugs
 function slugify(text: string): string {
@@ -29,13 +30,20 @@ type ProjectWithRegions = Prisma.ProjectGetPayload<{
 export class ProjectService {
   private readonly logger = new Logger(ProjectService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
+
+  private transformProject(project: Project): ProjectDto {
+    return {
+      ...project,
+      description: project.description || undefined
+    };
+  }
 
   async create(
     createProjectDto: CreateProjectDto,
     userId: string,
     tenantId: string,
-  ): Promise<Project> {
+  ): Promise<ProjectDto> {
     const { name, description } = createProjectDto;
 
     const slug = slugify(name);
@@ -52,7 +60,7 @@ export class ProjectService {
     }
 
     try {
-      return await this.prisma.project.create({
+      const project = await this.prisma.project.create({
         data: {
           id: slug,
           name,
@@ -61,6 +69,7 @@ export class ProjectService {
           owner: { connect: { id: userId } },
         },
       });
+      return this.transformProject(project);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -87,17 +96,12 @@ export class ProjectService {
 
   async findAll(
     tenantId: string,
-  ): Promise<Pick<Project, 'id' | 'name' | 'description' | 'tenantId'>[]> {
+  ): Promise<ProjectDto[]> {
     console.log(`[Service] Finding projects for tenant: ${tenantId}`); // Log de depuración
-    return this.prisma.project.findMany({
+    const projects = await this.prisma.project.findMany({
       where: { tenantId: tenantId }, // Filtrar directamente en la query por tenantId
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        tenantId: true /* Otros campos necesarios */,
-      },
     });
+    return projects.map(this.transformProject);
   }
 
   async findAllForUser(
@@ -117,34 +121,32 @@ export class ProjectService {
     });
   }
 
-  async findOne(id: string, tenantId: string): Promise<ProjectWithRegions> {
-    const project = await this.prisma.project.findUnique({
-      where: { id: id },
-      include: {
-        regions: true,
+  async findOne(id: string, tenantId: string): Promise<ProjectDto> {
+    const project = await this.prisma.project.findFirstOrThrow({
+      where: {
+        id,
+        tenantId,
       },
     });
-
-    if (!project || project.tenantId !== tenantId) {
-      throw new NotFoundException(
-        `Project with ID "${id}" not found for tenant "${tenantId}".`,
-      );
-    }
-    return project as ProjectWithRegions;
+    return this.transformProject(project);
   }
 
   async update(
     id: string,
     updateProjectDto: UpdateProjectDto,
     tenantId: string,
-  ): Promise<Project> {
+  ): Promise<ProjectDto> {
     await this.findOne(id, tenantId);
 
     try {
-      return await this.prisma.project.update({
-        where: { id: id },
+      const project = await this.prisma.project.update({
+        where: {
+          id,
+          tenantId,
+        },
         data: updateProjectDto,
       });
+      return this.transformProject(project);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -166,31 +168,12 @@ export class ProjectService {
     }
   }
 
-  async remove(id: string, tenantId: string): Promise<Project> {
-    await this.findOne(id, tenantId);
-
-    try {
-      return await this.prisma.project.delete({
-        where: { id: id },
-      });
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
-      ) {
-        this.logger.error(
-          `Error P2025 deleting project '${id}': ${error.message}`,
-          error.meta,
-        );
-        throw new NotFoundException(
-          `Delete failed. Project with ID "${id}" may have already been deleted.`,
-        );
-      }
-      this.logger.error(
-        `Error deleting project '${id}': ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
+  async remove(id: string, tenantId: string): Promise<void> {
+    await this.prisma.project.delete({
+      where: {
+        id,
+        tenantId,
+      },
+    });
   }
 }

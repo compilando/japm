@@ -253,14 +253,18 @@ async function main() {
         update: {
             name: promptRagQueryName,
             description: 'Core RAG prompt to answer user questions based on retrieved context.',
-            tags: { set: getRagTagIds(['rag', 'hr-policy', 'employee-faq']) }
+            tags: { set: getRagTagIds(['rag', 'hr-policy', 'employee-faq']) },
+            content: 'Texto base del prompt',
+            tenantId: defaultTenant.id
         },
         create: {
             id: promptRagQuerySlug, // ID es slug
             name: promptRagQueryName,
             description: 'Core RAG prompt to answer user questions based on retrieved context.',
             projectId: ragProjectId,
-            tags: { connect: getRagTagIds(['rag', 'hr-policy', 'employee-faq']) }
+            tags: { connect: getRagTagIds(['rag', 'hr-policy', 'employee-faq']) },
+            content: 'Texto base del prompt',
+            tenantId: defaultTenant.id
         },
         select: { id: true, name: true }
     });

@@ -28,6 +28,7 @@ import { SystemPromptModule } from './system-prompt/system-prompt.module';
 import { RawExecutionModule } from './raw-execution/raw-execution.module';
 import { TenantModule } from './tenant/tenant.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
+import { AssetModule } from './asset/asset.module';
 import { APP_GUARD } from '@nestjs/core';
 
 @Module({
@@ -61,6 +62,7 @@ import { APP_GUARD } from '@nestjs/core';
     RawExecutionModule,
     TenantModule,
     MarketplaceModule,
+    AssetModule,
   ],
   controllers: [AppController],
   providers: [AppService],

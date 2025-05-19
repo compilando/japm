@@ -227,6 +227,8 @@ async function main() {
             name: 'Marketing Common Assets',
             description: 'Common reusable assets for Marketing prompts.',
             projectId: marketingProject.id,
+            content: 'Texto base del prompt',
+            tenantId: defaultTenant.id,
         },
         select: { id: true }
     });
@@ -273,6 +275,8 @@ async function main() {
                 description: promptSeed.description,
                 projectId: mktProjectId,
                 tags: { connect: getMktTagIds(promptSeed.tags) },
+                content: 'Texto base del prompt',
+                tenantId: defaultTenant.id,
             },
             select: { id: true }
         });

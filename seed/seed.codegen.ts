@@ -374,6 +374,8 @@ async function main() {
                 name: promptSeed.name,
                 description: promptSeed.description,
                 projectId: cgProjectId,
+                content: promptSeed.promptText,
+                tenantId: tenantId,
                 tags: { connect: getTagIds(promptSeed.tags) }
             },
             select: { id: true }
