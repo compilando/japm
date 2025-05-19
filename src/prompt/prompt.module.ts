@@ -6,6 +6,7 @@ import { ProjectModule } from '../project/project.module';
 import { SystemPromptModule } from '../system-prompt/system-prompt.module';
 import { ConfigModule } from '@nestjs/config';
 import { RawExecutionModule } from '../raw-execution/raw-execution.module';
+import { RegionModule } from '../region/region.module';
 
 @Module({
   imports: [
@@ -14,9 +15,10 @@ import { RawExecutionModule } from '../raw-execution/raw-execution.module';
     SystemPromptModule,
     ConfigModule,
     RawExecutionModule,
+    RegionModule,
   ],
   controllers: [PromptController],
   providers: [PromptService],
   exports: [PromptService],
 })
-export class PromptModule {}
+export class PromptModule { }

@@ -7,5 +7,6 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [PrismaModule],
   controllers: [RegionController],
   providers: [RegionService],
+  exports: [RegionService],
 })
-export class RegionModule {}
+export class RegionModule { }

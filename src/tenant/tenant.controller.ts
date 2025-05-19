@@ -121,7 +121,7 @@ export class TenantController {
     required: true
   })
   async findOne(
-    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Param('tenantId') tenantId: string,
     @Req() req: any,
   ): Promise<TenantDto> {
     if (req.user.role === Role.TENANT_ADMIN && req.user.tenantId !== tenantId) {
@@ -172,7 +172,7 @@ export class TenantController {
     required: true
   })
   async update(
-    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Param('tenantId') tenantId: string,
     @Body() updateTenantDto: UpdateTenantDto,
     @Req() req: any,
   ): Promise<TenantDto> {
@@ -216,7 +216,7 @@ export class TenantController {
     required: true
   })
   async remove(
-    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Param('tenantId') tenantId: string,
   ): Promise<void> {
     await this.tenantService.remove(tenantId);
   }

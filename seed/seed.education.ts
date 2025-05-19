@@ -175,11 +175,11 @@ const educationPrompts: EducationPromptSeed[] = [
         ],
         versions: [
             {
-                versionTag: 'v1.0.0',
+                versionTag: 'v1.0.1',
                 assetVersions: [
                     {
                         assetKey: 'mcq-template-4-options',
-                        versionTag: 'v1.0.0',
+                        versionTag: 'v1.0.1',
                         name: 'Advanced MCQ Template (4 options with Learning Objective)',
                         type: 'text',
                         description: 'Enhanced template for multiple-choice questions with four options, correct answer, detailed explanation, and an optional learning objective.',
@@ -201,11 +201,11 @@ const educationPrompts: EducationPromptSeed[] = [
         ],
         versions: [
             {
-                versionTag: 'v1.0.0',
+                versionTag: 'v1.0.2',
                 assetVersions: [
                     {
                         assetKey: 'definition-cell-biology',
-                        versionTag: 'v1.0.0',
+                        versionTag: 'v1.0.2',
                         name: 'Foundational Definition - Cell Biology',
                         type: 'text',
                         description: 'A comprehensive and foundational definition of a cell, emphasizing its role as the cornerstone of life.',
@@ -213,7 +213,7 @@ const educationPrompts: EducationPromptSeed[] = [
                     },
                     {
                         assetKey: 'explanation-style-analogy',
-                        versionTag: 'v1.0.0',
+                        versionTag: 'v1.0.2',
                         name: 'Guideline for Crafting Potent Analogies',
                         type: 'text',
                         description: "Guideline for creating vivid, relatable analogies that simplify complex concepts for high school students, aiming for 'aha!' moments.",
@@ -232,7 +232,7 @@ const educationPrompts: EducationPromptSeed[] = [
         assets: [],
         versions: [
             {
-                versionTag: 'v1.0.0'
+                versionTag: 'v1.0.3'
             }
         ]
     }

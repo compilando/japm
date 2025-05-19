@@ -180,7 +180,7 @@ export class ProjectController {
   @CacheKey('project')
   @CacheTTL(3600)
   findOne(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Req() req: any,
   ): Promise<ProjectDto> {
     const tenantId = req.user.tenantId;
@@ -233,7 +233,7 @@ export class ProjectController {
     required: true
   })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() updateProjectDto: UpdateProjectDto,
     @Req() req: any,
   ): Promise<ProjectDto> {
@@ -282,7 +282,7 @@ export class ProjectController {
     required: true
   })
   async remove(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Req() req: any,
   ): Promise<void> {
     const tenantId = req.user.tenantId;

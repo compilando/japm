@@ -23,7 +23,8 @@ import {
 } from './marketplace.service';
 import { PromptVersion, PromptAssetVersion } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { GetPublishedPromptsQueryDto, GetPublishedAssetsQueryDto } from './dto';
+import { GetPublishedPromptsQueryDto } from './dto/get-published-prompts-query.dto';
+import { GetPublishedAssetsQueryDto } from './dto/get-published-assets-query.dto';
 import { Request as ExpressRequest } from 'express';
 import { Logger } from '@nestjs/common';
 

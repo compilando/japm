@@ -968,11 +968,20 @@
         ]
       }
     },
-    "/api/prompts": {
+    "/api/projects/{projectId}/prompts": {
       "post": {
         "description": "Creates a new prompt for the current tenant. Accessible by global admins or tenant admins.",
         "operationId": "PromptController_create",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1020,7 +1029,16 @@
       "get": {
         "description": "Retrieves a list of all prompts for the current tenant. Results are cached for 1 hour.",
         "operationId": "PromptController_findAll",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of prompts retrieved successfully",
@@ -1050,18 +1068,25 @@
         ]
       }
     },
-    "/api/prompts/{id}": {
+    "/api/projects/{projectId}/prompts/{id}": {
       "get": {
         "description": "Retrieves a specific prompt by its unique ID. Results are cached for 1 hour.",
         "operationId": "PromptController_findOne",
         "parameters": [
           {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "Unique prompt identifier (UUID)",
+            "description": "Unique prompt identifier (slug)",
             "schema": {
-              "format": "uuid",
               "type": "string"
             }
           }
@@ -1102,9 +1127,8 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "Unique prompt identifier to update (UUID)",
+            "description": "Unique prompt identifier to update (slug or UUID)",
             "schema": {
-              "format": "uuid",
               "type": "string"
             }
           }
@@ -1164,9 +1188,8 @@
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "Unique prompt identifier to delete (UUID)",
+            "description": "Unique prompt identifier to delete (slug or UUID)",
             "schema": {
-              "format": "uuid",
               "type": "string"
             }
           }
@@ -1196,7 +1219,7 @@
         ]
       }
     },
-    "/api/prompts/generate-structure": {
+    "/api/projects/{projectId}/prompts/generate-structure": {
       "post": {
         "description": "Analiza un prompt de usuario usando un LLM y sugiere una estructura basada en las entidades del proyecto.",
         "operationId": "PromptController_generateStructure",
@@ -1263,50 +1286,32 @@
         ]
       }
     },
-    "/api/prompts/load-structure": {
+    "/api/projects/{projectId}/prompts/{id}/load-structure": {
       "post": {
-        "description": "Carga una estructura de prompt predefinida en el proyecto",
         "operationId": "PromptController_loadStructure",
         "parameters": [
           {
-            "name": "projectId",
+            "name": "id",
             "required": true,
             "in": "path",
-            "description": "ID del proyecto",
             "schema": {
               "type": "string"
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoadPromptStructureDto"
-              }
-            }
-          }
-        },
         "responses": {
+          "200": {
+            "description": "Prompt structure loaded successfully"
+          },
           "201": {
-            "description": "Prompt creado exitosamente con la estructura cargada",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PromptDto"
+                  "type": "object"
                 }
               }
             }
-          },
-          "400": {
-            "description": "Datos de entrada inválidos"
-          },
-          "401": {
-            "description": "No autorizado"
-          },
-          "404": {
-            "description": "Proyecto no encontrado"
           }
         },
         "security": [
@@ -1314,22 +1319,21 @@
             "bearer": []
           }
         ],
-        "summary": "Carga estructura de prompt",
+        "summary": "Load prompt structure",
         "tags": [
           "Prompts"
         ]
       }
     },
-    "/api/prompts/{promptId}/versions": {
+    "/api/projects/{projectId}/prompts/{promptId}/versions": {
       "post": {
-        "description": "Crea una nueva versión de un prompt existente",
-        "operationId": "PromptController_createVersion",
+        "operationId": "PromptVersionController_create",
         "parameters": [
           {
             "name": "projectId",
             "required": true,
             "in": "path",
-            "description": "ID del proyecto",
+            "description": "Project ID",
             "schema": {
               "type": "string"
             }
@@ -1338,7 +1342,7 @@
             "name": "promptId",
             "required": true,
             "in": "path",
-            "description": "ID (slug) del prompt",
+            "description": "Prompt CUID",
             "schema": {
               "type": "string"
             }
@@ -1356,7 +1360,7 @@
         },
         "responses": {
           "201": {
-            "description": "Nueva versión de prompt creada exitosamente",
+            "description": "Version created.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1366,13 +1370,16 @@
             }
           },
           "400": {
-            "description": "Datos de entrada inválidos"
+            "description": "Invalid data (e.g., duplicate versionTag)."
           },
           "401": {
-            "description": "No autorizado"
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
           },
           "404": {
-            "description": "Proyecto o Prompt no encontrado"
+            "description": "Project or Prompt not found."
           }
         },
         "security": [
@@ -1380,9 +1387,65 @@
             "bearer": []
           }
         ],
-        "summary": "Crea una nueva versión de prompt",
+        "summary": "Create a new version for a specific prompt within a project",
         "tags": [
-          "Prompts"
+          "Prompt Versions (within Project/Prompt)"
+        ]
+      },
+      "get": {
+        "operationId": "PromptVersionController_findAll",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promptId",
+            "required": true,
+            "in": "path",
+            "description": "Prompt CUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of versions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CreatePromptVersionDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden Access to Project."
+          },
+          "404": {
+            "description": "Project or Prompt not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all versions for a specific prompt within a project",
+        "tags": [
+          "Prompt Versions (within Project/Prompt)"
         ]
       }
     },
@@ -3327,130 +3390,6 @@
         "summary": "Obtiene una etiqueta por su nombre dentro de un proyecto",
         "tags": [
           "Tags"
-        ]
-      }
-    },
-    "/api/projects/{projectId}/prompts/{promptId}/versions": {
-      "post": {
-        "operationId": "PromptVersionController_create",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "Project ID",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "promptId",
-            "required": true,
-            "in": "path",
-            "description": "Prompt CUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePromptVersionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Version created.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatePromptVersionDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid data (e.g., duplicate versionTag)."
-          },
-          "401": {
-            "description": "Unauthorized."
-          },
-          "403": {
-            "description": "Forbidden Access to Project."
-          },
-          "404": {
-            "description": "Project or Prompt not found."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a new version for a specific prompt within a project",
-        "tags": [
-          "Prompt Versions (within Project/Prompt)"
-        ]
-      },
-      "get": {
-        "operationId": "PromptVersionController_findAll",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "Project ID",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "promptId",
-            "required": true,
-            "in": "path",
-            "description": "Prompt CUID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of versions.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CreatePromptVersionDto"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized."
-          },
-          "403": {
-            "description": "Forbidden Access to Project."
-          },
-          "404": {
-            "description": "Project or Prompt not found."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get all versions for a specific prompt within a project",
-        "tags": [
-          "Prompt Versions (within Project/Prompt)"
         ]
       }
     },
@@ -5796,6 +5735,16 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "name": "languageCode",
+            "required": false,
+            "in": "query",
+            "description": "Language code to filter prompts (e.g., en-US, es-ES)",
+            "schema": {
+              "example": "en-US",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -5877,6 +5826,16 @@
                 "ASC",
                 "DESC"
               ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "languageCode",
+            "required": false,
+            "in": "query",
+            "description": "Language code to filter assets (e.g., en-US, es-ES)",
+            "schema": {
+              "example": "en-US",
               "type": "string"
             }
           }
@@ -6115,14 +6074,9 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "number",
-            "description": "Unique identifier of the region",
-            "example": "1"
-          },
-          "languageCode": {
             "type": "string",
-            "description": "Language code of the region (e.g., en-US, es-ES)",
-            "example": "en-US"
+            "description": "Unique identifier for the region",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
           },
           "name": {
             "type": "string",
@@ -6131,13 +6085,40 @@
           },
           "description": {
             "type": "string",
-            "description": "Description of the region",
-            "example": "English (United States)"
+            "description": "Optional description of the region",
+            "example": "English speaking region for North America"
           },
-          "tenantId": {
+          "projectId": {
             "type": "string",
-            "description": "ID of the tenant this region belongs to",
+            "description": "ID of the project this region belongs to",
             "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "languageCode": {
+            "type": "string",
+            "description": "Language code for the region",
+            "example": "en-US"
+          },
+          "parentRegionId": {
+            "type": "string",
+            "nullable": true,
+            "description": "ID of the parent region, if any",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "timeZone": {
+            "type": "string",
+            "description": "Time zone for the region",
+            "example": "America/New_York"
+          },
+          "defaultFormalityLevel": {
+            "type": "string",
+            "nullable": true,
+            "description": "Default formality level for the region",
+            "example": "formal"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional notes about the region",
+            "example": "Primary region for English content"
           },
           "createdAt": {
             "format": "date-time",
@@ -6154,10 +6135,10 @@
         },
         "required": [
           "id",
-          "languageCode",
           "name",
-          "description",
-          "tenantId",
+          "projectId",
+          "languageCode",
+          "timeZone",
           "createdAt",
           "updatedAt"
         ]
@@ -6425,185 +6406,6 @@
           "userPrompt"
         ]
       },
-      "PromptMetaDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Suggested name for the prompt.",
-            "example": "Invoice Details Extractor"
-          },
-          "description": {
-            "type": "string",
-            "description": "Suggested description for the prompt.",
-            "example": "Extracts invoice number, date, and total amount from invoice documents."
-          }
-        },
-        "required": [
-          "name",
-          "description"
-        ]
-      },
-      "PromptVersionTranslationDto": {
-        "type": "object",
-        "properties": {
-          "languageCode": {
-            "type": "string",
-            "description": "Language code for the translation.",
-            "example": "en-US"
-          },
-          "promptText": {
-            "type": "string",
-            "description": "Translated prompt text, potentially including {{asset_key}} placeholders.",
-            "example": "Review this invoice and extract the {{invoice_number_field}}."
-          }
-        },
-        "required": [
-          "languageCode",
-          "promptText"
-        ]
-      },
-      "PromptVersionStructureDto": {
-        "type": "object",
-        "properties": {
-          "promptText": {
-            "type": "string",
-            "description": "Core prompt text, potentially including {{asset_key}} placeholders.",
-            "example": "Extract the {{invoice_number_field}} and the {{total_amount_field}} from the attached invoice."
-          },
-          "changeMessage": {
-            "type": "string",
-            "description": "Change message for this version.",
-            "example": "Initial structure generated from user prompt."
-          },
-          "assets": {
-            "description": "Array of asset keys (slug-case) used in this prompt version. These keys must correspond to assets defined in the main \"assets\" list.",
-            "example": [
-              "invoice_number_field",
-              "total_amount_field"
-            ],
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "translations": {
-            "description": "Translations for the prompt text.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PromptVersionTranslationDto"
-            }
-          }
-        },
-        "required": [
-          "promptText",
-          "changeMessage",
-          "assets",
-          "translations"
-        ]
-      },
-      "AssetTranslationStructureDto": {
-        "type": "object",
-        "properties": {
-          "languageCode": {
-            "type": "string",
-            "description": "Language code for the asset value translation.",
-            "example": "en-US"
-          },
-          "value": {
-            "type": "string",
-            "description": "Translated value of the asset.",
-            "example": "Invoice Number"
-          }
-        },
-        "required": [
-          "languageCode",
-          "value"
-        ]
-      },
-      "PromptAssetStructureDto": {
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": "string",
-            "description": "Unique key for the asset in slug-case format. This key is used in {{placeholders}}.",
-            "example": "invoice-number-field"
-          },
-          "name": {
-            "type": "string",
-            "description": "Descriptive name for the asset.",
-            "example": "Invoice Number Field"
-          },
-          "value": {
-            "type": "string",
-            "description": "The original extracted value for the asset.",
-            "example": "invoice number"
-          },
-          "changeMessage": {
-            "type": "string",
-            "description": "Change message for this asset version.",
-            "example": "Initial asset version from user prompt."
-          },
-          "translations": {
-            "description": "Translations for the asset value.",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AssetTranslationStructureDto"
-            }
-          }
-        },
-        "required": [
-          "key",
-          "name",
-          "value",
-          "changeMessage",
-          "translations"
-        ]
-      },
-      "LoadPromptStructureDto": {
-        "type": "object",
-        "properties": {
-          "prompt": {
-            "description": "Metadata for the prompt to be created.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PromptMetaDto"
-              }
-            ]
-          },
-          "version": {
-            "description": "Structure for the initial prompt version.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PromptVersionStructureDto"
-              }
-            ]
-          },
-          "assets": {
-            "description": "List of assets to be created and associated with the prompt (conceptually via placeholders).",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PromptAssetStructureDto"
-            }
-          },
-          "tags": {
-            "description": "Optional list of tag names to associate with the prompt.",
-            "example": [
-              "invoicing",
-              "extraction"
-            ],
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "prompt",
-          "version",
-          "assets"
-        ]
-      },
       "CreatePromptVersionDto": {
         "type": "object",
         "properties": {
@@ -6658,7 +6460,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "Unique identifier of the project",
+            "description": "Unique identifier for the project",
             "example": "123e4567-e89b-12d3-a456-426614174000"
           },
           "name": {
@@ -6668,9 +6470,8 @@
           },
           "description": {
             "type": "string",
-            "nullable": true,
-            "description": "Description of the project",
-            "example": "A detailed description of the project"
+            "description": "Optional description of the project",
+            "example": "A project for managing content"
           },
           "tenantId": {
             "type": "string",
@@ -6698,7 +6499,6 @@
         "required": [
           "id",
           "name",
-          "description",
           "tenantId",
           "ownerUserId",
           "createdAt",

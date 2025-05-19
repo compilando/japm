@@ -50,6 +50,9 @@ async function main() {
                 marketplaceRequiresApproval: true,
             }
         });
+        console.log(`Created default tenant: ${defaultTenant.id}`);
+    } else {
+        console.log(`Found existing default tenant: ${defaultTenant.id}`);
     }
 
     // 2. Create Test User
@@ -66,7 +69,15 @@ async function main() {
             role: Role.ADMIN
         },
     });
-    console.log(`Upserted user: ${testUser.name}`);
+    console.log(`Upserted user: ${testUser.name} (ID: ${testUser.id}, Tenant: ${testUser.tenantId})`);
+
+    // Verificar que el usuario existe después de crearlo
+    const verifyUser = await prisma.user.findUnique({ where: { email: 'test@example.com' } });
+    if (verifyUser) {
+        console.log(`Verified user exists: ${verifyUser.name} (ID: ${verifyUser.id}, Tenant: ${verifyUser.tenantId})`);
+    } else {
+        console.error('User was not created successfully!');
+    }
 
     // 3. Create Default Project
     const defaultProject = await prisma.project.upsert({
@@ -325,3 +336,12 @@ async function main() {
         },
     });
 }
+
+main()
+    .catch((e) => {
+        console.error(e);
+        process.exit(1);
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
+    });

@@ -48,7 +48,7 @@ interface RequestWithUser extends ExpressRequest {
 
 @ApiTags('Prompts')
 @ApiBearerAuth()
-@Controller('prompts')
+@Controller('projects/:projectId/prompts')
 export class PromptController {
   private readonly logger = new Logger(PromptController.name);
 
@@ -86,8 +86,12 @@ export class PromptController {
     status: HttpStatus.FORBIDDEN,
     description: 'Forbidden - Insufficient permissions to create prompts'
   })
-  create(@Body() createPromptDto: CreatePromptDto, @Req() req: any): Promise<PromptDto> {
-    return this.promptService.create(createPromptDto, req.user.tenantId, req.user.tenantId).then(prompt => ({
+  create(
+    @Param('projectId') projectId: string,
+    @Body() createPromptDto: CreatePromptDto,
+    @Req() req: any
+  ): Promise<PromptDto> {
+    return this.promptService.create(createPromptDto, req.user.tenantId, projectId).then(prompt => ({
       ...prompt,
       description: prompt.description || undefined
     }));
@@ -110,8 +114,11 @@ export class PromptController {
   })
   @CacheKey('prompts')
   @CacheTTL(3600)
-  findAll(@Req() req: any): Promise<PromptDto[]> {
-    return this.promptService.findAll(req.user.tenantId).then(prompts =>
+  findAll(
+    @Param('projectId') projectId: string,
+    @Req() req: any
+  ): Promise<PromptDto[]> {
+    return this.promptService.findAll(projectId).then(prompts =>
       prompts.map(prompt => ({
         ...prompt,
         description: prompt.description || undefined
@@ -141,17 +148,17 @@ export class PromptController {
   @ApiParam({
     name: 'id',
     type: 'string',
-    format: 'uuid',
-    description: 'Unique prompt identifier (UUID)',
+    description: 'Unique prompt identifier (slug)',
     required: true
   })
   @CacheKey('prompt')
   @CacheTTL(3600)
   findOne(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
     @Req() req: any,
   ): Promise<PromptDto> {
-    return this.promptService.findOne(id, req.user.tenantId).then(prompt => ({
+    return this.promptService.findOne(id, projectId).then(prompt => ({
       ...prompt,
       description: prompt.description || undefined
     }));
@@ -192,12 +199,11 @@ export class PromptController {
   @ApiParam({
     name: 'id',
     type: 'string',
-    format: 'uuid',
-    description: 'Unique prompt identifier to update (UUID)',
+    description: 'Unique prompt identifier to update (slug or UUID)',
     required: true
   })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() updatePromptDto: UpdatePromptDto,
     @Req() req: any,
   ): Promise<PromptDto> {
@@ -234,12 +240,11 @@ export class PromptController {
   @ApiParam({
     name: 'id',
     type: 'string',
-    format: 'uuid',
-    description: 'Unique prompt identifier to delete (UUID)',
+    description: 'Unique prompt identifier to delete (slug or UUID)',
     required: true
   })
   remove(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Req() req: any,
   ): Promise<void> {
     return this.promptService.remove(id, req.user.tenantId);
