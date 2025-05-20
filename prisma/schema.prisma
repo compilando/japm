@@ -36,6 +36,18 @@ enum Role {
   TENANT_ADMIN
 }
 
+enum PromptType {
+  SYSTEM      // Instrucciones base del modelo
+  USER        // Entrada del usuario
+  ASSISTANT   // Respuesta del asistente
+  GUARD       // Reglas de seguridad y validación
+  COMPOSITE   // Prompt compuesto por otros prompts
+  CONTEXT     // Información contextual
+  FUNCTION    // Definición de funciones/capacidades
+  EXAMPLE     // Ejemplos de uso
+  TEMPLATE    // Plantillas reutilizables
+}
+
 // MODELS (alphabetical order)
 model User {
   id        String    @id @default(cuid())
@@ -112,6 +124,7 @@ model Prompt {
   name        String
   description String?
   content     String
+  type        PromptType @default(USER)
   projectId   String
   project     Project  @relation("ProjectPrompts", fields: [projectId], references: [id])
   tenantId    String

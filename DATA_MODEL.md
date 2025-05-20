@@ -67,13 +67,8 @@ Here's a description of the main entities (models) in the `schema.prisma` file:
 
 Several seed scripts were generated to illustrate how this model supports different enterprise use cases:
 
-1.  **Chatbot Agent Management (`seed.ts` - original):** Demonstrates heavy use of `Region`, `CulturalData`  and `Translations` for creating localized and culturally aware chatbot responses. Assets are used for reusable greetings.
-2.  **Document Data Extraction (`seed.invoice-extraction.ts`):** Shows how `PromptAsset`s can define individual fields to be extracted (like invoice number, date, total). The main `PromptVersion` provides general instructions and refers to linked assets. `AIModel` selection for JSON support is relevant.
-3.  **Marketing Content Generation (`seed.marketing.ts`):** Uses `PromptVersion`s for A/B testing copy, `PromptAsset`s for brand voice, CTAs, and target audience details. `Tags` help organize campaigns.
-4.  **Code Generation & Assistance (`seed.codegen.ts`):** Leverages `PromptAsset`s for code snippets, templates, and standards. `PromptVersion`s manage variations for different languages or tasks (generation vs. explanation). `Tags` categorize by language/task.
-5.  **Internal Knowledge Base (RAG) (`seed.rag.ts`):** Highlights the importance of `RagDocumentMetadata` to catalog source documents and `PromptVersion`s containing the RAG logic. `PromptAsset`s define system instructions (e.g., "answer only from context"). `PromptExecutionLog` tracks query success.
-6.  **Creative Writing & Adaptation (`seed.creative.ts`):** Employs `PromptAsset`s to store character profiles, setting details, and tone guidelines. `PromptVersion`s explore different narrative paths or scene variations.
-7.  **Educational Content & Tutoring (`seed.education.ts`):** Uses `PromptAsset`s for definitions, question templates, and explanation styles. `PromptVersion`s adjust difficulty or pedagogical approach. `Translations` are key for multilingual content.
+1.  **Document Data Extraction (`seed.invoice-extraction.ts`):** Shows how `PromptAsset`s can define individual fields to be extracted (like invoice number, date, total). The main `PromptVersion` provides general instructions and refers to linked assets. `AIModel` selection for JSON support is relevant.
+2.  **Code Generation & Assistance (`seed.codegen.ts`):** Leverages `PromptAsset`s for code snippets, templates, and standards. `PromptVersion`s manage variations for different languages or tasks (generation vs. explanation). `Tags` categorize by language/task.
 
 ## Entity Importance Matrix by Use Case
 

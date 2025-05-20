@@ -1,0 +1,144 @@
+# Prompt System Documentation
+
+## Overview
+
+This document describes the prompt system, its structure, and best practices for managing prompts, assets, and translations in the JAPM project.
+
+## Prompt Structure (2024-06)
+
+- **Prompt content** is stored in the `content` field of the `Prompt` model.
+- **Prompt classification** (system, user, assistant, guard, etc.) is currently managed through the prompt's `name`, `description`, and project structure, **not** through a dedicated `type` field in the database.
+- **Translations** are managed via the `PromptTranslation` model, and assets via `PromptAsset` and `PromptAssetVersion`.
+
+### Example Prompt Object
+```json
+{
+  "id": "system-base",
+  "name": "System Base Instructions",
+  "description": "Base system instructions for code generation, defining core behavior and constraints.",
+  "content": "...prompt text...",
+  "projectId": "codegen-examples",
+  "tenantId": "..."
+}
+```
+
+## Classification of Prompts
+
+- **System prompts**: Use `name` and `description` to indicate their role (e.g., "System Base Instructions").
+- **Guard prompts**: Clearly describe security or validation rules in the `description`.
+- **User/Assistant prompts**: Use naming conventions and descriptions to clarify their function.
+
+> **Note:** The `type` field exists in the Prisma schema, but is not currently used in the seed scripts due to type/linter issues. If you wish to reintroduce it, ensure the Prisma client exposes the enum correctly and update the seed scripts to use it.
+
+## Prompt Content and References
+
+- The main prompt text is stored in the `content` field.
+- Prompts can reference variables, assets, and other prompts using the following syntax:
+  - Variables: `{{variable:nombreVariable}}`
+  - Assets: `{{asset:nombreAsset:versionTag}}` or `{{asset:nombreAsset:latest}}`
+  - Prompts: `{{prompt:nombrePrompt:versionTag}}`, `{{prompt:nombrePrompt:latest}}`, or `{{prompt:nombrePrompt:latest:es-ES}}`
+
+### Quick Reference Table
+
+| Reference Type | Syntax Example                                 | Description                                 |
+|---------------|-----------------------------------------------|---------------------------------------------|
+| Variable      | `{{variable:userName}}`                        | Inserts the value of a variable             |
+| Asset         | `{{asset:template:latest}}`                    | Inserts the latest version of an asset      |
+| Asset (ver)   | `{{asset:template:v1.0.0}}`                    | Inserts a specific version of an asset      |
+| Prompt        | `{{prompt:system-base:latest}}`                | Inserts the latest version of a prompt      |
+| Prompt (ver)  | `{{prompt:system-base:v1.0.0}}`                | Inserts a specific version of a prompt      |
+| Prompt (lang) | `{{prompt:system-base:latest:es-ES}}`          | Inserts a prompt in a specific language     |
+
+## Practical Examples
+
+### 1. Composing Prompts
+
+Suppose you want to build a composite prompt for onboarding:
+
+```text
+{{prompt:system-base:latest}}
+
+Welcome, {{variable:userName}}!
+
+{{prompt:onboarding-instructions:latest:es-ES}}
+```
+
+### 2. Referencing Assets and Variables
+
+```text
+Please use the following template:
+{{asset:email-template:latest}}
+
+Your preferences:
+- Language: {{variable:language}}
+- Theme: {{variable:theme}}
+```
+
+### 3. Guard Prompt Example
+
+```text
+{{prompt:guard-codegen:latest}}
+
+All code must pass security validation. If any rule is violated, reject the request.
+```
+
+## Translations
+
+- Spanish and other language translations are managed via the `PromptTranslation` and `AssetTranslation` models.
+- The seed scripts automatically create Spanish translations for all prompts and assets.
+
+## Best Practices
+
+- Use clear and descriptive `name` and `description` fields to indicate the role and function of each prompt.
+- Maintain a consistent naming convention for prompt IDs (e.g., `system-base`, `guard-codegen`, `user-code-request`).
+- Store the main prompt text in the `content` field.
+- Use the reference syntax for modular and maintainable prompts.
+- Avoid circular references between prompts.
+- Use semantic versioning for prompt and asset versions (e.g., `v1.0.0`).
+
+## How to Reintroduce the `type` Field
+
+1. Ensure the `type` field is present and correctly defined in the Prisma schema as an enum.
+2. Regenerate the Prisma client (`npx prisma generate`).
+3. Update the seed scripts to use the `type` field, making sure the type is recognized by the Prisma client.
+4. Use the enum values (e.g., `'SYSTEM'`, `'USER'`, etc.) when creating or updating prompts.
+
+## Error Handling
+
+- If a required field is missing (e.g., `content`), the seed process will fail. Always provide the main prompt text in `content`.
+- If you wish to enforce classification, add validation logic in the application layer or update the seed scripts once the `type` field is fully supported.
+- The system prevents circular references and logs warnings for missing references or translations.
+
+## Example Use Case
+
+A prompt for code generation might look like this:
+
+```json
+{
+  "id": "guard-codegen",
+  "name": "Guard Code Generation",
+  "description": "Security-focused prompt that implements strict validation rules for code generation.",
+  "content": "...security rules and validation logic..."
+}
+```
+
+## FAQ (Frequently Asked Questions)
+
+**Q: ¿Cómo puedo añadir un nuevo tipo de prompt?**
+A: Actualmente, la clasificación se realiza por nombre y descripción. Si necesitas un campo dedicado, sigue la sección "How to Reintroduce the `type` Field".
+
+**Q: ¿Qué ocurre si hago referencia a un prompt o asset que no existe?**
+A: El sistema lo registrará como advertencia y continuará, pero es recomendable validar las referencias en desarrollo.
+
+**Q: ¿Puedo anidar referencias?**
+A: Sí, las referencias se resuelven recursivamente, pero se previenen los bucles circulares.
+
+**Q: ¿Cómo gestiono versiones y traducciones?**
+A: Usa el campo `versionTag` para versiones y el modelo `PromptTranslation` para traducciones. El sistema puede buscar la traducción adecuada automáticamente.
+
+**Q: ¿Puedo usar variables dinámicas en los prompts?**
+A: Sí, usa la sintaxis `{{variable:nombreVariable}}` y asegúrate de pasar el valor en el contexto de ejecución.
+
+## Conclusion
+
+The current system is robust and flexible, allowing for modular prompt composition, multi-language support, and clear documentation. Prompt classification is handled via naming and description, but can be extended to use the `type` field in the future if needed. 

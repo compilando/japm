@@ -53,8 +53,8 @@ export class ServePromptService {
    */
   async resolveAssets(
     text: string,
-    promptIdInput: string, // Slug del Prompt, renombrado para evitar colisión con el campo del modelo
-    projectIdInput: string, // ProjectId del Prompt, renombrado para evitar colisión
+    promptIdInput: string,
+    projectIdInput: string,
     languageCode?: string,
     inputVariables: Record<string, any> = {},
   ): Promise<{ processedText: string; resolvedAssetsMetadata: any[] }> {
@@ -67,12 +67,14 @@ export class ServePromptService {
       .map((match) => {
         const placeholderContent = match[1].trim();
         const parts = placeholderContent.split(':');
-        const key = parts[0];
-        const versionTag = parts.length > 1 ? parts[1] : undefined;
-        return { placeholderContent, key, versionTag };
+        const type = parts[0];
+        const key = parts[1];
+        const versionTag = parts.length > 2 ? parts[2] : undefined;
+        return { placeholderContent, type, key, versionTag };
       })
       .filter(
         (spec) =>
+          spec.type === 'asset' && // Solo procesar assets aquí
           !inputVariables.hasOwnProperty(spec.key) &&
           !inputVariables.hasOwnProperty(spec.placeholderContent),
       );
@@ -88,16 +90,14 @@ export class ServePromptService {
         `Potential asset keys to resolve from text: ${uniqueAssetKeys.join(', ')} after filtering against input variables.`,
       );
 
-      // Prisma query usando los nombres de campos del schema para PromptAsset
       const foundAssets = await this.prisma.promptAsset.findMany({
         where: {
-          promptId: promptIdInput, // Campo del modelo PromptAsset
-          projectId: projectIdInput, // Campo del modelo PromptAsset
+          promptId: promptIdInput,
+          projectId: projectIdInput,
           key: { in: uniqueAssetKeys },
         },
         include: {
           versions: {
-            // Relación en PromptAsset
             orderBy: { createdAt: 'desc' },
             include: { translations: true },
           },
@@ -109,7 +109,6 @@ export class ServePromptService {
       );
 
       for (const asset of foundAssets) {
-        // Asumiendo que 'versions' está disponible después de prisma generate y el include
         if (asset.versions && asset.versions.length > 0) {
           const latestVersion = asset.versions[0];
           this.logger.debug(
@@ -136,13 +135,11 @@ export class ServePromptService {
           continue;
         }
 
-        // Asumiendo que 'versions' está disponible
         const assetVersions =
           asset.versions as Prisma.PromptAssetVersionGetPayload<{
             include: { translations: true };
           }>[];
         if (!assetVersions) {
-          // Chequeo adicional por si acaso
           this.logger.warn(
             `Asset key "${spec.key}" for prompt "${promptIdInput}" found, but versions array is unexpectedly undefined.`,
           );
@@ -205,7 +202,24 @@ export class ServePromptService {
       }
     }
 
-    const finalContext = { ...assetContext, ...inputVariables };
+    // Procesar variables con la nueva sintaxis
+    const variableContext: Record<string, string> = {};
+    const variablePlaceholders = [...text.matchAll(/\{\{variable:([^}]+)\}\}/g)];
+
+    for (const match of variablePlaceholders) {
+      const placeholderContent = match[1].trim();
+      const variableName = placeholderContent.split(':')[0];
+
+      if (inputVariables.hasOwnProperty(variableName)) {
+        variableContext[`variable:${placeholderContent}`] = String(inputVariables[variableName]);
+      } else {
+        this.logger.warn(
+          `Variable "${variableName}" (referenced as "{{variable:${placeholderContent}}}") not found in provided variables.`,
+        );
+      }
+    }
+
+    const finalContext = { ...assetContext, ...variableContext };
     let processedText: string;
     try {
       processedText = text.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
@@ -229,8 +243,130 @@ export class ServePromptService {
   }
 
   /**
+   * Resolves prompt references in a given text.
+   * @param text The text containing potential prompt references.
+   * @param projectId The ID of the project to scope prompt search.
+   * @param languageCode Optional language code for prompt translation.
+   * @param processedPrompts Set of already processed prompts to prevent circular references.
+   * @param context Additional context for prompt resolution
+   * @returns An object containing the processed text and metadata about resolved prompts.
+   */
+  private async resolvePromptReferences(
+    text: string,
+    projectId: string,
+    languageCode?: string,
+    processedPrompts: Set<string> = new Set(),
+    context: {
+      currentPromptType?: string;
+      maxDepth?: number;
+      currentDepth?: number;
+    } = {},
+  ): Promise<{ processedText: string; resolvedPromptsMetadata: any[] }> {
+    const { currentPromptType, maxDepth = 5, currentDepth = 0 } = context;
+
+    if (currentDepth >= maxDepth) {
+      this.logger.warn(
+        `Maximum prompt reference depth (${maxDepth}) reached. Stopping resolution.`,
+      );
+      return { processedText: text, resolvedPromptsMetadata: [] };
+    }
+
+    this.logger.debug(
+      `Resolving prompt references for project "${projectId}"${languageCode ? ` with language "${languageCode}"` : ''} (depth: ${currentDepth})`,
+    );
+
+    const promptReferences = [...text.matchAll(/\{\{prompt:([^}]+)\}\}/g)];
+    const resolvedPromptsMetadata: any[] = [];
+
+    if (promptReferences.length === 0) {
+      return { processedText: text, resolvedPromptsMetadata };
+    }
+
+    let processedText = text;
+
+    for (const match of promptReferences) {
+      const fullMatch = match[0];
+      const referenceContent = match[1].trim();
+      const [promptName, versionTag, refLanguageCode] = referenceContent.split(':');
+
+      if (processedPrompts.has(promptName)) {
+        this.logger.warn(
+          `Circular reference detected for prompt "${promptName}". Skipping.`,
+        );
+        continue;
+      }
+
+      const promptNameSlug = slugify(promptName);
+      const targetLanguageCode = refLanguageCode || languageCode;
+
+      try {
+        // Obtener el prompt referenciado para validar su tipo
+        const referencedPrompt = await this.prisma.prompt.findUnique({
+          where: {
+            prompt_id_project_unique: {
+              id: promptNameSlug,
+              projectId,
+            },
+          },
+          select: {
+            id: true,
+            name: true,
+            type: true,
+          },
+        });
+
+        if (!referencedPrompt) {
+          throw new NotFoundException(
+            `Referenced prompt "${promptName}" not found in project "${projectId}".`,
+          );
+        }
+
+        // Validaciones específicas por tipo de prompt
+        if (currentPromptType === 'GUARD' && referencedPrompt.type !== 'GUARD') {
+          throw new BadRequestException(
+            `Guard prompts can only reference other guard prompts. Attempted to reference "${promptName}" of type ${referencedPrompt.type}.`,
+          );
+        }
+
+        if (currentPromptType === 'SYSTEM' && referencedPrompt.type === 'USER') {
+          throw new BadRequestException(
+            `System prompts cannot reference user prompts. Attempted to reference "${promptName}".`,
+          );
+        }
+
+        const { processedPrompt, metadata } = await this.executePromptVersion(
+          {
+            projectId,
+            promptName: promptName,
+            versionTag: versionTag || 'latest',
+            languageCode: targetLanguageCode,
+          },
+          { variables: {} },
+        );
+
+        processedText = processedText.replace(fullMatch, processedPrompt);
+        resolvedPromptsMetadata.push({
+          promptName,
+          versionTag: versionTag || 'latest',
+          languageUsed: targetLanguageCode,
+          promptType: referencedPrompt.type,
+          metadata,
+        });
+
+        processedPrompts.add(promptName);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to resolve prompt reference "${fullMatch}": ${error.message}`,
+        );
+      }
+    }
+
+    return { processedText, resolvedPromptsMetadata };
+  }
+
+  /**
    * Executes a specific prompt version with given variables.
-   * Handles translation and asset substitution.
+   * Handles translation, asset substitution, and prompt references.
    * @returns The processed prompt text ready for execution.
    */
   async executePromptVersion(
@@ -240,8 +376,8 @@ export class ServePromptService {
     const { projectId, promptName, versionTag, languageCode } = params;
     const { variables } = body;
 
-    const promptNameSlug = slugify(promptName); // This is the promptId for PromptAsset
-    const currentProjectId = projectId; // This is the projectId for PromptAsset
+    const promptNameSlug = slugify(promptName);
+    const currentProjectId = projectId;
 
     const prompt = await this.prisma.prompt.findUnique({
       where: {
@@ -249,6 +385,12 @@ export class ServePromptService {
           id: promptNameSlug,
           projectId: currentProjectId,
         },
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        projectId: true,
       },
     });
 
@@ -258,9 +400,15 @@ export class ServePromptService {
       );
     }
 
+    // Validaciones específicas por tipo de prompt
+    if (prompt.type === 'GUARD' && Object.keys(variables || {}).length > 0) {
+      throw new BadRequestException(
+        'Guard prompts cannot accept variables for security reasons.',
+      );
+    }
+
     let versionToUse;
     if (versionTag === 'latest') {
-      // Buscar la versión más reciente ordenada por createdAt
       versionToUse = await this.prisma.promptVersion.findFirst({
         where: {
           promptId: prompt.id,
@@ -307,10 +455,24 @@ export class ServePromptService {
       }
     }
 
+    // First resolve prompt references
+    const { processedText: textWithResolvedPrompts, resolvedPromptsMetadata } =
+      await this.resolvePromptReferences(
+        basePromptText,
+        prompt.projectId,
+        finalLanguageCode,
+        new Set([promptNameSlug]),
+        {
+          currentPromptType: prompt.type,
+          currentDepth: 0,
+        },
+      );
+
+    // Then resolve assets and variables
     const { processedText, resolvedAssetsMetadata } = await this.resolveAssets(
-      basePromptText,
-      prompt.id, // Corresponds to promptIdInput (slug of Prompt)
-      prompt.projectId, // Corresponds to projectIdInput (projectId of Prompt)
+      textWithResolvedPrompts,
+      prompt.id,
+      prompt.projectId,
       finalLanguageCode,
       variables,
     );
@@ -319,6 +481,7 @@ export class ServePromptService {
       projectId: currentProjectId,
       promptName: prompt.name,
       promptId: prompt.id,
+      promptType: prompt.type,
       promptVersionId: versionToUse.id,
       promptVersionTag: versionToUse.versionTag,
       languageUsed: finalLanguageCode
@@ -330,6 +493,7 @@ export class ServePromptService {
         : 'base_language',
       assetsUsed: resolvedAssetsMetadata,
       variablesProvided: Object.keys(variables || {}),
+      resolvedPrompts: resolvedPromptsMetadata,
     };
 
     return { processedPrompt: processedText, metadata };

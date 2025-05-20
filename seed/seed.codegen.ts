@@ -9,137 +9,334 @@ const SALT_ROUNDS = 10;
 // Traducciones específicas para el proyecto de generación de código
 const codegenTranslations = {
     assets: {
-        'python-standard-imports': `# Importaciones de la biblioteca estándar de Python
-import os
-import sys
-import json
-import datetime
-import math
-import logging
-import re
-import collections
-import functools
-import itertools
-from pathlib import Path
-from typing import Any, List, Dict, Tuple, Optional, Union, Callable
+        'system-base-instructions': `You are an expert code generator AI assistant. Your main goal is to generate high-quality, secure, and maintainable code. You must:
 
-# Configurar logging básico (opcional, puede ser personalizado por el usuario)
-# logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')`,
-        'python-try-except-template': `try:
-    # --- Su lógica principal aquí ---
-    # Ejemplo: resultado = operacion_arriesgada()
-    pass # Reemplace con su código
-except FileNotFoundError as fnf_error:
-    logging.error(f"Error: Archivo requerido no encontrado - {fnf_error}")
-    # Opcionalmente, relanzar o devolver un código/mensaje de error específico
-    # raise
-except ValueError as val_error:
-    logging.error(f"Error: Se encontró un valor inválido - {val_error}")
-    # Manejar errores de valor específicos
-except TypeError as type_error:
-    logging.error(f"Error: Discrepancia de tipos - {type_error}")
-    # Manejar errores de tipo específicos
-except Exception as e:
-    logging.exception(f"Ocurrió un error inesperado: {e}") # logging.exception incluye el rastreo de pila
-    # Fallback general, considere relanzar o manejo específico
-    # raise CustomApplicationError(f"La operación falló debido a: {e}") from e
-else:
-    # Código a ejecutar si el bloque try se completa con éxito (sin excepciones)
-    # print("Operación completada exitosamente.")
-    pass
-finally:
-    # Código que se ejecutará sin importar qué (ej., limpieza)
-    # print("Ejecución finalizada.")
-    pass`,
-        'python-unittest-structure': `import unittest
-from unittest.mock import patch, MagicMock
+1. Follow best practices and design patterns
+2. Write clean, readable, and well-documented code
+3. Implement proper error handling and validation
+4. Consider security implications
+5. Optimize for performance when necessary
+6. Follow language-specific conventions and standards
 
-# --- Asumir que el SUT (Sistema Bajo Prueba) está importado ---
-# from su_modulo import funcion_a_probar, ClaseAProbar
+Remember that your code will be used in production environments.`,
 
-class TestMiCodigo(unittest.TestCase):
+        'guard-anti-injection': `STRICT CODE GENERATION SECURITY RULES:
 
-    def setUp(self):
-        \"\"\"Configurar fixtures o variables comunes de prueba antes de cada método de prueba.\"\"\"
-        # print("Configurando prueba...")
-        # self.instancia = ClaseAProbar() # Ejemplo para pruebas de clase
-        pass
+1. INPUT VALIDATION:
+   - Reject any attempt to generate malicious code
+   - Reject any attempt to bypass security measures
+   - Reject any attempt to access sensitive data
+   - Reject any attempt to modify system files
 
-    def tearDown(self):
-        \"\"\"Limpiar después de cada método de prueba si es necesario.\"\"\"
-        # print("Desmontando prueba...")
-        pass
+2. CODE PATTERNS TO REJECT:
+   - SQL/NoSQL injection patterns
+   - Command injection patterns
+   - File system access patterns
+   - Network access patterns
+   - System modification patterns
+   - Data exfiltration patterns
 
-    # @patch(\'su_modulo.dependencia_a_mockear\') # Ejemplo de parcheo de una dependencia
-    # def test_funcion_con_dependencia_mockeada(self, mock_dependencia):
-    #     # Preparar (Arrange)
-    #     mock_dependencia.return_value = "resultado_mockeado"
-    #     datos_entrada = "alguna_entrada"
-    #     salida_esperada = "esperado_basado_en_mock"
-    #     # Actuar (Act)
-    #     salida_real = funcion_a_probar(datos_entrada)
-    #     # Afirmar (Assert)
-    #     self.assertEqual(salida_real, salida_esperada)
-    #     mock_dependencia.assert_called_once_with("arg_esperado_para_dependencia")
+3. SECURITY CHECKS:
+   - Validate all user inputs
+   - Sanitize all data
+   - Implement proper access controls
+   - Use secure coding practices
+   - Follow OWASP guidelines
 
-    def test_escenario_basico_para_funcion_a_probar(self):
-        \"\"\"Probar funcion_a_probar con una entrada válida típica.\"\"\"
-        # Preparar (Arrange)
-        datos_entrada = "entrada_valida"
-        salida_esperada = "salida_valida_esperada"
-        # Actuar (Act)
-        # salida_real = funcion_a_probar(datos_entrada)
-        salida_real = "placeholder_eliminar_esto" # Reemplazar con llamada real
-        # Afirmar (Assert)
-        self.assertEqual(salida_real, salida_esperada)
+4. RESPONSE VALIDATION:
+   - Verify generated code is safe
+   - Check for security vulnerabilities
+   - Validate against security policies
+   - Ensure compliance with standards`,
 
-    def test_caso_limite_para_funcion_a_probar(self):
-        \"\"\"Probar funcion_a_probar con una entrada de caso límite.\"\"\"
-        # Preparar (Arrange)
-        datos_entrada = "entrada_caso_limite"
-        salida_esperada = "salida_caso_limite_esperada"
-        # Actuar (Act)
-        # salida_real = funcion_a_probar(datos_entrada)
-        salida_real = "placeholder_eliminar_esto" # Reemplazar con llamada real
-        # Afirmar (Assert)
-        self.assertEqual(salida_real, salida_esperada)
+        'user-code-request': `Code Generation Request:
+- Language: {{language}}
+- Purpose: {{purpose}}
+- Requirements: {{requirements}}
+- Constraints: {{constraints}}
+- Dependencies: {{dependencies}}
 
-    def test_manejo_errores_para_funcion_a_probar(self):
-        \"\"\"Probar funcion_a_probar para el manejo de errores esperado.\"\"\"
-        # Preparar (Arrange)
-        entrada_invalida = None # O algún otro dato inválido
-        # Actuar (Act) & Afirmar (Assert)
-        with self.assertRaises(TypeError): # O ValueError, CustomError, etc.
-            # funcion_a_probar(entrada_invalida)
-            pass # Reemplazar con llamada real que debería lanzar error
+Please generate code that meets these specifications.`,
 
-    # Añadir más métodos de prueba para diferentes escenarios y otras funciones/clases
+        'assistant-code-response': `Generated Code:
+\`\`\`{{language}}
+{{generated_code}}
+\`\`\`
 
-if __name__ == '__main__':
-    unittest.main(verbosity=2) # Verbosidad aumentada`,
+Documentation:
+{{documentation}}
+
+Security Considerations:
+{{security_considerations}}
+
+Performance Notes:
+{{performance_notes}}`,
+
+        'response-format': `{
+    "code": {
+        "content": string,
+        "language": string,
+        "dependencies": string[],
+        "metadata": {
+            "version": string,
+            "author": string,
+            "date": string,
+            "security_level": "high" | "medium" | "low"
+        }
+    },
+    "documentation": {
+        "description": string,
+        "usage": string,
+        "examples": string[],
+        "notes": string[]
+    },
+    "security": {
+        "vulnerabilities": string[],
+        "mitigations": string[],
+        "best_practices": string[]
+    },
+    "performance": {
+        "complexity": string,
+        "optimizations": string[],
+        "bottlenecks": string[]
+    },
+    "status": "success" | "error",
+    "error": string | null
+}`
     },
     prompts: {
-        'generate-python-function': `Genera una función de Python robusta y bien documentada para realizar la siguiente tarea: {{Task Description}}.\n            Requisitos Esenciales:\n            - Argumentos de Entrada Claramente Definidos: {{Input Arguments}} (especificar nombres, tipos esperados y si son opcionales).\n            - Valor de Retorno Explícito: {{Return Value}} (especificar tipo y lo que representa).\n            - Importaciones Estándar Sugeridas: Utiliza el siguiente bloque como base para las importaciones necesarias: {{python-standard-imports}}.\n            - Manejo de Errores Proactivo: Implementa un manejo de errores exhaustivo utilizando la plantilla proporcionada en {{python-try-except-template}}, adaptándola para capturar excepciones específicas relevantes a la tarea.\n            - Tipado Estricto (Type Hints): Incluye anotaciones de tipo para todos los argumentos de la función y el valor de retorno.\n            - Documentación (Docstring) Completa: Añade un docstring conciso y claro que explique el propósito de la función, sus parámetros (con tipos y descripciones), lo que retorna, y cualquier excepción que pueda lanzar explícitamente. Sigue el formato PEP 257.\n            - Considerar Eficiencia y Legibilidad: El código generado debe ser eficiente para la tarea descrita y fácil de entender.`,
-        'generate-python-unittest': `Genera una suite de pruebas unitarias exhaustiva en Python utilizando el módulo \'unittest\' para la siguiente función/clase:\n\n            Código Bajo Prueba:\n            \`\`\`python\n            {{Function Code}}\n            \`\`\`\n\n            Estructura de Pruebas Base:\n            Utiliza la siguiente estructura como plantilla para la clase de prueba:\n            {{python-unittest-structure}}\n\n            Casos de Prueba Requeridos:\n            Desarrolla casos de prueba específicos que cubran meticulosamente:\n            - Escenario Principal 1: {{Test Case 1 Description}} (incluir datos de entrada, salida esperada y lógica de la prueba).\n            - Escenario Principal 2: {{Test Case 2 Description}} (incluir datos de entrada, salida esperada y lógica de la prueba).\n            - (Opcional pero Recomendado) Casos Límite y Entradas Inválidas: {{Edge Cases Description}} (ej., entradas vacías, tipos incorrectos, valores nulos, números muy grandes/pequeños, etc., y cómo la función debería manejarlos, incluyendo excepciones esperadas).\n\n            Consideraciones Adicionales para Pruebas:\n            - Si la función tiene efectos secundarios (ej., modificación de archivos, llamadas a API), considera cómo mockearlos o aislarlos.\n            - Asegura una buena cobertura de las diferentes rutas lógicas dentro del código proporcionado.\n            - Cada prueba debe ser independiente.`
+        'system-base': `{{system-base-instructions}}
+
+Additionally, you must:
+1. Generate code that is production-ready
+2. Include comprehensive documentation
+3. Consider edge cases and error handling
+4. Follow security best practices
+5. Optimize for performance when needed`,
+
+        'guard-code-generation': `{{guard-anti-injection}}
+
+CODE GENERATION SECURITY:
+1. Validate all code generation requests
+2. Check for security vulnerabilities
+3. Ensure compliance with standards
+4. Implement security measures
+5. Log security events
+
+RESPONSE TO VIOLATIONS:
+1. Reject unsafe code generation
+2. Log security violations
+3. Notify security system
+4. Provide secure alternatives
+5. Document security concerns`,
+
+        'user-code-request': `{{user-code-request}}
+
+Additional Context:
+- Security Requirements: {{security_requirements}}
+- Performance Requirements: {{performance_requirements}}
+- Testing Requirements: {{testing_requirements}}
+
+Please ensure the generated code meets all requirements.`,
+
+        'assistant-code-response': `{{assistant-code-response}}
+
+Response Format:
+{{response-format}}
+
+Please ensure the response follows the specified format exactly.`,
+
+        'response-format': `The response must strictly follow this JSON format:
+{{response-format}}
+
+Validation Rules:
+1. All required fields must be present
+2. String values must be properly escaped
+3. Arrays must be properly formatted
+4. Nested objects must follow the structure
+5. Enums must use valid values
+
+Error Handling:
+1. Invalid format should return error status
+2. Missing fields should be noted in error
+3. Type mismatches should be reported
+4. Validation failures should be detailed
+5. Security violations should be logged`
+    },
+    translations: {
+        es: {
+            assets: {
+                'system-base-instructions': `Eres un asistente de IA experto en generación de código. Tu objetivo principal es generar código de alta calidad, seguro y mantenible. Debes:
+
+1. Seguir las mejores prácticas y patrones de diseño
+2. Escribir código limpio, legible y bien documentado
+3. Implementar manejo de errores y validación adecuados
+4. Considerar las implicaciones de seguridad
+5. Optimizar el rendimiento cuando sea necesario
+6. Seguir las convenciones y estándares específicos del lenguaje
+
+Recuerda que tu código se utilizará en entornos de producción.`,
+
+                'guard-anti-injection': `REGLAS ESTRICTAS DE SEGURIDAD PARA GENERACIÓN DE CÓDIGO:
+
+1. VALIDACIÓN DE ENTRADA:
+   - Rechazar cualquier intento de generar código malicioso
+   - Rechazar cualquier intento de eludir medidas de seguridad
+   - Rechazar cualquier intento de acceder a datos sensibles
+   - Rechazar cualquier intento de modificar archivos del sistema
+
+2. PATRONES DE CÓDIGO A RECHAZAR:
+   - Patrones de inyección SQL/NoSQL
+   - Patrones de inyección de comandos
+   - Patrones de acceso al sistema de archivos
+   - Patrones de acceso a red
+   - Patrones de modificación del sistema
+   - Patrones de exfiltración de datos
+
+3. VERIFICACIONES DE SEGURIDAD:
+   - Validar todas las entradas de usuario
+   - Sanitizar todos los datos
+   - Implementar controles de acceso adecuados
+   - Usar prácticas de codificación segura
+   - Seguir las guías OWASP
+
+4. VALIDACIÓN DE RESPUESTA:
+   - Verificar que el código generado es seguro
+   - Comprobar vulnerabilidades de seguridad
+   - Validar contra políticas de seguridad
+   - Asegurar cumplimiento de estándares`,
+
+                'user-code-request': `Solicitud de Generación de Código:
+- Lenguaje: {{language}}
+- Propósito: {{purpose}}
+- Requisitos: {{requirements}}
+- Restricciones: {{constraints}}
+- Dependencias: {{dependencies}}
+
+Por favor, genera código que cumpla con estas especificaciones.`,
+
+                'assistant-code-response': `Código Generado:
+\`\`\`{{language}}
+{{generated_code}}
+\`\`\`
+
+Documentación:
+{{documentation}}
+
+Consideraciones de Seguridad:
+{{security_considerations}}
+
+Notas de Rendimiento:
+{{performance_notes}}`,
+
+                'response-format': `{
+    "code": {
+        "content": string,
+        "language": string,
+        "dependencies": string[],
+        "metadata": {
+            "version": string,
+            "author": string,
+            "date": string,
+            "security_level": "high" | "medium" | "low"
+        }
+    },
+    "documentation": {
+        "description": string,
+        "usage": string,
+        "examples": string[],
+        "notes": string[]
+    },
+    "security": {
+        "vulnerabilities": string[],
+        "mitigations": string[],
+        "best_practices": string[]
+    },
+    "performance": {
+        "complexity": string,
+        "optimizations": string[],
+        "bottlenecks": string[]
+    },
+    "status": "success" | "error",
+    "error": string | null
+}`
+            },
+            prompts: {
+                'system-base': `{{system-base-instructions}}
+
+Además, debes:
+1. Generar código listo para producción
+2. Incluir documentación exhaustiva
+3. Considerar casos límite y manejo de errores
+4. Seguir las mejores prácticas de seguridad
+5. Optimizar el rendimiento cuando sea necesario`,
+
+                'guard-code-generation': `{{guard-anti-injection}}
+
+SEGURIDAD EN GENERACIÓN DE CÓDIGO:
+1. Validar todas las solicitudes de generación de código
+2. Comprobar vulnerabilidades de seguridad
+3. Asegurar cumplimiento de estándares
+4. Implementar medidas de seguridad
+5. Registrar eventos de seguridad
+
+RESPUESTA A VIOLACIONES:
+1. Rechazar generación de código inseguro
+2. Registrar violaciones de seguridad
+3. Notificar al sistema de seguridad
+4. Proporcionar alternativas seguras
+5. Documentar preocupaciones de seguridad`,
+
+                'user-code-request': `{{user-code-request}}
+
+Contexto Adicional:
+- Requisitos de Seguridad: {{security_requirements}}
+- Requisitos de Rendimiento: {{performance_requirements}}
+- Requisitos de Pruebas: {{testing_requirements}}
+
+Por favor, asegúrate de que el código generado cumple con todos los requisitos.`,
+
+                'assistant-code-response': `{{assistant-code-response}}
+
+Formato de Respuesta:
+{{response-format}}
+
+Por favor, asegúrate de que la respuesta sigue exactamente el formato especificado.`,
+
+                'response-format': `La respuesta debe seguir estrictamente este formato JSON:
+{{response-format}}
+
+Reglas de Validación:
+1. Todos los campos requeridos deben estar presentes
+2. Los valores de string deben estar correctamente escapados
+3. Los arrays deben estar correctamente formateados
+4. Los objetos anidados deben seguir la estructura
+5. Los enums deben usar valores válidos
+
+Manejo de Errores:
+1. Formato inválido debe devolver estado de error
+2. Campos faltantes deben notificarse en el error
+3. Incompatibilidades de tipo deben reportarse
+4. Fallos de validación deben detallarse
+5. Violaciones de seguridad deben registrarse`
+            }
+        }
     }
 };
 
 // Función para crear traducciones en español
 async function createSpanishTranslations(projectId: string) {
     console.log(`Creating Spanish translations for project ${projectId}...`);
-    const targetLanguageCode = 'es-ES'; // Definir el idioma objetivo
+    const targetLanguageCode = 'es-ES';
 
-    // Obtener todas las promptversion y promptassetversion del proyecto
     const promptVersions = await prisma.promptVersion.findMany({
         where: {
             prompt: {
                 projectId: projectId
             }
         },
-        // @ts-ignore // Quitar cuando languageCode esté en el tipo y en el include
         include: {
-            prompt: { select: { id: true } }, // Incluir el id del prompt para buscar en codegenTranslations
-            // languageCode: true // Asegúrate de que tu cliente Prisma está actualizado
+            prompt: { select: { id: true } }
         }
     });
 
@@ -150,24 +347,17 @@ async function createSpanishTranslations(projectId: string) {
             }
         },
         include: {
-            asset: {
-                select: {
-                    key: true
-                }
-            }
+            asset: true
         }
     });
 
     // Crear traducciones para promptversion
     for (const version of promptVersions) {
-        // @ts-ignore // Quitar cuando languageCode esté en el tipo y en el include
         if (version.languageCode === targetLanguageCode) {
-            // @ts-ignore
             console.log(`PromptVersion ${version.id} (Prompt: ${version.prompt.id}) is already in ${targetLanguageCode}. Skipping Spanish translation.`);
             continue;
         }
-        // @ts-ignore
-        const translation = codegenTranslations.prompts[version.prompt.id] || version.promptText;
+        const translation = codegenTranslations.translations.es.prompts[version.prompt.id] || version.promptText;
         await prisma.promptTranslation.upsert({
             where: {
                 versionId_languageCode: {
@@ -184,18 +374,12 @@ async function createSpanishTranslations(projectId: string) {
                 promptText: translation
             }
         });
-        // @ts-ignore
         console.log(`Created Spanish translation for prompt version ${version.id}`);
     }
 
     // Crear traducciones para promptassetversion
     for (const version of promptAssetVersions) {
-        const assetKey = version.asset?.key;
-        if (!assetKey) {
-            console.warn(`Asset key not found for PromptAssetVersion ID: ${version.id}. Skipping translation.`);
-            continue;
-        }
-        const translation = codegenTranslations.assets[assetKey] || version.value;
+        const translation = codegenTranslations.translations.es.assets[version.asset.key] || version.value;
         await prisma.assetTranslation.upsert({
             where: {
                 versionId_languageCode: {
@@ -231,232 +415,270 @@ function slugify(text: string): string {
 
 async function main() {
     console.log(`-----------------------------------`);
-    console.log(`Start seeding for Code Generation & Assistance...`);
+    console.log(`Start seeding for Code Generation Project...`);
     console.log('Assuming base seed (user, envs, models, regions) already ran...');
 
     const defaultLanguageCode = process.env.DEFAULT_LANGUAGE_CODE || 'en-US';
     console.log(`Using default language code: ${defaultLanguageCode}`);
 
-    // --- Find necessary base data --- 
-    // Find test user (should exist)
+    // Find necessary base data
     const testUser = await prisma.user.findUniqueOrThrow({
         where: { email: 'test@example.com' },
         select: { id: true, tenantId: true }
     });
     const tenantId = testUser.tenantId;
 
-    // --- Create Project Specific Data ---
-    // 1. Upsert Code Gen Project
-    const codeGenProjectName = 'Developer Tools AI Assistance';
-    const cgProjectId = slugify(codeGenProjectName); // ID es slug del nombre
-    const codeGenProject = await prisma.project.upsert({
-        where: { id: cgProjectId },
-        update: { name: codeGenProjectName, description: 'Prompts to help developers with common coding tasks.', ownerUserId: testUser.id },
-        create: {
-            id: cgProjectId,
-            name: codeGenProjectName,
-            description: 'Prompts to help developers with common coding tasks.',
-            owner: { connect: { id: testUser.id } },
-            tenant: { connect: { id: tenantId } },
+    // Create Code Generation Project
+    const codegenProject = await prisma.project.upsert({
+        where: { id: 'codegen-examples' },
+        update: {
+            name: 'Code Generation Examples',
+            description: 'Collection of example prompts for code generation',
+            ownerUserId: testUser.id
         },
+        create: {
+            id: 'codegen-examples',
+            name: 'Code Generation Examples',
+            description: 'Collection of example prompts for code generation',
+            owner: { connect: { id: testUser.id } },
+            tenant: { connect: { id: tenantId } }
+        }
     });
-    console.log(`Upserted Project: ${codeGenProject.name} (ID: ${cgProjectId})`);
+    console.log(`Upserted Project: ${codegenProject.name}`);
 
-    // Crear Environments para el proyecto CodeGen
-    const cgDevEnv = await prisma.environment.upsert({
-        where: { projectId_name: { name: 'development', projectId: cgProjectId } },
-        update: {},
-        create: { name: 'development', projectId: cgProjectId, description: 'Development environment for CodeGen project' },
-        select: { id: true }
-    });
-    const cgStagingEnv = await prisma.environment.upsert({
-        where: { projectId_name: { name: 'staging', projectId: cgProjectId } },
-        update: {},
-        create: { name: 'staging', projectId: cgProjectId, description: 'Staging environment for CodeGen project' },
-        select: { id: true }
-    });
-    const cgProdEnv = await prisma.environment.upsert({
-        where: { projectId_name: { name: 'production', projectId: cgProjectId } },
-        update: {},
-        create: { name: 'production', projectId: cgProjectId, description: 'Production environment for CodeGen project' },
-        select: { id: true }
-    });
-    console.log(`Upserted Environments (dev, staging, prod) for project ${cgProjectId}`);
+    // Create regions and cultural data
+    await createSpanishRegionAndCulturalData(codegenProject.id);
+    await createUSRegionAndCulturalData(codegenProject.id);
 
-    // Crear región es-ES y datos culturales para el proyecto CodeGen
-    await createSpanishRegionAndCulturalData(codeGenProject.id);
-    // Crear región en-US y datos culturales para el proyecto CodeGen
-    await createUSRegionAndCulturalData(codeGenProject.id);
-
-    // Create specific AI models for this project
-    const cgGpt4o = await prisma.aIModel.upsert({
-        where: { projectId_name: { projectId: cgProjectId, name: 'gpt-4o-2024-05-13' } },
-        update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
-        create: { projectId: cgProjectId, name: 'gpt-4o-2024-05-13', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.5 },
-        select: { id: true }
-    });
-    const cgGpt4oMini = await prisma.aIModel.upsert({
-        where: { projectId_name: { projectId: cgProjectId, name: 'gpt-4o-mini-2024-07-18' } },
-        update: { provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
-        create: { projectId: cgProjectId, name: 'gpt-4o-mini-2024-07-18', provider: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY', temperature: 0.7 },
-        select: { id: true }
-    });
-    console.log(`Upserted AI Models for project ${cgProjectId}`);
-
-    // 3. Upsert Prompts and their versions/assets for Code Gen
-    // Define an array of prompt data to upsert
-    const promptDataArray: {
-        id: string; // slug
-        name: string;
-        description: string;
-        promptText: string;
-        tags: string[];
-        assets?: { key: string; initialValue: string; initialChangeMessage?: string }[]; // Name no se persiste
-        aiModelId?: string;
-    }[] = [
-            {
-                id: slugify('Generate Python Function'),
-                name: 'Generate Robust Python Function',
-                description: 'Generates a well-documented Python function based on a task description, input/output specs, and best practices.',
-                promptText: codegenTranslations.prompts['generate-python-function'],
-                tags: ['python', 'function-generation', 'code-snippet', 'best-practices'],
-                assets: [
-                    { key: 'python-standard-imports', initialValue: codegenTranslations.assets['python-standard-imports'], initialChangeMessage: 'Initial version of standard Python imports asset' },
-                    { key: 'python-try-except-template', initialValue: codegenTranslations.assets['python-try-except-template'], initialChangeMessage: 'Initial version of try-except template asset' }
-                ],
-                aiModelId: cgGpt4o.id
-            },
-            {
-                id: slugify('Generate Python Unit Tests'),
-                name: 'Generate Python Unit Tests',
-                description: 'Generates a Python unittest suite for a given function or class, based on provided test cases and structure.',
-                promptText: codegenTranslations.prompts['generate-python-unittest'],
-                tags: ['python', 'unit-testing', 'test-generation', 'unittest-module'],
-                assets: [
-                    { key: 'python-unittest-structure', initialValue: codegenTranslations.assets['python-unittest-structure'], initialChangeMessage: 'Initial version of unittest structure asset' }
-                ],
-                aiModelId: cgGpt4o.id
-            }
-        ];
-
-    // 3. Upsert Code Gen Tags with prefix
-    const cgPrefix = 'cg_';
-    const cgBaseTags = ['code-generation', 'python', 'javascript', 'unit-test', 'explanation', 'refactoring', 'api-integration'];
-    const cgTagMap: Map<string, string> = new Map();
-    for (const baseTagName of cgBaseTags) {
-        const tagName = `${cgPrefix}${baseTagName}`;
-        const tag = await prisma.tag.upsert({
-            where: { projectId_name: { projectId: cgProjectId, name: tagName } },
+    // Create environments
+    const environments = ['development', 'staging', 'production'];
+    for (const envName of environments) {
+        await prisma.environment.upsert({
+            where: { projectId_name: { name: envName, projectId: codegenProject.id } },
             update: {},
-            create: { name: tagName, projectId: cgProjectId },
-            select: { id: true }
+            create: {
+                name: envName,
+                projectId: codegenProject.id,
+                description: `${envName} environment for code generation examples`
+            }
         });
-        cgTagMap.set(tagName, tag.id);
-        console.log(`Upserted Tag: ${tagName} for project ${cgProjectId}`);
     }
-    const getTagIds = (baseNames: string[]): { id: string }[] => {
-        return baseNames
-            .map(baseName => cgTagMap.get(`${cgPrefix}${baseName}`))
-            .filter((id): id is string => id !== undefined)
-            .map(id => ({ id }));
-    };
+    console.log('Created environments for codegen project');
 
-    for (const promptSeed of promptDataArray) {
-        const prompt = await prisma.prompt.upsert({
-            where: { prompt_id_project_unique: { id: promptSeed.id, projectId: cgProjectId } },
+    // Create AI models
+    const models = [
+        {
+            name: 'gpt-4o-2024-05-13',
+            provider: 'OpenAI',
+            temperature: 0.5
+        },
+        {
+            name: 'gpt-4o-mini-2024-07-18',
+            provider: 'OpenAI',
+            temperature: 0.7
+        }
+    ];
+
+    for (const model of models) {
+        await prisma.aIModel.upsert({
+            where: { projectId_name: { projectId: codegenProject.id, name: model.name } },
             update: {
-                name: promptSeed.name,
-                description: promptSeed.description,
-                tags: { connect: getTagIds(promptSeed.tags) }
+                provider: model.provider,
+                temperature: model.temperature
             },
             create: {
-                id: promptSeed.id,
-                name: promptSeed.name,
-                description: promptSeed.description,
-                projectId: cgProjectId,
-                content: promptSeed.promptText,
-                tenantId: tenantId,
-                tags: { connect: getTagIds(promptSeed.tags) }
-            },
-            select: { id: true }
-        });
-        console.log(`Upserted Prompt: ${promptSeed.name} (ID: ${prompt.id})`);
-
-        const assetVersionsToConnect: { id: string }[] = [];
-
-        if (promptSeed.assets) {
-            for (const assetSeed of promptSeed.assets) {
-                const asset = await prisma.promptAsset.upsert({
-                    where: { prompt_asset_key_unique: { key: assetSeed.key, promptId: prompt.id, projectId: cgProjectId } }, // Correct unique constraint
-                    update: {},
-                    create: {
-                        key: assetSeed.key,
-                        promptId: prompt.id,
-                        projectId: cgProjectId
-                    },
-                    select: { id: true }
-                });
-
-                const assetVersion = await prisma.promptAssetVersion.upsert({
-                    where: { assetId_versionTag: { assetId: asset.id, versionTag: 'v1.0.0' } }, // Assuming v1.0.0 for seed
-                    update: {
-                        value: assetSeed.initialValue,
-                        changeMessage: assetSeed.initialChangeMessage || `Initial version for asset ${assetSeed.key}` // No assetSeed.name
-                    },
-                    create: {
-                        assetId: asset.id,
-                        value: assetSeed.initialValue,
-                        versionTag: 'v1.0.0',
-                        changeMessage: assetSeed.initialChangeMessage || `Initial version for asset ${assetSeed.key}`, // No assetSeed.name
-                        status: 'active'
-                    },
-                    select: { id: true }
-                });
-                assetVersionsToConnect.push({ id: assetVersion.id });
-                console.log(`Upserted PromptAsset & Version: ${assetSeed.key} for prompt ${promptSeed.name}`);
+                ...model,
+                projectId: codegenProject.id,
+                apiKeyEnvVar: 'OPENAI_API_KEY'
             }
+        });
+    }
+    console.log('Created AI models for codegen project');
+
+    // Create prompts first
+    const prompts = [
+        {
+            id: 'system-base',
+            name: 'System Base Instructions',
+            description: 'Base system instructions for code generation, defining core behavior and constraints.',
+            content: codegenTranslations.prompts['system-base'],
+            text: codegenTranslations.prompts['system-base']
+        },
+        {
+            id: 'guard-codegen',
+            name: 'Guard Code Generation',
+            description: 'Security-focused prompt that implements strict validation rules for code generation.',
+            content: codegenTranslations.prompts['guard-codegen'],
+            text: codegenTranslations.prompts['guard-codegen']
+        },
+        {
+            id: 'user-code-request',
+            name: 'User Code Request',
+            description: 'Template for processing and formatting code generation requests.',
+            content: codegenTranslations.prompts['user-code-request'],
+            text: codegenTranslations.prompts['user-code-request']
+        },
+        {
+            id: 'assistant-code-response',
+            name: 'Assistant Code Response',
+            description: 'Format for AI responses to code generation requests.',
+            content: codegenTranslations.prompts['assistant-code-response'],
+            text: codegenTranslations.prompts['assistant-code-response']
+        },
+        {
+            id: 'response-format',
+            name: 'Response Format',
+            description: 'Strict JSON format definition for code generation responses.',
+            content: codegenTranslations.prompts['response-format'],
+            text: codegenTranslations.prompts['response-format']
+        }
+    ];
+
+    // Map to store created prompts
+    const createdPrompts = new Map();
+
+    for (const prompt of prompts) {
+        try {
+            // First try to find existing prompt
+            const existingPrompt = await prisma.prompt.findUnique({
+                where: {
+                    id: prompt.id
+                }
+            });
+
+            let createdPrompt;
+            if (existingPrompt) {
+                // Update existing prompt
+                createdPrompt = await prisma.prompt.update({
+                    where: {
+                        id: prompt.id
+                    },
+                    data: {
+                        name: prompt.name,
+                        description: prompt.description,
+                        content: prompt.content,
+                        projectId: codegenProject.id,
+                        tenantId: tenantId
+                    }
+                });
+            } else {
+                // Create new prompt
+                createdPrompt = await prisma.prompt.create({
+                    data: {
+                        id: prompt.id,
+                        name: prompt.name,
+                        description: prompt.description,
+                        content: prompt.content,
+                        projectId: codegenProject.id,
+                        tenantId: tenantId
+                    }
+                });
+            }
+
+            createdPrompts.set(prompt.id, createdPrompt);
+
+            // Create or update version
+            await prisma.promptVersion.upsert({
+                where: {
+                    promptId_versionTag: {
+                        promptId: createdPrompt.id,
+                        versionTag: '1.0.0'
+                    }
+                },
+                update: {
+                    promptText: prompt.text
+                },
+                create: {
+                    promptId: createdPrompt.id,
+                    versionTag: '1.0.0',
+                    promptText: prompt.text
+                }
+            });
+        } catch (error) {
+            console.error(`Error processing prompt ${prompt.id}:`, error);
+            continue;
+        }
+    }
+    console.log('Created prompts for codegen project');
+
+    // Create assets after prompts exist
+    const assets = [
+        {
+            key: 'system-base-instructions',
+            value: codegenTranslations.assets['system-base-instructions']
+        },
+        {
+            key: 'guard-anti-injection',
+            value: codegenTranslations.assets['guard-anti-injection']
+        },
+        {
+            key: 'user-code-request',
+            value: codegenTranslations.assets['user-code-request']
+        },
+        {
+            key: 'assistant-code-response',
+            value: codegenTranslations.assets['assistant-code-response']
+        },
+        {
+            key: 'response-format',
+            value: codegenTranslations.assets['response-format']
+        }
+    ];
+
+    for (const asset of assets) {
+        // Ensure the prompt exists before creating the asset
+        const promptId = 'system-base'; // Default to system-base prompt
+        if (!createdPrompts.has(promptId)) {
+            console.error(`Prompt ${promptId} not found. Skipping asset creation.`);
+            continue;
         }
 
-        // Create PromptVersion
-        const promptVersion = await prisma.promptVersion.upsert({
-            where: { promptId_versionTag: { promptId: prompt.id, versionTag: 'v1.0.0' } },
+        const createdAsset = await prisma.promptAsset.upsert({
+            where: {
+                prompt_asset_key_unique: {
+                    promptId: promptId,
+                    projectId: codegenProject.id,
+                    key: asset.key
+                }
+            },
+            update: {},
+            create: {
+                key: asset.key,
+                promptId: promptId,
+                projectId: codegenProject.id
+            }
+        });
+
+        await prisma.promptAssetVersion.upsert({
+            where: {
+                assetId_versionTag: {
+                    assetId: createdAsset.id,
+                    versionTag: '1.0.0'
+                }
+            },
             update: {
-                promptText: promptSeed.promptText,
-                aiModelId: promptSeed.aiModelId || cgGpt4oMini.id, // Default to cgGpt4oMini if not specified
-                status: 'active',
-                changeMessage: `Initial version of ${promptSeed.name}`,
-                languageCode: defaultLanguageCode, // <--- AÑADIDO languageCode
-                // activeInEnvironments is intentionally omitted here to match the original structure of this seed file's logic
+                value: asset.value
             },
             create: {
-                promptId: prompt.id,
-                promptText: promptSeed.promptText,
-                versionTag: 'v1.0.0',
-                aiModelId: promptSeed.aiModelId || cgGpt4oMini.id,
-                status: 'active',
-                changeMessage: `Initial version of ${promptSeed.name}`,
-                languageCode: defaultLanguageCode, // <--- AÑADIDO languageCode
-                activeInEnvironments: { connect: [{ id: cgDevEnv.id }, { id: cgStagingEnv.id }] } // Defaulting to dev and staging as per other seeds
-            },
-            select: { id: true, languageCode: true } // Asegurar que se selecciona languageCode
+                assetId: createdAsset.id,
+                versionTag: '1.0.0',
+                value: asset.value
+            }
         });
-        console.log(`Upserted PromptVersion ${promptVersion.id} (Lang: ${promptVersion.languageCode}) for prompt ${promptSeed.name}`);
-
-        // Link PromptAssetVersions to PromptVersion (if any and if your schema supports this directly)
-        // This part was previously commented out or handled differently. Assuming a direct relation isn't standard or used here.
-        // if (assetVersionsToConnect.length > 0) {
-        //     // await prisma.promptVersion.update({
-        //     //     where: { id: promptVersion.id },
-        //     //     data: { assets: { connect: assetVersionsToConnect } }
-        //     // });
-        //     console.log(`Attempted to connect ${assetVersionsToConnect.length} asset versions to PromptVersion ${promptVersion.id}. Schema dependent.`);
-        // }
     }
+    console.log('Created assets for codegen project');
 
-    // Crear traducciones en español
-    await createSpanishTranslations(cgProjectId);
+    // Create Spanish translations
+    await createSpanishTranslations(codegenProject.id);
 
-    console.log('Code Generation & Assistance seeding finished.');
+    console.log('Finished seeding codegen examples');
 }
 
-main().catch((e) => { console.error(e); process.exit(1); }).finally(async () => { await prisma.$disconnect(); });
+main()
+    .catch((e) => {
+        console.error(e);
+        process.exit(1);
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
+    });

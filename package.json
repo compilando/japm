@@ -18,7 +18,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed:all": "ts-node seed/seed.ts && ts-node seed/seed.codegen.ts && ts-node seed/seed.creative.ts && ts-node seed/seed.education.ts && ts-node seed/seed.invoice-extraction.ts && ts-node seed/seed.marketing.ts && ts-node seed/seed.rag.ts"
+    "seed:all": "ts-node seed/seed.ts && ts-node seed/seed.codegen.ts && ts-node seed/seed.invoice-extraction.ts && ts-node seed/seed.prompt-types.ts"
   },
   "prisma": {
     "seed": "ts-node seed/seed.ts"
