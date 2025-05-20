@@ -75,7 +75,12 @@ Remember that accuracy and compliance are critical for invoice processing.`,
 - Optional Fields: {{optional_fields}}
 - Validation Rules: {{validation_rules}}
 
-Please extract the requested information from the invoice.`,
+Additional Context:
+- Security Requirements: {{security_requirements}}
+- Compliance Requirements: {{compliance_requirements}}
+- Validation Requirements: {{validation_requirements}}
+
+Please ensure the extracted data meets all requirements.`,
 
         'assistant-invoice-response': `Extracted Invoice Data:
 {{extracted_data}}
@@ -87,9 +92,15 @@ Confidence Scores:
 {{confidence_scores}}
 
 Additional Notes:
-{{additional_notes}}`,
+{{additional_notes}}
 
-        'response-format': `{
+Response Format:
+{{response-format}}
+
+Please ensure the response follows the specified format exactly.`,
+
+        'response-format': `The response must strictly follow this JSON format:
+{
     "invoice": {
         "basic_info": {
             "invoice_number": string,
@@ -137,7 +148,21 @@ Additional Notes:
         "version": string,
         "processing_time": number
     }
-}`
+}
+
+Validation Rules:
+1. All required fields must be present
+2. Numeric values must be properly formatted
+3. Dates must be in ISO format
+4. Currency codes must be valid
+5. Tax IDs must be properly formatted
+
+Error Handling:
+1. Invalid format should return error status
+2. Missing fields should be noted in error
+3. Type mismatches should be reported
+4. Validation failures should be detailed
+5. Security violations should be logged`
     },
     prompts: {
         'system-base': `{{system-base-instructions}}
@@ -165,7 +190,12 @@ RESPONSE TO VIOLATIONS:
 4. Provide secure alternatives
 5. Document security concerns`,
 
-        'user-invoice-request': `{{user-invoice-request}}
+        'user-invoice-request': `Invoice Extraction Request:
+- Document Type: {{document_type}}
+- Format: {{format}}
+- Required Fields: {{required_fields}}
+- Optional Fields: {{optional_fields}}
+- Validation Rules: {{validation_rules}}
 
 Additional Context:
 - Security Requirements: {{security_requirements}}
@@ -174,7 +204,17 @@ Additional Context:
 
 Please ensure the extracted data meets all requirements.`,
 
-        'assistant-invoice-response': `{{assistant-invoice-response}}
+        'assistant-invoice-response': `Extracted Invoice Data:
+{{extracted_data}}
+
+Validation Results:
+{{validation_results}}
+
+Confidence Scores:
+{{confidence_scores}}
+
+Additional Notes:
+{{additional_notes}}
 
 Response Format:
 {{response-format}}
@@ -182,7 +222,55 @@ Response Format:
 Please ensure the response follows the specified format exactly.`,
 
         'response-format': `The response must strictly follow this JSON format:
-{{response-format}}
+{
+    "invoice": {
+        "basic_info": {
+            "invoice_number": string,
+            "date": string,
+            "due_date": string,
+            "total_amount": number,
+            "currency": string
+        },
+        "parties": {
+            "seller": {
+                "name": string,
+                "tax_id": string,
+                "address": string
+            },
+            "buyer": {
+                "name": string,
+                "tax_id": string,
+                "address": string
+            }
+        },
+        "items": [{
+            "description": string,
+            "quantity": number,
+            "unit_price": number,
+            "total": number,
+            "tax_rate": number
+        }],
+        "totals": {
+            "subtotal": number,
+            "tax_amount": number,
+            "total": number
+        }
+    },
+    "validation": {
+        "status": "success" | "error",
+        "errors": string[],
+        "warnings": string[],
+        "confidence_scores": {
+            "overall": number,
+            "fields": object
+        }
+    },
+    "metadata": {
+        "extraction_date": string,
+        "version": string,
+        "processing_time": number
+    }
+}
 
 Validation Rules:
 1. All required fields must be present

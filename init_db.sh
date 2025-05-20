@@ -8,7 +8,9 @@ echo "🚧 Inicializando la base de datos con Prisma..."
 npx prisma migrate dev --name init
 
 echo "🌱 Ejecutando todos los scripts de seed..."
-# Ejecuta el script seed:all definido en package.json
-pnpm run seed:all
+# Ejecuta los scripts de seed en orden
+npx ts-node seed/seed.ts
+npx ts-node seed/seed.codegen.ts
+npx ts-node seed/seed.invoice-extraction.ts
 
 echo "✅ ¡Base de datos inicializada y poblada!" 

@@ -91,7 +91,7 @@ export class PromptController {
     @Body() createPromptDto: CreatePromptDto,
     @Req() req: any
   ): Promise<PromptDto> {
-    return this.promptService.create(createPromptDto, req.user.tenantId, projectId).then(prompt => ({
+    return this.promptService.create(createPromptDto, projectId, req.user.tenantId).then(prompt => ({
       ...prompt,
       description: prompt.description || undefined
     }));
@@ -203,11 +203,12 @@ export class PromptController {
     required: true
   })
   update(
+    @Param('projectId') projectId: string,
     @Param('id') id: string,
     @Body() updatePromptDto: UpdatePromptDto,
     @Req() req: any,
   ): Promise<PromptDto> {
-    return this.promptService.update(id, updatePromptDto, req.user.tenantId).then(prompt => ({
+    return this.promptService.update(id, updatePromptDto, projectId).then(prompt => ({
       ...prompt,
       description: prompt.description || undefined
     }));
@@ -244,10 +245,11 @@ export class PromptController {
     required: true
   })
   remove(
+    @Param('projectId') projectId: string,
     @Param('id') id: string,
     @Req() req: any,
   ): Promise<void> {
-    return this.promptService.remove(id, req.user.tenantId);
+    return this.promptService.remove(id, projectId);
   }
 
   @Post('generate-structure')

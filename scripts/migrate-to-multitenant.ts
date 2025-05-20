@@ -17,7 +17,7 @@ async function main() {
             email: 'admin@default.com',
             password: 'admin', // ¡En producción usa hash!
             tenantId: tenant.id,
-            role: Role.ADMIN,
+            role: Role.admin,
         },
     });
 

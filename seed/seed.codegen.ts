@@ -56,7 +56,12 @@ Remember that your code will be used in production environments.`,
 - Constraints: {{constraints}}
 - Dependencies: {{dependencies}}
 
-Please generate code that meets these specifications.`,
+Additional Context:
+- Security Requirements: {{security_requirements}}
+- Performance Requirements: {{performance_requirements}}
+- Testing Requirements: {{testing_requirements}}
+
+Please ensure the generated code meets all requirements.`,
 
         'assistant-code-response': `Generated Code:
 \`\`\`{{language}}
@@ -70,9 +75,15 @@ Security Considerations:
 {{security_considerations}}
 
 Performance Notes:
-{{performance_notes}}`,
+{{performance_notes}}
 
-        'response-format': `{
+Response Format:
+{{response-format}}
+
+Please ensure the response follows the specified format exactly.`,
+
+        'response-format': `The response must strictly follow this JSON format:
+{
     "code": {
         "content": string,
         "language": string,
@@ -102,7 +113,21 @@ Performance Notes:
     },
     "status": "success" | "error",
     "error": string | null
-}`
+}
+
+Validation Rules:
+1. All required fields must be present
+2. String values must be properly escaped
+3. Arrays must be properly formatted
+4. Nested objects must follow the structure
+5. Enums must use valid values
+
+Error Handling:
+1. Invalid format should return error status
+2. Missing fields should be noted in error
+3. Type mismatches should be reported
+4. Validation failures should be detailed
+5. Security violations should be logged`
     },
     prompts: {
         'system-base': `{{system-base-instructions}}
@@ -130,7 +155,12 @@ RESPONSE TO VIOLATIONS:
 4. Provide secure alternatives
 5. Document security concerns`,
 
-        'user-code-request': `{{user-code-request}}
+        'user-code-request': `Code Generation Request:
+- Language: {{language}}
+- Purpose: {{purpose}}
+- Requirements: {{requirements}}
+- Constraints: {{constraints}}
+- Dependencies: {{dependencies}}
 
 Additional Context:
 - Security Requirements: {{security_requirements}}
@@ -139,7 +169,19 @@ Additional Context:
 
 Please ensure the generated code meets all requirements.`,
 
-        'assistant-code-response': `{{assistant-code-response}}
+        'assistant-code-response': `Generated Code:
+\`\`\`{{language}}
+{{generated_code}}
+\`\`\`
+
+Documentation:
+{{documentation}}
+
+Security Considerations:
+{{security_considerations}}
+
+Performance Notes:
+{{performance_notes}}
 
 Response Format:
 {{response-format}}
@@ -147,7 +189,37 @@ Response Format:
 Please ensure the response follows the specified format exactly.`,
 
         'response-format': `The response must strictly follow this JSON format:
-{{response-format}}
+{
+    "code": {
+        "content": string,
+        "language": string,
+        "dependencies": string[],
+        "metadata": {
+            "version": string,
+            "author": string,
+            "date": string,
+            "security_level": "high" | "medium" | "low"
+        }
+    },
+    "documentation": {
+        "description": string,
+        "usage": string,
+        "examples": string[],
+        "notes": string[]
+    },
+    "security": {
+        "vulnerabilities": string[],
+        "mitigations": string[],
+        "best_practices": string[]
+    },
+    "performance": {
+        "complexity": string,
+        "optimizations": string[],
+        "bottlenecks": string[]
+    },
+    "status": "success" | "error",
+    "error": string | null
+}
 
 Validation Rules:
 1. All required fields must be present

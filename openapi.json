@@ -1124,6 +1124,14 @@
         "operationId": "PromptController_update",
         "parameters": [
           {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "id",
             "required": true,
             "in": "path",
@@ -1184,6 +1192,14 @@
         "description": "Permanently deletes a prompt. This is a destructive operation that requires admin privileges.",
         "operationId": "PromptController_remove",
         "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "id",
             "required": true,
@@ -5921,11 +5937,11 @@
             "type": "string",
             "description": "Role of the user",
             "enum": [
-              "USER",
-              "ADMIN",
-              "TENANT_ADMIN"
+              "user",
+              "admin",
+              "tenant_admin"
             ],
-            "default": "USER"
+            "default": "user"
           }
         },
         "required": [

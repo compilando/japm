@@ -118,6 +118,22 @@ export class PromptService {
     } = createDto;
     const slug = slugify(name);
 
+    // Verificar que el proyecto existe
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+    if (!project) {
+      throw new NotFoundException(`Project with ID "${projectId}" not found.`);
+    }
+
+    // Verificar que el tenant existe
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+    });
+    if (!tenant) {
+      throw new NotFoundException(`Tenant with ID "${tenantId}" not found.`);
+    }
+
     let tagsToConnect: Prisma.TagWhereUniqueInput[] | undefined = undefined;
     if (tagNames && tagNames.length > 0) {
       const existingTags = await this.prisma.tag.findMany({
@@ -311,8 +327,8 @@ export class PromptService {
     }
   }
 
-  async remove(id: string, tenantId: string): Promise<void> {
-    const prompt = await this.findOne(id, tenantId);
+  async remove(id: string, projectId: string): Promise<void> {
+    const prompt = await this.findOne(id, projectId);
     await this.prisma.prompt.delete({
       where: { id: prompt.id },
     });

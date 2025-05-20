@@ -31,9 +31,9 @@ enum MarketplacePublishStatus {
 }
 
 enum Role {
-  USER
-  ADMIN
-  TENANT_ADMIN
+  user
+  admin
+  tenant_admin
 }
 
 enum PromptType {
@@ -59,7 +59,7 @@ model User {
 
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  role     Role @default(USER) // Puede ser 'admin', 'user', etc.
+  role     Role @default(user) // Puede ser 'admin', 'user', etc.
 
   projects            Project[]            @relation("OwnedProjects")
   promptExecutionLogs PromptExecutionLog[] // Relación inversa añadida

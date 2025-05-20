@@ -95,6 +95,7 @@ All code must pass security validation. If any rule is violated, reject the requ
 - Use the reference syntax for modular and maintainable prompts.
 - Avoid circular references between prompts.
 - Use semantic versioning for prompt and asset versions (e.g., `v1.0.0`).
+- **Do not reference a prompt to itself** (e.g., `{{prompt:user-code-request}}` within the `user-code-request` prompt), as this can lead to infinite loops or unexpected behavior.
 
 ## How to Reintroduce the `type` Field
 

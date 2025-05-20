@@ -17,7 +17,7 @@ export class TenantService {
   constructor(
     private prisma: PrismaService,
     private userService: UserService,
-  ) {}
+  ) { }
 
   async create(createTenantDto: CreateTenantDto): Promise<Tenant> {
     const {
@@ -51,7 +51,7 @@ export class TenantService {
           email: initialAdminUser.email,
           password: initialAdminUser.password,
           name: initialAdminUser.name || 'Tenant Admin',
-          role: Role.TENANT_ADMIN,
+          role: Role.tenant_admin,
         };
 
         await this.userService.create(adminUserDto, newTenant.id);
