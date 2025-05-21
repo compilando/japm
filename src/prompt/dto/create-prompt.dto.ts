@@ -57,7 +57,7 @@ export class CreatePromptDto {
   tags?: string[];
 
   @ApiProperty({
-    description: 'Base prompt text for the first version (v1.0.0)',
+    description: 'Base prompt text for the first version (1.0.0)',
     example: 'Hello {{customer_name}}, welcome.',
   })
   @IsString()

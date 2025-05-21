@@ -574,35 +574,35 @@ async function main() {
             name: 'System Base Instructions',
             description: 'Base system instructions for code generation, defining core behavior and constraints.',
             content: codegenTranslations.prompts['system-base'],
-            text: codegenTranslations.prompts['system-base']
+            type: 'SYSTEM'
         },
         {
             id: 'guard-codegen',
             name: 'Guard Code Generation',
             description: 'Security-focused prompt that implements strict validation rules for code generation.',
-            content: codegenTranslations.prompts['guard-codegen'],
-            text: codegenTranslations.prompts['guard-codegen']
+            content: codegenTranslations.prompts['guard-code-generation'],
+            type: 'GUARD'
         },
         {
             id: 'user-code-request',
             name: 'User Code Request',
             description: 'Template for processing and formatting code generation requests.',
             content: codegenTranslations.prompts['user-code-request'],
-            text: codegenTranslations.prompts['user-code-request']
+            type: 'USER'
         },
         {
             id: 'assistant-code-response',
             name: 'Assistant Code Response',
             description: 'Format for AI responses to code generation requests.',
             content: codegenTranslations.prompts['assistant-code-response'],
-            text: codegenTranslations.prompts['assistant-code-response']
+            type: 'ASSISTANT'
         },
         {
             id: 'response-format',
             name: 'Response Format',
             description: 'Strict JSON format definition for code generation responses.',
             content: codegenTranslations.prompts['response-format'],
-            text: codegenTranslations.prompts['response-format']
+            type: 'TEMPLATE'
         }
     ];
 
@@ -642,7 +642,8 @@ async function main() {
                         description: prompt.description,
                         content: prompt.content,
                         projectId: codegenProject.id,
-                        tenantId: tenantId
+                        tenantId: tenantId,
+                        type: 'GUARD'
                     }
                 });
             }
@@ -658,12 +659,12 @@ async function main() {
                     }
                 },
                 update: {
-                    promptText: prompt.text
+                    promptText: prompt.content
                 },
                 create: {
                     promptId: createdPrompt.id,
                     versionTag: '1.0.0',
-                    promptText: prompt.text
+                    promptText: prompt.content
                 }
             });
         } catch (error) {

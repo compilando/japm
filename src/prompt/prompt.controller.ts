@@ -46,9 +46,9 @@ interface RequestWithUser extends ExpressRequest {
   };
 }
 
-@ApiTags('Prompts')
-@ApiBearerAuth()
 @Controller('projects/:projectId/prompts')
+@UseGuards(JwtAuthGuard)
+@ApiTags('prompts')
 export class PromptController {
   private readonly logger = new Logger(PromptController.name);
 

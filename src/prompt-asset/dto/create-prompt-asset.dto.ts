@@ -52,7 +52,8 @@ export class CreatePromptAssetDto {
   category?: string;
 
   @ApiProperty({
-    description: 'Valor inicial del asset para la primera versión (v1.0.0)',
+    description: 'Valor inicial del asset para la primera versión (1.0.0)',
+    example: 'Texto inicial',
   })
   @IsString()
   @IsNotEmpty()

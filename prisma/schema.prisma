@@ -146,7 +146,7 @@ model PromptVersion {
   promptId             String               @map("prompt")
   promptText           String               @default("")
   languageCode         String               @default("en-US")
-  versionTag           String               @default("v1.0.0")
+  versionTag           String               @default("1.0.0")
   changeMessage        String?
   status               String               @default("draft")
   createdAt            DateTime             @default(now())
@@ -214,7 +214,7 @@ model PromptAssetVersion {
   asset                PromptAsset        @relation("AssetVersions", fields: [assetId], references: [id], onDelete: Cascade)
   assetId              String             @map("asset")
   value                String             @default("")
-  versionTag           String             @default("v1.0.0")
+  versionTag           String             @default("1.0.0")
   changeMessage        String?
   status               String             @default("draft")
   createdAt            DateTime           @default(now())

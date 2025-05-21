@@ -34,9 +34,8 @@ export class CreateAssetVersionDto {
   value: string;
 
   @ApiProperty({
-    description:
-      'Etiqueta única para esta versión dentro del asset (e.g., v1.1.0, fix-typo).',
-    example: 'v1.0.1',
+    description: 'Etiqueta única para esta versión dentro del asset (e.g., 1.1.0, fix-typo).',
+    example: '1.0.1',
   })
   @IsString()
   @IsDefined()

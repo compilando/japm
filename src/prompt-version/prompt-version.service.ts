@@ -55,10 +55,10 @@ export class PromptVersionService {
   ): Promise<PromptVersion> {
     await this.verifyPromptAccess(projectId, promptId); // Ensure prompt exists in project
 
-    // versionTag no viene de createDto. Se asignará 'v1.0.0' por defecto para la creación inicial.
+    // versionTag no viene de createDto. Se asignará '1.0.0' por defecto para la creación inicial.
     // const { ...versionData } = createDto; // No es necesario desestructurar así ahora
 
-    const newVersionTag = 'v1.0.0'; // Asignación directa
+    const newVersionTag = '1.0.0'; // Asignación directa
 
     try {
       return await this.prisma.promptVersion.create({

@@ -169,7 +169,7 @@ export class PromptService {
           data: {
             promptId: slug,
             promptText: promptText,
-            versionTag: 'v1.0.0',
+            versionTag: '1.0.0',
             languageCode: process.env.DEFAULT_LANGUAGE_CODE || 'en-US',
             changeMessage: 'Initial version created automatically.',
             translations:
@@ -194,7 +194,7 @@ export class PromptService {
         include: {
           tags: true,
           versions: {
-            where: { versionTag: 'v1.0.0' },
+            where: { versionTag: '1.0.0' },
             include: {
               translations: true,
               activeInEnvironments: { select: { id: true, name: true } },

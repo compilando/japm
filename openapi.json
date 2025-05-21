@@ -1016,14 +1016,9 @@
             "description": "Prompt already exists - A prompt with this name already exists for this tenant"
           }
         },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
         "summary": "Create new prompt",
         "tags": [
-          "Prompts"
+          "prompts"
         ]
       },
       "get": {
@@ -1057,14 +1052,9 @@
             "description": "Unauthorized - Invalid or expired token"
           }
         },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
         "summary": "Get all prompts",
         "tags": [
-          "Prompts"
+          "prompts"
         ]
       }
     },
@@ -1109,14 +1099,9 @@
             "description": "Prompt not found - The specified ID does not exist for this tenant"
           }
         },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
         "summary": "Get prompt by ID",
         "tags": [
-          "Prompts"
+          "prompts"
         ]
       },
       "patch": {
@@ -1178,14 +1163,9 @@
             "description": "Prompt name already exists - The provided name is already in use"
           }
         },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
         "summary": "Update prompt",
         "tags": [
-          "Prompts"
+          "prompts"
         ]
       },
       "delete": {
@@ -1224,14 +1204,9 @@
             "description": "Prompt not found - The specified ID does not exist for this tenant"
           }
         },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
         "summary": "Delete prompt",
         "tags": [
-          "Prompts"
+          "prompts"
         ]
       }
     },
@@ -1291,14 +1266,9 @@
             "description": "Proyecto no encontrado"
           }
         },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
         "summary": "Genera estructura de prompt",
         "tags": [
-          "Prompts"
+          "prompts"
         ]
       }
     },
@@ -1330,14 +1300,9 @@
             }
           }
         },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
         "summary": "Load prompt structure",
         "tags": [
-          "Prompts"
+          "prompts"
         ]
       }
     },
@@ -6342,7 +6307,7 @@
           },
           "promptText": {
             "type": "string",
-            "description": "Base prompt text for the first version (v1.0.0)",
+            "description": "Base prompt text for the first version (1.0.0)",
             "example": "Hello {{customer_name}}, welcome."
           },
           "initialTranslations": {
@@ -6433,8 +6398,9 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 50,
-            "description": "Tag de versión para esta nueva versión (e.g., v1.0.0, v1.0.0-beta.1). Debe ser único por prompt.",
-            "example": "v1.0.0"
+            "pattern": "/^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)*)?(\\+[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)*)?$/",
+            "description": "Tag de versión para esta nueva versión (e.g., 1.0.0, 1.0.0-beta.1). Debe ser único por prompt.",
+            "example": "1.0.0"
           },
           "changeMessage": {
             "type": "string",
@@ -6649,7 +6615,8 @@
           },
           "initialValue": {
             "type": "string",
-            "description": "Valor inicial del asset para la primera versión (v1.0.0)"
+            "description": "Valor inicial del asset para la primera versión (1.0.0)",
+            "example": "Texto inicial"
           },
           "initialChangeMessage": {
             "type": "string",
@@ -6991,8 +6958,9 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 50,
-            "description": "Tag de versión para esta nueva versión (e.g., v1.0.0, v1.0.0-beta.1). Debe ser único por prompt.",
-            "example": "v1.0.0"
+            "pattern": "/^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)*)?(\\+[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)*)?$/",
+            "description": "Tag de versión para esta nueva versión (e.g., 1.0.0, 1.0.0-beta.1). Debe ser único por prompt.",
+            "example": "1.0.0"
           },
           "changeMessage": {
             "type": "string",
@@ -7158,8 +7126,8 @@
           },
           "versionTag": {
             "type": "string",
-            "description": "Etiqueta de versión (e.g., v1.0.1, v1.1.0). Si no se provee, se podría auto-incrementar o requerir.",
-            "example": "v1.0.1"
+            "description": "Etiqueta de versión (e.g., 1.0.1, 1.1.0). Si no se provee, se podría auto-incrementar o requerir.",
+            "example": "1.0.1"
           },
           "changeMessage": {
             "type": "string",

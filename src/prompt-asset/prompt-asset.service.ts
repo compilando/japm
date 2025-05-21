@@ -78,7 +78,7 @@ export class PromptAssetService {
             create: [
               {
                 value: initialValue,
-                versionTag: 'v1.0.0',
+                versionTag: '1.0.0',
                 status: 'active',
                 changeMessage:
                   initialChangeMessage || name || 'Initial version',

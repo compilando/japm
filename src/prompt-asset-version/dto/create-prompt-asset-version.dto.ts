@@ -11,12 +11,11 @@ export class CreatePromptAssetVersionDto {
   value: string;
 
   @ApiPropertyOptional({
-    description:
-      'Etiqueta de versión (e.g., v1.0.1, v1.1.0). Si no se provee, se podría auto-incrementar o requerir.',
-    example: 'v1.0.1',
+    description: 'Etiqueta de versión (e.g., 1.0.1, 1.1.0). Si no se provee, se podría auto-incrementar o requerir.',
+    example: '1.0.1',
   })
   @IsString()
-  @IsNotEmpty() // Hacerlo requerido para nuevas versiones explícitas después de la v1.0.0 inicial.
+  @IsNotEmpty() // Hacerlo requerido para nuevas versiones explícitas después de la 1.0.0 inicial.
   versionTag: string; // Cambiado de opcional a requerido
 
   @ApiPropertyOptional({

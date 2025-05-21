@@ -6,6 +6,7 @@ import {
   ValidateNested,
   IsDefined,
   Length,
+  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -35,11 +36,14 @@ export class CreatePromptVersionDto {
   promptText: string;
 
   @ApiProperty({
-    description: 'Tag de versión para esta nueva versión (e.g., v1.0.0, v1.0.0-beta.1). Debe ser único por prompt.',
-    example: 'v1.0.0',
+    description: 'Tag de versión para esta nueva versión (e.g., 1.0.0, 1.0.0-beta.1). Debe ser único por prompt.',
+    example: '1.0.0',
   })
   @IsString()
   @Length(1, 50)
+  @Matches(/^\d+\.\d+\.\d+(-[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*)?(\+[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*)?$/, {
+    message: 'versionTag debe ser una versión semántica válida (ej: 1.0.0)',
+  })
   versionTag: string;
 
   @ApiPropertyOptional({

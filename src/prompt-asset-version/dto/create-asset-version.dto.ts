@@ -11,19 +11,14 @@ export class CreateAssetVersionDto {
   value: string;
 
   @ApiProperty({
-    description:
-      'Etiqueta de versión semántica (e.g., v1.1.0, v2.0.0-alpha). Debe ser única para el asset.',
-    example: 'v1.1.0',
+    description: 'Etiqueta de versión semántica (e.g., 1.1.0, 2.0.0-alpha). Debe ser única para el asset.',
+    example: '1.1.0',
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(
-    /^v\d+\.\d+\.\d+(-[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*)?(\+[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*)?$/,
-    {
-      message:
-        'versionTag must be a valid semantic version string (e.g., v1.0.0)',
-    },
-  )
+  @Matches(/^\d+\.\d+\.\d+(-[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*)?(\+[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*)?$/, {
+    message: 'versionTag debe ser una versión semántica válida (ej: 1.0.0)',
+  })
   versionTag: string;
 
   @ApiPropertyOptional({
