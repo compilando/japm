@@ -10,7 +10,10 @@ import { Logger } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.setGlobalPrefix('api');
+  // Configurar el prefijo global antes de cualquier otra configuración
+  app.setGlobalPrefix('api', {
+    exclude: ['/health', '/health/(.*)'], // Excluir rutas de health check
+  });
 
   // Apply Global Filters (Prisma specific first, then generic HTTP)
   // HttpAdapterHost is needed for filters that might handle non-HttpException errors
@@ -54,13 +57,14 @@ async function bootstrap() {
     );
   }
 
-  SwaggerModule.setup('api-docs', app, document);
+  SwaggerModule.setup('api/docs', app, document);
 
   // Enable CORS
   app.enableCors();
 
-  const port = process.env.PORT ?? 3001;
+  const port = process.env.PORT || 3000;
   await app.listen(port);
+  Logger.log(`Application is running on: http://localhost:${port}`);
 
   const appUrl = await app.getUrl();
   const funnyArt = `
