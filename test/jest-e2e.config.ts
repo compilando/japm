@@ -11,7 +11,8 @@ const config: Config.InitialOptions = {
   moduleNameMapper: {
     '^src/(.*)$': '<rootDir>/../src/$1',
   },
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/jest-e2e.setup.ts'],
+  maxWorkers: 1,
 };
 
 export default config; 

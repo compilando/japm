@@ -2433,7 +2433,7 @@
         ]
       }
     },
-    "/api/health": {
+    "/health": {
       "get": {
         "operationId": "HealthController_check",
         "parameters": [],
@@ -5951,7 +5951,7 @@
             "type": "string",
             "minLength": 8,
             "description": "User password",
-            "example": "Password123!"
+            "example": "password123"
           },
           "name": {
             "type": "string",
@@ -6010,7 +6010,7 @@
           "password": {
             "type": "string",
             "description": "User password",
-            "example": "Password123!"
+            "example": "password123"
           }
         },
         "required": [

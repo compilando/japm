@@ -53,10 +53,10 @@ Variables should now use the format: `{{variable:variableName}}`
 ## 3. Prompt Composition
 
 ### New Reference Syntax
-Prompts can now reference other prompts using:
-- `{{prompt:promptName:versionTag}}`
-- `{{prompt:promptName:latest}}`
-- `{{prompt:promptName:latest:languageCode}}`
+   Prompts can now reference other prompts using:
+   - `{{prompt:promptName:versionTag}}`
+   - `{{prompt:promptName:latest}}`
+   - `{{prompt:promptName:latest:languageCode}}`
 
 ### UI Implementation
 1. **Prompt Reference Dialog**:

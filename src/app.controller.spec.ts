@@ -14,9 +14,9 @@ describe('AppController', () => {
     appController = app.get<AppController>(AppController);
   });
 
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+  describe('admin-check', () => {
+    it('should return admin access message', () => {
+      expect(appController.adminCheck()).toEqual({ message: '¡Acceso de administrador concedido!' });
     });
   });
 });
