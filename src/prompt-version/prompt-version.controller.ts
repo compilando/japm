@@ -123,6 +123,13 @@ export class PromptVersionController {
     required: false,
     example: '{"varName": "value"}',
   })
+  @ApiQuery({
+    name: 'processed',
+    description: 'Whether to return the processed prompt with all references and variables resolved. Defaults to false.',
+    type: Boolean,
+    required: false,
+    example: 'true',
+  })
   @ApiResponse({
     status: 200,
     description: 'Version found.',

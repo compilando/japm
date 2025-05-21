@@ -14,6 +14,7 @@ import { StringOutputParser } from '@langchain/core/output_parsers';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ExecuteLlmDto } from './dto/execute-llm.dto';
+import { PromptResolverService } from '../prompt/prompt-resolver.service';
 
 @Injectable()
 export class LlmExecutionService {
@@ -23,15 +24,37 @@ export class LlmExecutionService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
+    private promptResolver: PromptResolverService,
   ) {}
 
   async execute(
     dto: ExecuteLlmDto,
-  ): Promise<{ result: string; modelUsed: string; providerUsed: string }> {
-    const { modelId, promptText } = dto;
+  ): Promise<{ result: string; modelUsed: string; providerUsed: string; metadata: any }> {
+    const { modelId, promptId, projectId, versionTag, languageCode, variables } = dto;
     this.logger.log(`Executing LLM request for model ID: ${modelId}`);
 
-    // 1. Get AI model configuration from DB
+    // 1. Resolver el prompt y sus referencias
+    let resolvedPrompt: string;
+    let promptMetadata: any;
+    
+    if (promptId && projectId) {
+      const resolved = await this.promptResolver.resolvePrompt(
+        projectId,
+        promptId,
+        versionTag || 'latest',
+        languageCode,
+        variables || {},
+      );
+      resolvedPrompt = resolved.resolvedText;
+      promptMetadata = resolved.metadata;
+    } else if (dto.promptText) {
+      resolvedPrompt = dto.promptText as string;
+      promptMetadata = null;
+    } else {
+      throw new BadRequestException('Either promptId with projectId or promptText must be provided');
+    }
+
+    // 2. Get AI model configuration from DB
     this.logger.debug(`Fetching AIModel configuration for ID: ${modelId}`);
     const aiModel = await this.prisma.aIModel.findUnique({
       where: { id: modelId },
@@ -45,7 +68,7 @@ export class LlmExecutionService {
       `Found AIModel: ${aiModel.name} (Provider: ${aiModel.provider}, Identifier: ${aiModel.apiIdentifier})`,
     );
 
-    // 2. Get API Key from environment variables
+    // 3. Get API Key from environment variables
     if (!aiModel.apiKeyEnvVar) {
       this.logger.error(
         `apiKeyEnvVar not set for AIModel ID ${aiModel.id} (${aiModel.name}).`,
@@ -71,7 +94,7 @@ export class LlmExecutionService {
       `API Key found for ${aiModel.provider} (length: ${apiKey.length}).`,
     );
 
-    // 3. Instantiate the appropriate LangChain model
+    // 4. Instantiate the appropriate LangChain model
     let chatModel: BaseChatModel;
     this.logger.log(
       `Instantiating LangChain model for provider: ${aiModel.provider}, model: ${aiModel.apiIdentifier}`,
@@ -113,14 +136,14 @@ export class LlmExecutionService {
       );
     }
 
-    // 4. Call the LLM using LangChain
+    // 5. Call the LLM using LangChain
     this.logger.log(
-      `Invoking LLM ${aiModel.name} with prompt (length: ${promptText.length})...`,
+      `Invoking LLM ${aiModel.name} with prompt (length: ${resolvedPrompt.length})...`,
     );
     try {
       const parser = new StringOutputParser();
       const chain = chatModel.pipe(parser);
-      const llmResult = await chain.invoke(promptText);
+      const llmResult = await chain.invoke(resolvedPrompt);
       this.logger.log(
         `LLM invocation successful for ${aiModel.name}. Output length: ${llmResult?.length ?? 0}`,
       );
@@ -129,6 +152,16 @@ export class LlmExecutionService {
         result: llmResult,
         modelUsed: aiModel.apiIdentifier ?? aiModel.name,
         providerUsed: aiModel.provider ?? 'Unknown',
+        metadata: {
+          prompt: promptMetadata,
+          model: {
+            id: aiModel.id,
+            name: aiModel.name,
+            provider: aiModel.provider,
+            temperature: aiModel.temperature,
+            maxTokens: aiModel.maxTokens,
+          },
+        },
       };
     } catch (error) {
       const errorMessage =

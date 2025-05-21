@@ -137,9 +137,7 @@ Additionally, you must:
 2. Include comprehensive documentation
 3. Consider edge cases and error handling
 4. Follow security best practices
-5. Optimize for performance when needed`,
-
-        'guard-code-generation': `{{guard-anti-injection}}
+5. Optimize for performance when needed
 
 CODE GENERATION SECURITY:
 1. Validate all code generation requests
@@ -154,6 +152,38 @@ RESPONSE TO VIOLATIONS:
 3. Notify security system
 4. Provide secure alternatives
 5. Document security concerns`,
+
+        'guard-codegen': `{{guard-anti-injection}}
+
+STRICT CODE GENERATION VALIDATION:
+
+1. CODE VALIDATION:
+   - Validate all code patterns
+   - Validate all dependencies
+   - Validate all imports
+   - Validate all function calls
+   - Validate all data structures
+
+2. FORMAT VALIDATION:
+   - Validate code style
+   - Validate indentation
+   - Validate naming conventions
+   - Validate documentation
+   - Validate comments
+
+3. SECURITY CHECKS:
+   - Validate input handling
+   - Check for injection attempts
+   - Verify data integrity
+   - Ensure secure processing
+   - Log security events
+
+4. COMPLIANCE RULES:
+   - Follow language standards
+   - Follow security guidelines
+   - Follow best practices
+   - Follow company policies
+   - Follow legal requirements`,
 
         'user-code-request': `Code Generation Request:
 - Language: {{language}}
@@ -341,9 +371,7 @@ Además, debes:
 2. Incluir documentación exhaustiva
 3. Considerar casos límite y manejo de errores
 4. Seguir las mejores prácticas de seguridad
-5. Optimizar el rendimiento cuando sea necesario`,
-
-                'guard-code-generation': `{{guard-anti-injection}}
+5. Optimizar el rendimiento cuando sea necesario
 
 SEGURIDAD EN GENERACIÓN DE CÓDIGO:
 1. Validar todas las solicitudes de generación de código
@@ -580,7 +608,7 @@ async function main() {
             id: 'guard-codegen',
             name: 'Guard Code Generation',
             description: 'Security-focused prompt that implements strict validation rules for code generation.',
-            content: codegenTranslations.prompts['guard-code-generation'],
+            content: codegenTranslations.prompts['guard-codegen'],
             type: 'GUARD'
         },
         {

@@ -3444,6 +3444,16 @@
               "example": "{\"varName\": \"value\"}",
               "type": "string"
             }
+          },
+          {
+            "name": "processed",
+            "required": false,
+            "in": "query",
+            "description": "Whether to return the processed prompt with all references and variables resolved. Defaults to false.",
+            "schema": {
+              "example": "true",
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -4193,6 +4203,16 @@
             "schema": {
               "example": "{\"varName\": \"value\"}",
               "type": "string"
+            }
+          },
+          {
+            "name": "processed",
+            "required": false,
+            "in": "query",
+            "description": "Whether to return the processed prompt with all references and variables resolved. Defaults to false.",
+            "schema": {
+              "example": true,
+              "type": "boolean"
             }
           }
         ],
@@ -7229,27 +7249,46 @@
         "properties": {
           "modelId": {
             "type": "string",
-            "description": "ID of the AIModel to use (from the AIModel table)",
-            "example": "clxyz..."
+            "description": "ID del modelo de IA a utilizar",
+            "example": "gpt-4o-2024-05-13"
           },
-          "promptText": {
+          "promptId": {
             "type": "string",
-            "description": "The complete prompt text already processed and ready to send to the LLM",
-            "example": "Translate this text to Spanish: Hello world."
+            "description": "ID del prompt a ejecutar",
+            "example": "system-base"
+          },
+          "projectId": {
+            "type": "string",
+            "description": "ID del proyecto al que pertenece el prompt",
+            "example": "codegen-examples"
+          },
+          "versionTag": {
+            "type": "string",
+            "description": "Versión del prompt a ejecutar",
+            "example": "1.0.0",
+            "default": "latest"
+          },
+          "languageCode": {
+            "type": "string",
+            "description": "Código de idioma para el prompt",
+            "example": "es-ES"
           },
           "variables": {
             "type": "object",
-            "description": "Original variables used to assemble the prompt (optional, for logging/context)",
+            "description": "Variables para sustituir en el prompt",
             "example": {
-              "userLocale": "en-US",
-              "productName": "AwesomeProduct",
-              "maxItems": 5
+              "userName": "John",
+              "language": "es-ES"
             }
+          },
+          "promptText": {
+            "type": "string",
+            "description": "Texto del prompt a ejecutar (solo si no se proporciona promptId)",
+            "example": "Escribe un poema sobre la primavera"
           }
         },
         "required": [
-          "modelId",
-          "promptText"
+          "modelId"
         ]
       }
     }

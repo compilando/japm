@@ -70,9 +70,11 @@ export class LlmExecutionController {
       `Received LLM execution request for model ID: ${executeLlmDto.modelId}`,
     );
     // Log prompt length for debugging potential size issues
-    this.logger.debug(
-      `Prompt text length: ${executeLlmDto.promptText.length} chars`,
-    );
+    if (executeLlmDto.promptText) {
+      this.logger.debug(
+        `Prompt text length: ${executeLlmDto.promptText.length} chars`,
+      );
+    }
     // Avoid logging full variables if sensitive, maybe just keys or count
     if (executeLlmDto.variables) {
       this.logger.debug(

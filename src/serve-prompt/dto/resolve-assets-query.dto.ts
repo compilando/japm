@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBooleanString, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class ResolveAssetsQueryDto {
   @ApiPropertyOptional({
@@ -9,8 +10,9 @@ export class ResolveAssetsQueryDto {
     example: 'true', // Sent as string in query
   })
   @IsOptional()
-  @IsBooleanString() // Validates 'true' or 'false'
-  resolveAssets?: string;
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true')
+  resolveAssets?: boolean;
 
   @ApiPropertyOptional({
     description:
@@ -38,4 +40,14 @@ export class ResolveAssetsQueryDto {
   @IsOptional()
   @IsString()
   variables?: string; // JSON string for Record<string, any>, needs parsing
+
+  @ApiPropertyOptional({
+    description: 'Whether to return the processed prompt with all references and variables resolved. Defaults to false.',
+    type: Boolean,
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true')
+  processed?: boolean;
 }

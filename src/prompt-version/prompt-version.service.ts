@@ -13,7 +13,7 @@ import {
   Prompt,
   MarketplacePublishStatus,
 } from '@prisma/client';
-import { CreatePromptVersionDto } from 'src/prompt/dto/create-prompt-version.dto';
+import { CreatePromptVersionDto } from '../prompt/dto/create-prompt-version.dto';
 import { TenantService } from '../tenant/tenant.service';
 import { ServePromptService } from '../serve-prompt/serve-prompt.service';
 import { ResolveAssetsQueryDto } from '../serve-prompt/dto/resolve-assets-query.dto';
@@ -106,71 +106,67 @@ export class PromptVersionService {
     projectId: string,
     promptId: string,
     versionTag: string,
-    query?: ResolveAssetsQueryDto,
+    query: ResolveAssetsQueryDto = {},
   ): Promise<PromptVersion> {
-    await this.verifyPromptAccess(projectId, promptId);
+    const prompt = await this.prisma.prompt.findFirst({
+      where: {
+        projectId,
+        id: promptId,
+      },
+    });
 
-    let version;
+    if (!prompt) {
+      throw new NotFoundException(
+        `Prompt with ID "${promptId}" not found in project "${projectId}".`,
+      );
+    }
+
+    let version: PromptVersion | null;
     if (versionTag === 'latest') {
       version = await this.prisma.promptVersion.findFirst({
-        where: { promptId: promptId },
-        orderBy: { createdAt: 'desc' },
-        include: {
-          prompt: true,
-          translations: true,
+        where: {
+          promptId: prompt.id,
+        },
+        orderBy: {
+          createdAt: 'desc',
         },
       });
-      if (!version) {
-        throw new NotFoundException(
-          `No versions found for prompt "${promptId}" in project "${projectId}".`,
-        );
-      }
     } else {
       version = await this.prisma.promptVersion.findUnique({
         where: {
-          promptId_versionTag: { promptId: promptId, versionTag: versionTag },
-        },
-        include: {
-          prompt: true,
-          translations: true,
+          promptId_versionTag: {
+            promptId: prompt.id,
+            versionTag,
+          },
         },
       });
-      if (!version) {
-        throw new NotFoundException(
-          `PromptVersion with tag "${versionTag}" not found for prompt "${promptId}".`,
-        );
-      }
     }
 
-    if (query && query.resolveAssets === 'true') {
-      let inputVariables: Record<string, any> = {};
-      if (query.variables) {
-        try {
-          inputVariables = JSON.parse(query.variables);
-        } catch (e) {
-          this.logger.warn(
-            `Failed to parse variables JSON string: ${query.variables}. Proceeding without variables.`,
-          );
-        }
-      }
+    if (!version) {
+      throw new NotFoundException(
+        `Version "${versionTag}" not found for prompt "${promptId}" in project "${projectId}".`,
+      );
+    }
 
-      // The languageCode for asset translation should be query.regionCode if provided,
-      // otherwise, if we are fetching a specific prompt translation later, that languageCode would be used.
-      // For a base prompt version, query.regionCode is the primary source for asset language.
-      // If not resolving for a specific translation, query.regionCode is used for assets.
-      const assetLanguageCode = query?.regionCode; // string | undefined
-
-      const { processedText, resolvedAssetsMetadata } =
-        await this.servePromptService.resolveAssets(
-          version.promptText, // text
-          promptId, // promptIdInput (slug of the Prompt)
-          projectId, // projectIdInput (CUID of the project the Prompt belongs to)
-          assetLanguageCode, // languageCode for asset translation (optional)
-          inputVariables, // inputVariables (Record<string, any>)
-        );
-      version.promptText = processedText;
-      // Optionally, attach resolvedAssetsMetadata to the version object if the return type is adjusted
-      // (version as any).resolvedAssetsMetadata = resolvedAssetsMetadata;
+    // Si se solicita el prompt procesado, usamos el ServePromptService
+    if (query.processed) {
+      const { processedPrompt } = await this.servePromptService.executePromptVersion(
+        {
+          projectId,
+          promptName: prompt.id,
+          versionTag,
+          languageCode: query.regionCode,
+        },
+        {
+          variables: query.variables ? JSON.parse(query.variables) : {},
+        },
+      );
+      
+      // Creamos una copia del objeto version y reemplazamos el promptText con el procesado
+      return {
+        ...version,
+        promptText: processedPrompt,
+      };
     }
 
     return version;

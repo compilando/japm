@@ -88,7 +88,7 @@ export class PromptTranslationService {
       );
     }
 
-    if (query && query.resolveAssets === 'true') {
+    if (query?.resolveAssets) {
       let inputVariables: Record<string, any> = {};
       if (query.variables) {
         try {
