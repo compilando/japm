@@ -10,7 +10,7 @@ import { Prisma, Region } from '@prisma/client';
 
 @Injectable()
 export class RegionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(
     createRegionDto: CreateRegionDto,
@@ -56,13 +56,17 @@ export class RegionService {
           if (
             error.meta?.target &&
             Array.isArray(error.meta.target) &&
-            error.meta.target.includes('projectId') &&
+            (error.meta.target.includes('project') || error.meta.target.includes('projectId')) &&
             error.meta.target.includes('languageCode')
           ) {
             throw new ConflictException(
               `Region with languageCode "${languageCode}" already exists in project "${projectId}".`,
             );
           }
+          // Cualquier otro P2002 también debería ser un conflicto
+          throw new ConflictException(
+            `Region with languageCode "${languageCode}" already exists in project "${projectId}".`,
+          );
         } else if (error.code === 'P2025') {
           throw new NotFoundException(
             `Data integrity error during region creation: ${error.message}`,

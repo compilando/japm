@@ -664,36 +664,36 @@ async function main() {
             id: 'system-base',
             name: 'System Base Instructions',
             description: 'Base system instructions for invoice extraction, defining core behavior and constraints.',
-            content: invoiceExtractionTranslations.prompts['system-base'],
-            text: invoiceExtractionTranslations.prompts['system-base']
+            text: invoiceExtractionTranslations.prompts['system-base'],
+            type: 'SYSTEM' as const
         },
         {
             id: 'guard-invoice-extraction',
             name: 'Guard Invoice Extraction',
             description: 'Security-focused prompt that implements strict validation rules for invoice extraction.',
-            content: invoiceExtractionTranslations.prompts['guard-invoice-extraction'],
-            text: invoiceExtractionTranslations.prompts['guard-invoice-extraction']
+            text: invoiceExtractionTranslations.prompts['guard-invoice-extraction'],
+            type: 'SYSTEM' as const
         },
         {
             id: 'user-invoice-request',
             name: 'User Invoice Request',
             description: 'Template for processing and formatting invoice extraction requests.',
-            content: invoiceExtractionTranslations.prompts['user-invoice-request'],
-            text: invoiceExtractionTranslations.prompts['user-invoice-request']
+            text: invoiceExtractionTranslations.prompts['user-invoice-request'],
+            type: 'USER' as const
         },
         {
             id: 'assistant-invoice-response',
             name: 'Assistant Invoice Response',
             description: 'Format for AI responses to invoice extraction requests.',
-            content: invoiceExtractionTranslations.prompts['assistant-invoice-response'],
-            text: invoiceExtractionTranslations.prompts['assistant-invoice-response']
+            text: invoiceExtractionTranslations.prompts['assistant-invoice-response'],
+            type: 'ASSISTANT' as const
         },
         {
             id: 'response-format',
             name: 'Response Format',
             description: 'Strict JSON format definition for invoice extraction responses.',
-            content: invoiceExtractionTranslations.prompts['response-format'],
-            text: invoiceExtractionTranslations.prompts['response-format']
+            text: invoiceExtractionTranslations.prompts['response-format'],
+            type: 'SYSTEM' as const
         }
     ];
 
@@ -719,7 +719,7 @@ async function main() {
                     data: {
                         name: prompt.name,
                         description: prompt.description,
-                        content: prompt.content,
+                        type: prompt.type,
                         projectId: invoiceExtractionProject.id,
                         tenantId: tenantId
                     }
@@ -731,7 +731,7 @@ async function main() {
                         id: prompt.id,
                         name: prompt.name,
                         description: prompt.description,
-                        content: prompt.content,
+                        type: prompt.type,
                         projectId: invoiceExtractionProject.id,
                         tenantId: tenantId
                     }

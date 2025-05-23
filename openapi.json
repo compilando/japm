@@ -4501,6 +4501,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "languageCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -4574,6 +4582,14 @@
             "required": true,
             "in": "path",
             "description": "Version tag (e.g., v1.0.0)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "languageCode",
+            "required": true,
+            "in": "query",
             "schema": {
               "type": "string"
             }
@@ -6056,14 +6072,10 @@
             "description": "Time zone",
             "example": "Europe/Berlin"
           },
-          "defaultFormalityLevel": {
+          "notes": {
             "type": "string",
             "description": "Default formality level (optional)",
             "example": "Formal"
-          },
-          "notes": {
-            "type": "string",
-            "description": "Additional notes (optional)"
           }
         },
         "required": [
@@ -6109,12 +6121,6 @@
             "type": "string",
             "description": "Time zone for the region",
             "example": "America/New_York"
-          },
-          "defaultFormalityLevel": {
-            "type": "string",
-            "nullable": true,
-            "description": "Default formality level for the region",
-            "example": "formal"
           },
           "notes": {
             "type": "string",
@@ -6162,14 +6168,10 @@
             "description": "Time zone",
             "example": "Europe/Berlin"
           },
-          "defaultFormalityLevel": {
+          "notes": {
             "type": "string",
             "description": "Default formality level (optional)",
             "example": "Formal"
-          },
-          "notes": {
-            "type": "string",
-            "description": "Additional notes (optional)"
           }
         }
       },
@@ -6187,28 +6189,19 @@
             "maxLength": 5,
             "description": "ID (CUID) of the Region this data applies to"
           },
-          "formalityLevel": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 10,
-            "description": "Formality level (1-10)"
-          },
           "style": {
             "type": "string",
-            "description": "Description of the communication style"
-          },
-          "considerations": {
-            "type": "string",
-            "description": "Specific cultural considerations"
+            "description": "The style of communication"
           },
           "notes": {
             "type": "string",
-            "description": "General notes"
+            "description": "Additional notes"
           }
         },
         "required": [
           "key",
-          "regionId"
+          "regionId",
+          "style"
         ]
       },
       "CulturalDataResponse": {
@@ -6225,23 +6218,13 @@
             "maxLength": 5,
             "description": "ID (CUID) of the Region this data applies to"
           },
-          "formalityLevel": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 10,
-            "description": "Formality level (1-10)"
-          },
           "style": {
             "type": "string",
-            "description": "Description of the communication style"
-          },
-          "considerations": {
-            "type": "string",
-            "description": "Specific cultural considerations"
+            "description": "The style of communication"
           },
           "notes": {
             "type": "string",
-            "description": "General notes"
+            "description": "Additional notes"
           },
           "region": {
             "$ref": "#/components/schemas/CreateRegionDto"
@@ -6253,6 +6236,7 @@
         "required": [
           "key",
           "regionId",
+          "style",
           "region",
           "projectId"
         ]
@@ -6260,23 +6244,17 @@
       "UpdateCulturalDataDto": {
         "type": "object",
         "properties": {
-          "formalityLevel": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 10,
-            "description": "Formality level (1-10)"
-          },
           "style": {
             "type": "string",
-            "description": "Description of the communication style"
-          },
-          "considerations": {
-            "type": "string",
-            "description": "Specific cultural considerations"
+            "description": "The style of communication"
           },
           "notes": {
             "type": "string",
-            "description": "General notes"
+            "description": "Additional notes"
+          },
+          "key": {
+            "type": "string",
+            "description": "The key identifier for the cultural data"
           }
         }
       },
@@ -6325,6 +6303,10 @@
               "type": "string"
             }
           },
+          "type": {
+            "type": "object",
+            "description": "The type of prompt"
+          },
           "promptText": {
             "type": "string",
             "description": "Base prompt text for the first version (1.0.0)",
@@ -6340,6 +6322,7 @@
         },
         "required": [
           "name",
+          "type",
           "promptText"
         ]
       },
@@ -6646,6 +6629,13 @@
             "type": "string",
             "description": "ID del tenant al que pertenece este asset",
             "example": "tenant-cuid-xxxx"
+          },
+          "initialTranslations": {
+            "description": "Traducciones iniciales para diferentes idiomas",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InitialTranslationDto"
+            }
           }
         },
         "required": [
@@ -6667,6 +6657,13 @@
             "type": "string",
             "description": "ID del tenant al que pertenece este asset",
             "example": "tenant-cuid-xxxx"
+          },
+          "initialTranslations": {
+            "description": "Traducciones iniciales para diferentes idiomas",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InitialTranslationDto"
+            }
           },
           "enabled": {
             "type": "boolean",
@@ -7105,11 +7102,6 @@
       "CreatePromptTranslationDto": {
         "type": "object",
         "properties": {
-          "versionId": {
-            "type": "string",
-            "description": "ID de la versión del prompt a la que pertenece esta traducción",
-            "example": "cl...........cuid"
-          },
           "languageCode": {
             "type": "string",
             "minLength": 5,
@@ -7123,7 +7115,6 @@
           }
         },
         "required": [
-          "versionId",
           "languageCode",
           "promptText"
         ]
@@ -7152,6 +7143,11 @@
           "changeMessage": {
             "type": "string",
             "description": "Mensaje describiendo los cambios en esta versión."
+          },
+          "languageCode": {
+            "type": "string",
+            "description": "Código de idioma para la versión del asset (ej: en-US, es-ES).",
+            "example": "en-US"
           }
         },
         "required": [
@@ -7170,17 +7166,17 @@
             "type": "string",
             "description": "Nuevo mensaje describiendo los cambios.",
             "example": "Corrección de error tipográfico."
+          },
+          "languageCode": {
+            "type": "string",
+            "description": "Código de idioma para la versión del asset (ej: en-US, es-ES).",
+            "example": "en-US"
           }
         }
       },
       "CreateAssetTranslationDto": {
         "type": "object",
         "properties": {
-          "versionId": {
-            "type": "string",
-            "description": "ID de la versión del asset a la que pertenece esta traducción",
-            "example": "cl...........cuid"
-          },
           "languageCode": {
             "type": "string",
             "minLength": 5,
@@ -7195,7 +7191,6 @@
           }
         },
         "required": [
-          "versionId",
           "languageCode",
           "value"
         ]

@@ -39,9 +39,6 @@ export class CreateRegionDto {
     description: 'Default formality level (optional)',
     example: 'Formal',
   })
-  @IsString()
-  @IsOptional()
-  defaultFormalityLevel?: string;
 
   @ApiPropertyOptional({ description: 'Additional notes (optional)' })
   @IsString()

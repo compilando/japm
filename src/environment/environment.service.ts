@@ -11,7 +11,7 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class EnvironmentService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(
     createDto: CreateEnvironmentDto,
@@ -28,13 +28,13 @@ export class EnvironmentService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         // P2002 code: Unique constraint failed
-        // The constraint is now @@unique([projectId, name])
+        // The constraint is now @@unique([projectId, name]) but the field names in meta.target are 'project' and 'name'
         if (
           error.code === 'P2002' &&
           error.meta?.target &&
           Array.isArray(error.meta.target) &&
           error.meta.target.includes('name') &&
-          error.meta.target.includes('projectId')
+          error.meta.target.includes('project')
         ) {
           throw new ConflictException(
             `An environment with the name '${createDto.name}' already exists in this project.`,
@@ -106,7 +106,7 @@ export class EnvironmentService {
           error.meta?.target &&
           Array.isArray(error.meta.target) &&
           error.meta.target.includes('name') &&
-          error.meta.target.includes('projectId')
+          error.meta.target.includes('project')
         ) {
           throw new ConflictException(
             `An environment with the name '${updateDto.name}' already exists in this project.`,

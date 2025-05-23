@@ -18,7 +18,7 @@ export class AuthService {
   constructor(
     private userService: UserService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   // Used by LocalStrategy
   async validateUser(email: string, pass: string): Promise<User | null> {
@@ -59,8 +59,10 @@ export class AuthService {
       if (error instanceof ConflictException) {
         throw error;
       }
-      // Other unexpected errors
-      console.error('Error during user registration:', error);
+      // Other unexpected errors - solo loggear si no estamos en modo test
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('Error during user registration:', error);
+      }
       throw new Error('Failed to register user.'); // Generic error message
     }
   }

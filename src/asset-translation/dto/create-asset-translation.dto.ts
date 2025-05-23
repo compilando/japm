@@ -3,15 +3,6 @@ import { IsString, IsNotEmpty, Matches, Length } from 'class-validator';
 
 export class CreateAssetTranslationDto {
   @ApiProperty({
-    description:
-      'ID de la versión del asset a la que pertenece esta traducción',
-    example: 'cl...........cuid',
-  })
-  @IsString()
-  @IsNotEmpty()
-  versionId: string; // FK a PromptAssetVersion.id
-
-  @ApiProperty({
     description: 'Código de idioma para esta traducción (formato xx-XX)',
     example: 'es-ES',
   })

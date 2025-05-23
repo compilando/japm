@@ -34,14 +34,14 @@ type PromptAssetWithDetails = Prisma.PromptAssetGetPayload<{
 
 @Injectable()
 export class PromptAssetService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(
     createDto: CreatePromptAssetDto,
     promptIdInput: string,
     projectIdInput: string,
   ): Promise<AssetWithInitialVersion> {
-    const { key, name, category, initialValue, initialChangeMessage } =
+    const { key, name, category, initialValue, initialChangeMessage, initialTranslations } =
       createDto;
 
     if (!promptIdInput || !projectIdInput) {
@@ -82,12 +82,22 @@ export class PromptAssetService {
                 status: 'active',
                 changeMessage:
                   initialChangeMessage || name || 'Initial version',
+                translations: initialTranslations ? {
+                  create: initialTranslations.map(translation => ({
+                    languageCode: translation.languageCode,
+                    value: translation.value,
+                  }))
+                } : undefined,
               },
             ],
           },
         },
         include: {
-          versions: true,
+          versions: {
+            include: {
+              translations: true,
+            },
+          },
         },
       });
       return newAsset as AssetWithInitialVersion;

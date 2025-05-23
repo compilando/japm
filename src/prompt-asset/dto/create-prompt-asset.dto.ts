@@ -74,6 +74,16 @@ export class CreatePromptAssetDto {
   @IsNotEmpty()
   tenantId: string;
 
+  @ApiPropertyOptional({
+    description: 'Traducciones iniciales para diferentes idiomas',
+    type: [InitialTranslationDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => InitialTranslationDto)
+  initialTranslations?: InitialTranslationDto[];
+
   // Campos obsoletos eliminados:
   // regionId?: string;
   // version?: string;

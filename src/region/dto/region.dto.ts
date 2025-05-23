@@ -46,13 +46,6 @@ export class RegionDto {
     })
     timeZone: string;
 
-    @ApiProperty({
-        description: 'Default formality level for the region',
-        example: 'formal',
-        required: false,
-        nullable: true
-    })
-    defaultFormalityLevel: string | null;
 
     @ApiProperty({
         description: 'Optional notes about the region',

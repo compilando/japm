@@ -22,11 +22,14 @@ export class PrismaClientExceptionFilter implements ExceptionFilter {
     const status = HttpStatus.INTERNAL_SERVER_ERROR; // Default status
     const message = 'An internal server error occurred';
 
-    this.logger.error(
-      `Prisma Error ${exception.code} on path ${request.url}: ${exception.message}`,
-      exception.stack,
-      'PrismaClientExceptionFilter',
-    );
+    // Solo loggear errores si no estamos en modo test
+    if (process.env.NODE_ENV !== 'test') {
+      this.logger.error(
+        `Prisma Error ${exception.code} on path ${request.url}: ${exception.message}`,
+        exception.stack,
+        'PrismaClientExceptionFilter',
+      );
+    }
 
     let errorResponse: HttpException;
 
