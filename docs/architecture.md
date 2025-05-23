@@ -82,7 +82,168 @@ The system follows an N-tier architecture, implemented using the **NestJS** fram
 
 ## 5. Deployment Considerations
 
-*   The application can be packaged as a Docker image.
-*   It could be deployed on platforms like Kubernetes, AWS ECS, Google Cloud Run, or a traditional VPS.
-*   A CI/CD pipeline will be needed to automate testing and deployments.
+### 5.1. Development Environment
+
+*   The application runs locally using SQLite database
+*   Hot reload enabled for rapid development
+*   Use `npm run start:dev` or `./run_dev.sh`
+
+### 5.2. Production Environment
+
+#### Docker Containerization
+
+The application is containerized using Docker for consistent deployment across environments:
+
+**Docker Images:**
+- `Dockerfile`: Standard production image with SQLite (current default)
+- `Dockerfile.production`: Optimized production image with MySQL support
+- `Dockerfile.dev`: Development image with hot reload
+
+**Key Features:**
+- Multi-stage builds for optimized image size
+- Non-root user for security
+- Automatic Prisma migrations on startup
+- Health checks built-in
+- Support for external MySQL databases
+
+#### Production Deployment Options
+
+**Option 1: Docker Compose (Recommended for single-server deployments)**
+
+```bash
+# Basic production deployment with MySQL
+./deploy-production.sh start
+
+# With monitoring (Prometheus + Grafana)
+./deploy-production.sh start --monitoring
+
+# Build and deploy
+./build-docker.sh --production --tag 1.0.0
+./deploy-production.sh build
+```
+
+**Option 2: Kubernetes (Recommended for scalable production)**
+
+For Kubernetes deployment, see detailed documentation in `docs/deployment.md`.
+
+Key Kubernetes components:
+- **Deployment**: 3+ replicas for high availability
+- **Service**: ClusterIP for internal communication
+- **Ingress**: External access with SSL termination
+- **ConfigMap**: Non-sensitive configuration
+- **Secret**: Database credentials and API keys
+- **PVC**: Persistent storage for uploads
+- **HPA**: Horizontal Pod Autoscaler for scaling
+
+#### Database Configuration
+
+**Development:**
+- SQLite database (`file:./prisma/japm.db`)
+- Embedded in the application
+- Perfect for development and testing
+
+**Production:**
+- MySQL 8.0+ (external database)
+- Connection pooling via Prisma
+- SSL encryption enabled
+- Automatic migrations on deployment
+
+#### Environment-Specific Configurations
+
+**Local Development:**
+```env
+DATABASE_URL="file:./prisma/japm.db"
+NODE_ENV=development
+AUTO_SEED=true
+```
+
+**Production:**
+```env
+DATABASE_URL="mysql://user:pass@mysql-host:3306/japm?ssl=true"
+NODE_ENV=production
+AUTO_SEED=false
+SKIP_SEED=true
+```
+
+#### Build and Deployment Scripts
+
+**Available Scripts:**
+- `./build-docker.sh`: Advanced Docker image builder
+- `./deploy-production.sh`: Production deployment manager
+- `./run_docker.sh`: Development Docker manager
+- `./init_db.sh`: Database initialization
+
+**Build Process:**
+1. Clone repository
+2. Configure environment variables
+3. Build Docker image using `./build-docker.sh --production`
+4. Push to container registry
+5. Deploy to Kubernetes or Docker Compose
+
+#### Infrastructure Requirements
+
+**Minimum Production Setup:**
+- **Kubernetes**: 2 nodes, 4 CPU, 8GB RAM each
+- **MySQL**: 2GB storage, backup strategy
+- **Container Registry**: Docker Hub, AWS ECR, etc.
+- **Load Balancer**: Nginx Ingress Controller
+- **Monitoring**: Optional Prometheus + Grafana
+
+#### Security Considerations
+
+- Non-root container execution
+- Secrets management via Kubernetes Secrets
+- Network policies for traffic restriction
+- Image vulnerability scanning
+- SSL/TLS termination at ingress level
+- JWT-based authentication
+
+#### Scalability Features
+
+- Horizontal Pod Autoscaler (HPA)
+- Database connection pooling
+- Redis caching layer (optional)
+- CDN for static assets
+- Multi-region deployment capability
+
+#### Monitoring and Observability
+
+- Health check endpoints (`/health`)
+- Structured logging with configurable levels
+- Prometheus metrics (optional)
+- Grafana dashboards (optional)
+- Error tracking with Sentry (configurable)
+
+### 5.3. Deployment Workflow
+
+1. **Preparation**
+   - Set up external MySQL database
+   - Configure container registry access
+   - Prepare Kubernetes cluster
+
+2. **Build Phase**
+   ```bash
+   ./build-docker.sh --production --tag 1.0.0 --registry your-registry.com --push
+   ```
+
+3. **Deploy Phase**
+   ```bash
+   # For Kubernetes
+   kubectl apply -f k8s/
+   
+   # For Docker Compose
+   ./deploy-production.sh start
+   ```
+
+4. **Verification**
+   ```bash
+   curl https://api.your-domain.com/health
+   ```
+
+5. **Monitoring**
+   - Check application logs
+   - Verify database connectivity
+   - Monitor resource usage
+
+For detailed deployment instructions, see `docs/deployment.md`.
 

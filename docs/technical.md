@@ -151,7 +151,7 @@ Appropriate indexes will be defined within the schema files to optimize query pe
       @IsString()
       promptText: string;
 
-      @ApiProperty({ description: 'Version tag for this new version...\', example: 'v1.0.0' })
+      @ApiProperty({ description: 'Version tag for this new version...\', example: '1.0.0' })
       @IsString()
       @Length(1, 50)
       versionTag: string;
@@ -193,17 +193,17 @@ Appropriate indexes will be defined within the schema files to optimize query pe
 7.  Code review by at least one other team member.
 8.  Merge the PR.
 
-## 10. Inicialización de la Base de Datos
+## 10. Database Initialization
 
-Para inicializar la base de datos, aplicar todas las migraciones y ejecutar el seed, utiliza el script estándar:
+To initialize the database, apply all migrations and execute the seed, use the standard script:
 
 ```bash
 ./init_db.sh
 ```
 
-Este script ejecuta:
-- Las migraciones de Prisma para crear o actualizar el esquema de la base de datos.
-- La generación del cliente Prisma.
-- El seed para poblar la base de datos con datos iniciales.
+This script executes:
+- Prisma migrations to create or update the database schema.
+- Prisma client generation.
+- Seed to populate the database with initial data.
 
-> **Nota:** Si hay cambios en el esquema de Prisma, asegúrate de ejecutar este script para mantener la base de datos sincronizada y evitar errores de migración o seed. 
+> **Note:** If there are changes in the Prisma schema, make sure to run this script to keep the database synchronized and avoid migration or seed errors. 

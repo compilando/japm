@@ -47,7 +47,7 @@ export class PromptTranslationController {
   })
   @ApiParam({ name: 'projectId', description: 'Project ID' })
   @ApiParam({ name: 'promptId', description: 'Prompt CUID' })
-  @ApiParam({ name: 'versionTag', description: 'Version Tag (e.g., v1.0.0) or "latest" to get the most recent version' })
+  @ApiParam({ name: 'versionTag', description: 'Version Tag (e.g., 1.0.0) or "latest" to get the most recent version' })
   @ApiBody({ type: CreatePromptTranslationDto })
   @ApiResponse({
     status: 201,
@@ -85,7 +85,7 @@ export class PromptTranslationController {
   })
   @ApiParam({ name: 'projectId', description: 'Project ID' })
   @ApiParam({ name: 'promptId', description: 'Prompt CUID' })
-  @ApiParam({ name: 'versionTag', description: 'Version Tag (e.g., v1.0.0) or "latest" to get the most recent version' })
+  @ApiParam({ name: 'versionTag', description: 'Version Tag (e.g., 1.0.0) or "latest" to get the most recent version' })
   @ApiResponse({
     status: 200,
     description: 'List of translations.',
@@ -112,7 +112,7 @@ export class PromptTranslationController {
   })
   @ApiParam({ name: 'projectId', description: 'Project ID' })
   @ApiParam({ name: 'promptId', description: 'Prompt CUID' })
-  @ApiParam({ name: 'versionTag', description: 'Version Tag (e.g., v1.0.0) or "latest" to get the most recent version' })
+  @ApiParam({ name: 'versionTag', description: 'Version Tag (e.g., 1.0.0) or "latest" to get the most recent version' })
   @ApiParam({
     name: 'languageCode',
     description: 'Language code (e.g., es-ES)',
@@ -188,7 +188,7 @@ export class PromptTranslationController {
   })
   @ApiParam({ name: 'projectId', description: 'Project ID' })
   @ApiParam({ name: 'promptId', description: 'Prompt CUID' })
-  @ApiParam({ name: 'versionTag', description: 'Version Tag (e.g., v1.0.0) or "latest" to get the most recent version' })
+  @ApiParam({ name: 'versionTag', description: 'Version Tag (e.g., 1.0.0) or "latest" to get the most recent version' })
   @ApiParam({
     name: 'languageCode',
     description: 'Language code of the translation to update',
@@ -230,7 +230,7 @@ export class PromptTranslationController {
   })
   @ApiParam({ name: 'projectId', description: 'Project ID' })
   @ApiParam({ name: 'promptId', description: 'Prompt CUID' })
-  @ApiParam({ name: 'versionTag', description: 'Version Tag (e.g., v1.0.0) or "latest" to get the most recent version' })
+  @ApiParam({ name: 'versionTag', description: 'Version Tag (e.g., 1.0.0) or "latest" to get the most recent version' })
   @ApiParam({
     name: 'languageCode',
     description: 'Language code of the translation to delete',

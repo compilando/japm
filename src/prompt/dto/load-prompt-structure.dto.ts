@@ -170,6 +170,14 @@ export class LoadPromptStructureDto {
   version: PromptVersionStructureDto;
 
   @ApiProperty({
+    description: 'Código de idioma para la versión inicial (e.g., en-US, es-ES). Se obtiene del listado de regiones del proyecto.',
+    example: 'en-US',
+  })
+  @IsString()
+  @IsNotEmpty()
+  languageCode: string;
+
+  @ApiProperty({
     type: [PromptAssetStructureDto],
     description:
       'List of assets to be created and associated with the prompt (conceptually via placeholders).',

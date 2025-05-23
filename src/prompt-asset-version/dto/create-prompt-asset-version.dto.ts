@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNotEmpty } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty, Length } from 'class-validator';
 
 export class CreatePromptAssetVersionDto {
   // assetId (entendido como la key del PromptAsset) se eliminará de aquí,
@@ -25,13 +25,13 @@ export class CreatePromptAssetVersionDto {
   @IsOptional()
   changeMessage?: string;
 
-  @ApiPropertyOptional({
-    description: 'Código de idioma para la versión del asset (ej: en-US, es-ES).',
+  @ApiProperty({
+    description: 'Código de idioma para la versión del asset (e.g., en-US, es-ES). Se obtiene del listado de regiones del proyecto.',
     example: 'en-US',
   })
   @IsString()
-  @IsOptional()
-  languageCode?: string;
+  @Length(2, 10)
+  languageCode: string;
 
   // Las relaciones (translations, links) se manejan por separado.
 }

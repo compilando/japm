@@ -46,6 +46,14 @@ export class CreatePromptVersionDto {
   })
   versionTag: string;
 
+  @ApiProperty({
+    description: 'Código de idioma para esta versión (e.g., en-US, es-ES). Se obtiene del listado de regiones del proyecto.',
+    example: 'en-US',
+  })
+  @IsString()
+  @Length(2, 10)
+  languageCode: string;
+
   @ApiPropertyOptional({
     description: 'Mensaje describiendo los cambios en esta versión.',
   })

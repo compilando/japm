@@ -12,6 +12,7 @@ A robust, scalable, and secure prompt management system designed for multi-tenan
 - **API-first Design**: RESTful API for seamless integration with other systems.
 - **Swagger Documentation**: Interactive API documentation for easy testing and integration.
 - **Multiple Database Support**: SQLite, MySQL, and PostgreSQL compatibility.
+- **Docker & Kubernetes Ready**: Production-ready containerization and orchestration.
 
 ## Tech Stack
 
@@ -20,6 +21,8 @@ A robust, scalable, and secure prompt management system designed for multi-tenan
 - **Authentication**: JWT-based authentication
 - **API Documentation**: Swagger/OpenAPI
 - **Caching**: In-memory caching for improved performance
+- **Containerization**: Docker with multi-stage builds
+- **Orchestration**: Kubernetes support with Helm charts
 
 ## Database Options
 
@@ -49,6 +52,7 @@ For detailed database setup instructions, see our [Database Configuration Guide]
 - Node.js (v18 or higher)
 - Database system of choice (SQLite included by default)
 - npm, yarn, or pnpm
+- Docker (optional, for containerized deployment)
 
 ### Quick Start (SQLite)
 
@@ -97,7 +101,7 @@ For production deployment with MySQL or PostgreSQL:
 
 3. **Update environment variables** with your production database URL
 
-4. **Deploy** using your preferred method (Docker, PM2, etc.)
+4. **Deploy** using your preferred method (Docker, Kubernetes, PM2, etc.)
 
 ## API Documentation
 
@@ -143,7 +147,12 @@ japm/
 ├── scripts/                # Utility scripts
 │   └── migrate_db.sh       # Database migration script
 ├── docs/                   # Documentation
-│   └── DATABASE.md         # Database configuration guide
+│   ├── DATABASE.md         # Database configuration guide
+│   └── deployment.md       # Production deployment guide
+├── k8s/                    # Kubernetes manifests
+├── Dockerfile              # Standard Docker image
+├── Dockerfile.production   # Optimized production image
+├── docker-compose.production.yml  # Production compose
 └── README.md               # This file
 ```
 
@@ -168,6 +177,11 @@ ANTHROPIC_API_KEY=your_anthropic_key
 
 # Regional
 DEFAULT_LANGUAGE_CODE=es-ES
+
+# Production specific
+AUTO_SEED=false
+SKIP_SEED=true
+LOG_LEVEL=info
 ```
 
 See `env.example` for complete configuration options.
@@ -198,16 +212,106 @@ npm run format            # Format code
 
 ## Docker Support
 
-Run with Docker:
+### Development with Docker
 
 ```bash
-# Build and run
-docker build -t japm .
-docker run -p 3001:3001 japm
+# Quick start with Docker Compose
+./run_docker.sh dev
 
-# Or use the convenience script
-./run_docker.sh
+# Or manually
+docker-compose up -d japm-dev
 ```
+
+### Production Deployment
+
+#### Option 1: Docker Compose (Single Server)
+
+```bash
+# Build and deploy production stack
+./deploy-production.sh start
+
+# With monitoring
+./deploy-production.sh start --monitoring
+
+# View logs
+./deploy-production.sh logs japm-api
+
+# Backup database
+./deploy-production.sh backup
+```
+
+#### Option 2: Kubernetes (Scalable Production)
+
+```bash
+# Build production image
+./build-docker.sh --production --tag 1.0.0 --registry your-registry.com --push
+
+# Deploy to Kubernetes
+kubectl apply -f k8s/
+
+# Check deployment
+kubectl get pods -n japm
+kubectl logs -f deployment/japm-api -n japm
+```
+
+### Available Docker Scripts
+
+- `./build-docker.sh`: Advanced Docker image builder with multi-arch support
+- `./deploy-production.sh`: Production deployment manager
+- `./run_docker.sh`: Development Docker manager
+
+### Docker Images
+
+- **Dockerfile**: Standard image with SQLite (development)
+- **Dockerfile.production**: Optimized image with MySQL support (production)
+- **Dockerfile.dev**: Development image with hot reload
+
+## Production Deployment
+
+### Recommended Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Load Balancer │    │   Kubernetes    │    │   External      │
+│    (Ingress)    │────│     Cluster     │────│   MySQL DB      │
+│                 │    │   (JAPM Pods)   │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                              │
+                       ┌─────────────────┐
+                       │      Redis      │
+                       │     (Cache)     │
+                       └─────────────────┘
+```
+
+### Deployment Options
+
+1. **Docker Compose**: Perfect for single-server deployments
+2. **Kubernetes**: Recommended for scalable, production environments
+3. **Traditional**: Direct deployment with PM2 or similar
+
+### Infrastructure Requirements
+
+**Minimum Production Setup:**
+- **Kubernetes**: 2 nodes, 4 CPU, 8GB RAM each
+- **MySQL**: 2GB storage, backup strategy
+- **Container Registry**: Docker Hub, AWS ECR, etc.
+- **Load Balancer**: Nginx Ingress Controller
+
+### Deployment Checklist
+
+- [ ] Choose and configure production database (MySQL/PostgreSQL)
+- [ ] Set secure `JWT_SECRET`
+- [ ] Configure SSL/TLS
+- [ ] Set up database backups
+- [ ] Configure monitoring and logging
+- [ ] Set up CI/CD pipeline
+- [ ] Configure environment variables
+- [ ] Test database migration scripts
+- [ ] Set up health checks
+- [ ] Configure container registry access
+- [ ] Set up Kubernetes cluster (if using K8s)
+
+For detailed deployment instructions, see [docs/deployment.md](docs/deployment.md).
 
 ## Contributing
 
@@ -227,35 +331,7 @@ docker run -p 3001:3001 japm
 - Add tests for new features
 - Update documentation as needed
 - Test migrations between database systems if making schema changes
-
-## Production Deployment
-
-### Recommended Architecture
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Load Balancer │    │      JAPM       │    │   PostgreSQL    │
-│    (nginx)      │────│   Application   │────│    Database     │
-│                 │    │    (Node.js)    │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                              │
-                       ┌─────────────────┐
-                       │      Redis      │
-                       │     (Cache)     │
-                       └─────────────────┘
-```
-
-### Deployment Checklist
-
-- [ ] Choose and configure production database (MySQL/PostgreSQL)
-- [ ] Set secure `JWT_SECRET`
-- [ ] Configure SSL/TLS
-- [ ] Set up database backups
-- [ ] Configure monitoring and logging
-- [ ] Set up CI/CD pipeline
-- [ ] Configure environment variables
-- [ ] Test database migration scripts
-- [ ] Set up health checks
+- Test Docker builds before submitting PRs
 
 ## Troubleshooting
 
@@ -265,10 +341,13 @@ docker run -p 3001:3001 japm
 2. **Migration errors**: Try `npx prisma migrate reset` to start fresh
 3. **Port conflicts**: Change `PORT` in `.env` or kill processes using port 3001
 4. **Missing API keys**: Set `OPENAI_API_KEY` for LLM functionality
+5. **Docker build issues**: Ensure Docker is running and has sufficient resources
+6. **Kubernetes deployment issues**: Check pod logs and resource limits
 
 ### Getting Help
 
 - Check the [Database Configuration Guide](docs/DATABASE.md)
+- Review [Deployment Guide](docs/deployment.md) for production issues
 - Review logs for detailed error information
 - Ensure all environment variables are properly set
 - Verify database connectivity independently

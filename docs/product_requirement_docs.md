@@ -59,7 +59,7 @@ This document details the product requirements for the Prompt Management system 
     b.  The system confirms the creation of the base prompt entity.
     c.  The administrator then sends a request to create the first version for this new prompt (e.g., `POST /prompts/{promptId}/versions`) using `CreatePromptVersionDto`, providing:
         *   `promptText`: The text for the first version in the prompt's base language.
-        *   `versionTag`: An initial version tag (e.g., "v1.0.0").
+        *   `versionTag`: An initial version tag (e.g., "1.0.0").
         *   `changeMessage` (optional): e.g., "Initial version."
         *   `initialTranslations` (optional): Any initial translations.
     d.  The system creates the prompt version and any associated initial translations.

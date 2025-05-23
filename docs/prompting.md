@@ -44,9 +44,9 @@ This document describes the prompt system, its structure, and best practices for
 |---------------|-----------------------------------------------|---------------------------------------------|
 | Variable      | `{{variable:userName}}`                        | Inserts the value of a variable             |
 | Asset         | `{{asset:template:latest}}`                    | Inserts the latest version of an asset      |
-| Asset (ver)   | `{{asset:template:v1.0.0}}`                    | Inserts a specific version of an asset      |
+| Asset (ver)   | `{{asset:template:1.0.0}}`                    | Inserts a specific version of an asset      |
 | Prompt        | `{{prompt:system-base:latest}}`                | Inserts the latest version of a prompt      |
-| Prompt (ver)  | `{{prompt:system-base:v1.0.0}}`                | Inserts a specific version of a prompt      |
+| Prompt (ver)  | `{{prompt:system-base:1.0.0}}`                | Inserts a specific version of a prompt      |
 | Prompt (lang) | `{{prompt:system-base:latest:es-ES}}`          | Inserts a prompt in a specific language     |
 
 ## Practical Examples
@@ -94,7 +94,7 @@ All code must pass security validation. If any rule is violated, reject the requ
 - Store the main prompt text in the `content` field.
 - Use the reference syntax for modular and maintainable prompts.
 - Avoid circular references between prompts.
-- Use semantic versioning for prompt and asset versions (e.g., `v1.0.0`).
+- Use semantic versioning for prompt and asset versions (e.g., `1.0.0`).
 - **Do not reference a prompt to itself** (e.g., `{{prompt:user-code-request}}` within the `user-code-request` prompt), as this can lead to infinite loops or unexpected behavior.
 
 ## How to Reintroduce the `type` Field

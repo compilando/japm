@@ -3400,7 +3400,7 @@
             "name": "versionTag",
             "required": true,
             "in": "path",
-            "description": "Version tag (e.g., v1.0.0) or \"latest\" to get the most recent version",
+            "description": "Version tag (e.g., 1.0.0) or \"latest\" to get the most recent version",
             "schema": {
               "type": "string"
             }
@@ -4006,7 +4006,7 @@
             "name": "versionTag",
             "required": true,
             "in": "path",
-            "description": "Version Tag (e.g., v1.0.0) or \"latest\" to get the most recent version",
+            "description": "Version Tag (e.g., 1.0.0) or \"latest\" to get the most recent version",
             "schema": {
               "type": "string"
             }
@@ -4084,7 +4084,7 @@
             "name": "versionTag",
             "required": true,
             "in": "path",
-            "description": "Version Tag (e.g., v1.0.0) or \"latest\" to get the most recent version",
+            "description": "Version Tag (e.g., 1.0.0) or \"latest\" to get the most recent version",
             "schema": {
               "type": "string"
             }
@@ -4151,7 +4151,7 @@
             "name": "versionTag",
             "required": true,
             "in": "path",
-            "description": "Version Tag (e.g., v1.0.0) or \"latest\" to get the most recent version",
+            "description": "Version Tag (e.g., 1.0.0) or \"latest\" to get the most recent version",
             "schema": {
               "type": "string"
             }
@@ -4272,7 +4272,7 @@
             "name": "versionTag",
             "required": true,
             "in": "path",
-            "description": "Version Tag (e.g., v1.0.0) or \"latest\" to get the most recent version",
+            "description": "Version Tag (e.g., 1.0.0) or \"latest\" to get the most recent version",
             "schema": {
               "type": "string"
             }
@@ -4356,7 +4356,7 @@
             "name": "versionTag",
             "required": true,
             "in": "path",
-            "description": "Version Tag (e.g., v1.0.0) or \"latest\" to get the most recent version",
+            "description": "Version Tag (e.g., 1.0.0) or \"latest\" to get the most recent version",
             "schema": {
               "type": "string"
             }
@@ -4581,7 +4581,7 @@
             "name": "versionTag",
             "required": true,
             "in": "path",
-            "description": "Version tag (e.g., v1.0.0)",
+            "description": "Version tag (e.g., 1.0.0)",
             "schema": {
               "type": "string"
             }
@@ -5878,20 +5878,6 @@
           "Marketplace"
         ]
       }
-    },
-    "/api/assets": {
-      "get": {
-        "operationId": "AssetController_findAll",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Asset"
-        ]
-      }
     }
   },
   "info": {
@@ -6312,6 +6298,13 @@
             "description": "Base prompt text for the first version (1.0.0)",
             "example": "Hello {{customer_name}}, welcome."
           },
+          "languageCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 10,
+            "description": "Código de idioma para la primera versión (e.g., en-US, es-ES). Se obtiene del listado de regiones del proyecto.",
+            "example": "en-US"
+          },
           "initialTranslations": {
             "description": "Optional initial translations for the first version",
             "type": "array",
@@ -6323,7 +6316,8 @@
         "required": [
           "name",
           "type",
-          "promptText"
+          "promptText",
+          "languageCode"
         ]
       },
       "PromptDto": {
@@ -6405,6 +6399,13 @@
             "description": "Tag de versión para esta nueva versión (e.g., 1.0.0, 1.0.0-beta.1). Debe ser único por prompt.",
             "example": "1.0.0"
           },
+          "languageCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 10,
+            "description": "Código de idioma para esta versión (e.g., en-US, es-ES). Se obtiene del listado de regiones del proyecto.",
+            "example": "en-US"
+          },
           "changeMessage": {
             "type": "string",
             "description": "Mensaje describiendo los cambios en esta versión."
@@ -6419,7 +6420,8 @@
         },
         "required": [
           "promptText",
-          "versionTag"
+          "versionTag",
+          "languageCode"
         ]
       },
       "CreateProjectDto": {
@@ -6979,6 +6981,13 @@
             "description": "Tag de versión para esta nueva versión (e.g., 1.0.0, 1.0.0-beta.1). Debe ser único por prompt.",
             "example": "1.0.0"
           },
+          "languageCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 10,
+            "description": "Código de idioma para esta versión (e.g., en-US, es-ES). Se obtiene del listado de regiones del proyecto.",
+            "example": "en-US"
+          },
           "changeMessage": {
             "type": "string",
             "description": "Mensaje describiendo los cambios en esta versión."
@@ -7146,12 +7155,15 @@
           },
           "languageCode": {
             "type": "string",
-            "description": "Código de idioma para la versión del asset (ej: en-US, es-ES).",
+            "minLength": 2,
+            "maxLength": 10,
+            "description": "Código de idioma para la versión del asset (e.g., en-US, es-ES). Se obtiene del listado de regiones del proyecto.",
             "example": "en-US"
           }
         },
         "required": [
-          "value"
+          "value",
+          "languageCode"
         ]
       },
       "UpdatePromptAssetVersionDto": {

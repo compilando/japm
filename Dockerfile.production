@@ -1,0 +1,105 @@
+# ====================================
+# Dockerfile de Producción para JAPM API
+# Optimizado para Kubernetes con MySQL
+# ====================================
+
+# ---- Imagen base para construcción ----
+FROM node:20-slim AS builder
+
+# Instalar herramientas necesarias para la construcción
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3 \
+    git \
+    openssl \
+    ca-certificates \
+    --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copiar archivos de dependencias
+COPY package.json package-lock.json ./
+
+# Instalar todas las dependencias (incluyendo devDependencies para la construcción)
+RUN npm ci --silent --only=production=false
+
+# Copiar código fuente y archivos necesarios
+COPY . .
+
+# Generar cliente Prisma
+RUN npx prisma generate
+
+# Construir la aplicación
+RUN npm run build
+
+# Verificar salida de construcción
+RUN echo "Contenido de /app/dist después de la construcción:" && ls -la /app/dist
+
+# Limpiar dependencias de desarrollo
+RUN npm prune --production && npm cache clean --force
+
+# ---- Imagen de producción ----
+FROM node:20-alpine AS production
+
+# Instalar herramientas necesarias para Alpine y MySQL
+RUN apk add --no-cache \
+    openssl \
+    ca-certificates \
+    mysql-client \
+    curl
+
+WORKDIR /app
+
+# Crear usuario no-root para seguridad
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S japm -u 1001
+
+# Copiar package.json para contexto de runtime
+COPY --chown=japm:nodejs package.json ./
+
+# Copiar node_modules de producción desde builder
+COPY --from=builder --chown=japm:nodejs /app/node_modules ./node_modules
+
+# Copiar aplicación construida
+COPY --from=builder --chown=japm:nodejs /app/dist ./dist
+
+# Copiar esquema Prisma y migraciones (necesarios para runtime)
+COPY --from=builder --chown=japm:nodejs /app/prisma ./prisma
+
+# Copiar archivos de seed (pueden ser necesarios para inicialización)
+COPY --from=builder --chown=japm:nodejs /app/seed ./seed
+
+# Crear directorios para uploads y logs
+RUN mkdir -p /app/uploads /app/logs && \
+    chown -R japm:nodejs /app/uploads /app/logs
+
+# Establecer permisos apropiados
+RUN chown -R japm:nodejs /app
+
+# Cambiar a usuario no-root
+USER japm
+
+# Exponer puerto de la aplicación
+EXPOSE 3001
+
+# Establecer variables de entorno
+ENV NODE_ENV=production
+ENV PORT=3001
+
+# Labels para metadatos
+LABEL maintainer="JAPM Team"
+LABEL version="1.0.0"
+LABEL description="JAPM API - Prompt Management System"
+
+# Health check mejorado
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3001/health || exit 1
+
+# Script de inicio que manejará migraciones y seed
+COPY --chown=japm:nodejs docker-entrypoint.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Comando de inicio
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+CMD ["node", "dist/src/main"] 

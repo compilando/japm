@@ -108,14 +108,31 @@ export class PromptService {
     projectId: string,
     tenantId: string,
   ): Promise<PromptWithInitialVersionAndTags> {
+    // Debug logging para verificar los valores después de la transformación
+    this.logger.debug(`🐞 CreatePromptDto recibido:`, {
+      createDto,
+      type: typeof createDto.type,
+      typeValue: createDto.type,
+    });
+
     const {
       name,
       description,
       promptText,
+      languageCode,
       initialTranslations,
       tags: tagNames,
+      type,
       ...restData
     } = createDto;
+
+    // Debug logging para verificar el valor extraído de type
+    this.logger.debug(`🐞 Valor de type después de destructuring:`, {
+      type,
+      typeOf: typeof type,
+      restData,
+    });
+
     const slug = slugify(name);
 
     // Verificar que el proyecto existe
@@ -157,6 +174,7 @@ export class PromptService {
             id: slug,
             name: name,
             description: description,
+            type: type,
             projectId: projectId,
             tenantId: tenantId,
             tags: tagsToConnect ? { connect: tagsToConnect } : undefined,
@@ -169,7 +187,7 @@ export class PromptService {
             promptId: slug,
             promptText: promptText,
             versionTag: '1.0.0',
-            languageCode: process.env.DEFAULT_LANGUAGE_CODE || 'en-US',
+            languageCode: languageCode,
             changeMessage: 'Initial version created automatically.',
             translations:
               initialTranslations && initialTranslations.length > 0
@@ -357,14 +375,14 @@ export class PromptService {
     // }
 
     // 4. Crear la nueva versión usando el versionTag del DTO
-    const { promptText, changeMessage, versionTag, initialTranslations } = createVersionDto;
+    const { promptText, changeMessage, versionTag, languageCode, initialTranslations } = createVersionDto;
     try {
       return await this.prisma.promptVersion.create({
         data: {
           promptId: prompt.id, // prompt.id es el slug
           versionTag: versionTag, // Usar el tag del DTO
           promptText: promptText,
-          languageCode: process.env.DEFAULT_LANGUAGE_CODE || 'en-US',
+          languageCode: languageCode, // Usar el languageCode del DTO
           changeMessage: changeMessage || `Version ${versionTag} created.`, // Mensaje por defecto si no se provee
           translations: initialTranslations && initialTranslations.length > 0
             ? {
@@ -561,17 +579,9 @@ export class PromptService {
     dto: LoadPromptStructureDto,
     tenantId: string,
   ): Promise<Prompt> {
-    this.logger.log(
-      `Attempting to load prompt structure for project: ${projectId} with DTO: ${JSON.stringify(dto)}`,
-    );
+    const { prompt: promptMeta, version: versionData, assets: assetEntries, tags: tagNames, languageCode } = dto;
 
-    const {
-      prompt: promptMeta,
-      version: versionData,
-      assets: assetEntries,
-      tags: tagNames,
-    } = dto;
-
+    // Crear slug para el prompt
     const promptSlug = slugify(promptMeta.name);
 
     return this.prisma.$transaction(async (tx) => {
@@ -650,7 +660,7 @@ export class PromptService {
                 assetEntry.changeMessage ||
                 'Initial version from loaded structure.',
               status: 'active',
-              versionTag: 'v1.0.0', // O una lógica para el tag de versión
+              versionTag: '1.0.0', // O una lógica para el tag de versión
             },
           });
           this.logger.debug(
@@ -693,11 +703,11 @@ export class PromptService {
         data: {
           promptId: prompt.id, // slug del prompt padre
           promptText: versionData.promptText,
-          languageCode: process.env.DEFAULT_LANGUAGE_CODE || 'en-US',
+          languageCode: languageCode, // Usar el languageCode del DTO
           changeMessage:
             versionData.changeMessage ||
             'Initial version from loaded structure.',
-          versionTag: 'v1.0.0',
+          versionTag: '1.0.0',
           status: 'active',
           // No hay conexión directa a PromptAsset en PromptVersion según el schema actual
         },

@@ -35,7 +35,7 @@ Here's a description of the main entities (models) in the `schema.prisma` file:
 ### Prompts & Versioning
 
 * **`Prompt`**: The logical representation of a prompt's purpose (e.g., "Translate English to Spanish", "Extract Invoice Data"). It groups different versions and links to `Project`  and `Tags`. Identified by a unique `name` (often a slug).
-* **`PromptVersion`**: A specific iteration of a `Prompt`. This is where the actual `promptText` resides. It includes a `versionTag` (e.g., "v1.0.0"), `status` ("draft", "active", "archived"), `changeMessage`, creation timestamp, and links to:
+* **`PromptVersion`**: A specific iteration of a `Prompt`. This is where the actual `promptText` resides. It includes a `versionTag` (e.g., "1.0.0"), `status` ("draft", "active", "archived"), `changeMessage`, creation timestamp, and links to:
     * `PromptTranslation`s for different languages.
     * `PromptAssetLink`s defining which assets are used.
     * `Environment`s where it's active.

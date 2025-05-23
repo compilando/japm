@@ -112,7 +112,7 @@ export class PromptAssetVersionController {
   })
   @ApiParam({ name: 'promptId', description: 'ID (slug) of the Prompt' })
   @ApiParam({ name: 'assetKey', description: 'Key of the PromptAsset' })
-  @ApiParam({ name: 'versionTag', description: 'Version tag (e.g., v1.0.0)' })
+  @ApiParam({ name: 'versionTag', description: 'Version tag (e.g., 1.0.0)' })
   @ApiResponse({
     status: 200,
     description: 'Version found.',

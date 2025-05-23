@@ -4,7 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as fs from 'fs';
 import { PrismaClientExceptionFilter } from './common/filters/prisma-exception.filter';
 import { TenantIdInterceptor } from './common/interceptors/tenant-id.interceptor';
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 // import { HttpExceptionFilter } from './common/filters/http-exception.filter'; // Optional: A generic HTTP exception filter
 
 async function bootstrap() {
@@ -14,6 +14,18 @@ async function bootstrap() {
   app.setGlobalPrefix('api', {
     exclude: ['/health', '/health/(.*)'], // Excluir rutas de health check
   });
+
+  // Configurar ValidationPipe global con transformaciones habilitadas
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true, // Habilitar transformaciones
+      transformOptions: {
+        enableImplicitConversion: true, // Permitir conversión implícita de tipos
+      },
+      whitelist: true, // Solo permitir propiedades definidas en el DTO
+      forbidNonWhitelisted: true, // Rechazar propiedades no definidas
+    }),
+  );
 
   // Apply Global Filters (Prisma specific first, then generic HTTP)
   // HttpAdapterHost is needed for filters that might handle non-HttpException errors

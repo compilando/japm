@@ -20,7 +20,7 @@ export class ServePromptQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Tag of the specific prompt version to serve (e.g., v1.0.0). Ignored if useLatestActive is true.',
+      'Tag of the specific prompt version to serve (e.g., 1.0.0). Ignored if useLatestActive is true.',
     example: 'v1.2.1',
   })
   @IsString()

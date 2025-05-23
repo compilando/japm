@@ -10,7 +10,7 @@ import {
   Length,
   IsEnum,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { PromptType } from '@prisma/client';
 
 // Auxiliary DTO moved here or imported from a common place
@@ -59,6 +59,60 @@ export class CreatePromptDto {
   tags?: string[];
 
   @ApiProperty({ description: 'The type of prompt' })
+  @Transform(({ value }) => {
+    // Función helper para validar y mapear valores
+    const mapToValidPromptType = (val: any): PromptType => {
+      if (typeof val === 'string') {
+        // Mapear valores comunes que no están en el enum
+        const upperVal = val.toUpperCase();
+        switch (upperVal) {
+          case 'TASK':
+            return PromptType.USER; // Mapear TASK a USER
+          case 'USER':
+            return PromptType.USER;
+          case 'SYSTEM':
+            return PromptType.SYSTEM;
+          case 'ASSISTANT':
+            return PromptType.ASSISTANT;
+          case 'GUARD':
+            return PromptType.GUARD;
+          case 'COMPOSITE':
+            return PromptType.COMPOSITE;
+          case 'CONTEXT':
+            return PromptType.CONTEXT;
+          case 'FUNCTION':
+            return PromptType.FUNCTION;
+          case 'EXAMPLE':
+            return PromptType.EXAMPLE;
+          case 'TEMPLATE':
+            return PromptType.TEMPLATE;
+          default:
+            return PromptType.USER; // Valor por defecto para strings no reconocidos
+        }
+      }
+      // Si no es string, usar valor por defecto
+      return PromptType.USER;
+    };
+
+    // Si el valor es un objeto con propiedad 'value', extraer el valor
+    if (typeof value === 'object' && value !== null && 'value' in value) {
+      const extractedValue = value.value;
+      // Si el valor extraído es un objeto vacío, null, o undefined, usar valor por defecto
+      if (extractedValue === null || extractedValue === undefined ||
+        (typeof extractedValue === 'object' && Object.keys(extractedValue).length === 0)) {
+        return PromptType.USER;
+      }
+      return mapToValidPromptType(extractedValue);
+    }
+
+    // Si es null o undefined, usar valor por defecto
+    if (value === null || value === undefined) {
+      return PromptType.USER;
+    }
+
+    return mapToValidPromptType(value);
+  })
+  @IsEnum(PromptType)
   type: PromptType;
 
   @ApiProperty({
@@ -68,6 +122,14 @@ export class CreatePromptDto {
   @IsString()
   @IsNotEmpty()
   promptText: string;
+
+  @ApiProperty({
+    description: 'Código de idioma para la primera versión (e.g., en-US, es-ES). Se obtiene del listado de regiones del proyecto.',
+    example: 'en-US',
+  })
+  @IsString()
+  @Length(2, 10)
+  languageCode: string;
 
   @ApiPropertyOptional({
     description: 'Optional initial translations for the first version',

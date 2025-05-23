@@ -217,14 +217,14 @@ GET {{baseUrl}}/prompts/{{promptNameBienvenida}} # Use name slug in URL
 # SERVE PROMPT (using slugs)
 # -------------------------
 
-### 17. Serve Prompt Bienvenida v1.0.0
+### 17. Serve Prompt Bienvenida 1.0.0
 # PATCH {{baseUrl}}/prompts/{{promptNameBienvenida}}/versions/{{promptBienvenidaV1Id}}/activate
 
-# 17a. Serve v1.0.0 in ES
+# 17a. Serve 1.0.0 in ES
 # @name servePromptV1_ES
 GET {{baseUrl}}/serve-prompt?promptId={{promptNameBienvenida}}&languageCode=es-ES # Use name slug
 
-# 17b. Serve v1.0.0 in EN (Base)
+# 17b. Serve 1.0.0 in EN (Base)
 # @name servePromptV1_EN
 GET {{baseUrl}}/serve-prompt?promptId={{promptNameBienvenida}} # Use name slug
 
@@ -244,9 +244,9 @@ GET {{baseUrl}}/serve-prompt?promptId={{promptNameBienvenida}}&languageCode=fr-F
 # @name servePromptV1_1_EN
 GET {{baseUrl}}/serve-prompt?promptId={{promptNameBienvenida}} # Use name slug
 
-# 18d. Serve specific version v1.0.0
+# 18d. Serve specific version 1.0.0
 # @name servePromptSpecificV1_EN
-GET {{baseUrl}}/serve-prompt?promptId={{promptNameBienvenida}}&versionTag=v1.0.0&useLatestActive=false # Use name slug
+GET {{baseUrl}}/serve-prompt?promptId={{promptNameBienvenida}}&versionTag=1.0.0&useLatestActive=false # Use name slug
 
 ###
 # -------------------------

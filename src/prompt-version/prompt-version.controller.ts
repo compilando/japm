@@ -94,7 +94,7 @@ export class PromptVersionController {
   })
   @ApiParam({ name: 'projectId', description: 'Project ID' })
   @ApiParam({ name: 'promptId', description: 'Prompt CUID' })
-  @ApiParam({ name: 'versionTag', description: 'Version tag (e.g., v1.0.0) or "latest" to get the most recent version' })
+  @ApiParam({ name: 'versionTag', description: 'Version tag (e.g., 1.0.0) or "latest" to get the most recent version' })
   @ApiQuery({
     name: 'resolveAssets',
     description: 'Whether to resolve asset placeholders. Defaults to false.',
