@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, PromptType } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createSpanishRegionAndCulturalData, createUSRegionAndCulturalData } from './helpers';
@@ -603,36 +603,36 @@ async function main() {
             id: 'system-base',
             name: 'System Base Instructions',
             description: 'Base system instructions for code generation, defining core behavior and constraints.',
-            content: codegenTranslations.prompts['system-base'],
-            type: 'SYSTEM'
+            promptText: codegenTranslations.prompts['system-base'],
+            type: PromptType.SYSTEM
         },
         {
             id: 'guard-codegen',
             name: 'Guard Code Generation',
             description: 'Security-focused prompt that implements strict validation rules for code generation.',
-            content: codegenTranslations.prompts['guard-codegen'],
-            type: 'GUARD'
+            promptText: codegenTranslations.prompts['guard-codegen'],
+            type: PromptType.GUARD
         },
         {
             id: 'user-code-request',
             name: 'User Code Request',
             description: 'Template for processing and formatting code generation requests.',
-            content: codegenTranslations.prompts['user-code-request'],
-            type: 'USER'
+            promptText: codegenTranslations.prompts['user-code-request'],
+            type: PromptType.USER
         },
         {
             id: 'assistant-code-response',
             name: 'Assistant Code Response',
             description: 'Format for AI responses to code generation requests.',
-            content: codegenTranslations.prompts['assistant-code-response'],
-            type: 'ASSISTANT'
+            promptText: codegenTranslations.prompts['assistant-code-response'],
+            type: PromptType.ASSISTANT
         },
         {
             id: 'response-format',
             name: 'Response Format',
             description: 'Strict JSON format definition for code generation responses.',
-            content: codegenTranslations.prompts['response-format'],
-            type: 'TEMPLATE'
+            promptText: codegenTranslations.prompts['response-format'],
+            type: PromptType.TEMPLATE
         }
     ];
 
@@ -658,9 +658,9 @@ async function main() {
                     data: {
                         name: prompt.name,
                         description: prompt.description,
-                        content: prompt.content,
                         projectId: codegenProject.id,
-                        tenantId: tenantId
+                        tenantId: tenantId,
+                        type: prompt.type
                     }
                 });
             } else {
@@ -670,10 +670,9 @@ async function main() {
                         id: prompt.id,
                         name: prompt.name,
                         description: prompt.description,
-                        content: prompt.content,
                         projectId: codegenProject.id,
                         tenantId: tenantId,
-                        type: 'GUARD'
+                        type: prompt.type
                     }
                 });
             }
@@ -689,12 +688,12 @@ async function main() {
                     }
                 },
                 update: {
-                    promptText: prompt.content
+                    promptText: prompt.promptText
                 },
                 create: {
                     promptId: createdPrompt.id,
                     versionTag: '1.0.0',
-                    promptText: prompt.content
+                    promptText: prompt.promptText
                 }
             });
         } catch (error) {

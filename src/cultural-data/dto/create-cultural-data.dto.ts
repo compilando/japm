@@ -26,26 +26,12 @@ export class CreateCulturalDataDto {
   @Length(5, 5)
   regionId: string;
 
-  @ApiPropertyOptional({ description: 'Formality level (1-10)' })
-  @IsInt()
-  @Min(1)
-  @Max(10)
-  @IsOptional()
-  formalityLevel?: number;
-
-  @ApiPropertyOptional({
-    description: 'Description of the communication style',
-  })
+  @ApiProperty({ description: 'The style of communication' })
   @IsString()
   @IsOptional()
-  style?: string;
+  style: string;
 
-  @ApiPropertyOptional({ description: 'Specific cultural considerations' })
-  @IsString()
-  @IsOptional()
-  considerations?: string;
-
-  @ApiPropertyOptional({ description: 'General notes' })
+  @ApiPropertyOptional({ description: 'Additional notes' })
   @IsString()
   @IsOptional()
   notes?: string;

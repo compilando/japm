@@ -132,7 +132,7 @@ describe('Prompt Creation E2E Tests', () => {
           .send({
             name: 'Test Prompt for Assets',
             description: 'Prompt for testing assets',
-            content: 'This is a test prompt with {{test-asset}}',
+            promptText: 'This is a test prompt with {{test-asset}}',
             type: 'SYSTEM',
           });
 
@@ -181,7 +181,7 @@ describe('Prompt Creation E2E Tests', () => {
           .send({
             name: 'Test Prompt for Duplicate Assets',
             description: 'Prompt for testing duplicate assets',
-            content: 'This is a test prompt with {{duplicate-asset}}',
+            promptText: 'This is a test prompt with {{duplicate-asset}}',
             type: 'SYSTEM',
           });
 
@@ -241,7 +241,7 @@ describe('Prompt Creation E2E Tests', () => {
           .send({
             name: 'Test Prompt for Invalid Assets',
             description: 'Prompt for testing invalid assets',
-            content: 'This is a test prompt with {{invalid-asset}}',
+            promptText: 'This is a test prompt with {{invalid-asset}}',
             type: 'SYSTEM',
           });
 

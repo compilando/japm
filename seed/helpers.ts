@@ -16,14 +16,12 @@ export async function createSpanishRegionAndCulturalData(projectId: string) {
         },
         update: {
             name: 'España',
-            timeZone: 'Europe/Madrid',
-            defaultFormalityLevel: 'Formal'
+            timeZone: 'Europe/Madrid'
         },
         create: {
             languageCode: 'es-ES',
             name: 'España',
             timeZone: 'Europe/Madrid',
-            defaultFormalityLevel: 'Formal',
             project: { connect: { id: projectId } }
         }
     });
@@ -38,16 +36,12 @@ export async function createSpanishRegionAndCulturalData(projectId: string) {
             }
         },
         update: {
-            formalityLevel: 8,
             style: 'Lenguaje formal y directo común en el español de negocios.',
-            considerations: 'Respetar la jerarquía y el protocolo. Usar "usted" en contextos formales.',
             region: { connect: { id: regionES.id } }
         },
         create: {
             key: 'es-formal',
-            formalityLevel: 8,
             style: 'Lenguaje formal y directo común en el español de negocios.',
-            considerations: 'Respetar la jerarquía y el protocolo. Usar "usted" en contextos formales.',
             project: { connect: { id: projectId } },
             region: { connect: { id: regionES.id } }
         }
@@ -71,14 +65,12 @@ export async function createUSRegionAndCulturalData(projectId: string) {
         },
         update: {
             name: 'United States',
-            timeZone: 'America/New_York',
-            defaultFormalityLevel: 'Informal'
+            timeZone: 'America/New_York'
         },
         create: {
             languageCode: 'en-US',
             name: 'United States',
             timeZone: 'America/New_York',
-            defaultFormalityLevel: 'Informal',
             project: { connect: { id: projectId } }
         }
     });
@@ -93,16 +85,12 @@ export async function createUSRegionAndCulturalData(projectId: string) {
             }
         },
         update: {
-            formalityLevel: 3,
             style: 'Direct and casual American English style.',
-            considerations: 'Use contractions and informal expressions. Avoid overly formal language.',
             region: { connect: { id: regionUS.id } }
         },
         create: {
             key: 'us-informal',
-            formalityLevel: 3,
             style: 'Direct and casual American English style.',
-            considerations: 'Use contractions and informal expressions. Avoid overly formal language.',
             project: { connect: { id: projectId } },
             region: { connect: { id: regionUS.id } }
         }

@@ -16,7 +16,7 @@ export class PromptAssetVersionService {
   constructor(
     private prisma: PrismaService,
     private tenantService: TenantService,
-  ) {}
+  ) { }
 
   // Helper para obtener el PromptAsset padre.
   // Devuelve el PromptAsset con su ID CUID.
@@ -64,7 +64,7 @@ export class PromptAssetVersionService {
     try {
       return await this.prisma.promptAssetVersion.create({
         data: {
-          ...versionData, // value, changeMessage
+          ...versionData, // value, changeMessage, languageCode
           versionTag: versionTag,
           asset: { connect: { id: parentAsset.id } }, // Conectar usando el ID CUID del PromptAsset padre
           // status: 'active', // Considerar si las nuevas versiones deben ser activas por defecto
@@ -93,6 +93,7 @@ export class PromptAssetVersionService {
     projectId: string,
     promptId: string,
     assetKey: string,
+    languageCode?: string,
   ): Promise<PromptAssetVersion[]> {
     const parentAsset = await this.getParentAsset(
       projectId,
@@ -100,9 +101,12 @@ export class PromptAssetVersionService {
       assetKey,
     );
     return this.prisma.promptAssetVersion.findMany({
-      where: { assetId: parentAsset.id }, // Filtrar por el ID CUID del PromptAsset padre
+      where: {
+        assetId: parentAsset.id,
+        ...(languageCode ? { languageCode } : {}),
+      },
       orderBy: { createdAt: 'desc' },
-      include: { translations: true }, // asset: false para evitar redundancia si no se necesita
+      include: { translations: true },
     });
   }
 
@@ -111,25 +115,44 @@ export class PromptAssetVersionService {
     promptId: string,
     assetKey: string,
     versionTag: string,
+    languageCode?: string,
   ): Promise<PromptAssetVersion> {
     const parentAsset = await this.getParentAsset(
       projectId,
       promptId,
       assetKey,
     );
-    const version = await this.prisma.promptAssetVersion.findUnique({
-      where: {
-        assetId_versionTag: { assetId: parentAsset.id, versionTag: versionTag },
-      },
-      include: {
-        asset: true,
-        translations: true,
-      },
-    });
-
+    let version: PromptAssetVersion | null = null;
+    if (languageCode) {
+      version = await this.prisma.promptAssetVersion.findFirst({
+        where: {
+          assetId: parentAsset.id,
+          versionTag,
+          translations: {
+            some: {
+              languageCode
+            }
+          }
+        },
+        include: {
+          asset: true,
+          translations: true,
+        },
+      });
+    } else {
+      version = await this.prisma.promptAssetVersion.findUnique({
+        where: {
+          assetId_versionTag: { assetId: parentAsset.id, versionTag: versionTag },
+        },
+        include: {
+          asset: true,
+          translations: true,
+        },
+      });
+    }
     if (!version) {
       throw new NotFoundException(
-        `PromptAssetVersion with tag "${versionTag}" not found for asset "${assetKey}" (ID: ${parentAsset.id}).`,
+        `PromptAssetVersion with tag "${versionTag}"${languageCode ? ` and languageCode "${languageCode}"` : ''} not found for asset "${assetKey}" (ID: ${parentAsset.id}).`,
       );
     }
     return version;
@@ -165,7 +188,7 @@ export class PromptAssetVersionService {
         where: {
           id: existingVersion.id, // Usar el CUID id de la PromptAssetVersion para la actualización
         },
-        data: dataToUpdate,
+        data: dataToUpdate, // value, changeMessage, languageCode
         include: { asset: true },
       });
     } catch (error) {

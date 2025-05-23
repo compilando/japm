@@ -158,7 +158,6 @@ export class PromptService {
             name: name,
             description: description,
             projectId: projectId,
-            content: promptText,
             tenantId: tenantId,
             tags: tagsToConnect ? { connect: tagsToConnect } : undefined,
             ...restData,
@@ -598,7 +597,6 @@ export class PromptService {
           name: promptMeta.name,
           description: promptMeta.description,
           projectId: projectId,
-          content: versionData.promptText,
           tenantId: tenantId,
         },
       });

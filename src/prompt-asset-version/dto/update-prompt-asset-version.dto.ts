@@ -19,4 +19,12 @@ export class UpdatePromptAssetVersionDto {
   @IsOptional()
   @IsString()
   changeMessage?: string;
+
+  @ApiPropertyOptional({
+    description: 'Código de idioma para la versión del asset (ej: en-US, es-ES).',
+    example: 'en-US',
+  })
+  @IsOptional()
+  @IsString()
+  languageCode?: string;
 }

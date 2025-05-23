@@ -85,7 +85,7 @@ describe('Prompt Hierarchy E2E Tests', () => {
         .send({
           name: 'Test Base Prompt 2',
           description: 'Base prompt 2 for testing',
-          content: 'This is a base prompt with {{asset1-2}} and {{asset2-2}}',
+          promptText: 'This is a base prompt with {{asset1-2}} and {{asset2-2}}',
           type: 'SYSTEM',
         });
 
@@ -145,7 +145,7 @@ describe('Prompt Hierarchy E2E Tests', () => {
         .send({
           name: 'Test Prompt 1-3',
           description: 'Prompt 1 for testing circular references',
-          content: 'This is prompt 1 with {{prompt2-3}}',
+          promptText: 'This is prompt 1 with {{prompt2-3}}',
           type: 'SYSTEM',
         });
       console.log('Respuesta al crear prompt1:', prompt1Res.status, prompt1Res.body, prompt1Res.text);
@@ -159,7 +159,7 @@ describe('Prompt Hierarchy E2E Tests', () => {
         .send({
           name: 'Test Prompt 2-3',
           description: 'Prompt 2 for testing circular references',
-          content: 'This is prompt 2 with {{prompt1-3}}',
+          promptText: 'This is prompt 2 with {{prompt1-3}}',
           type: 'SYSTEM',
         });
       console.log('Respuesta al crear prompt2:', prompt2Res.status, prompt2Res.body, prompt2Res.text);

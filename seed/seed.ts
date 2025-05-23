@@ -240,13 +240,11 @@ async function main() {
             }
         },
         update: {
-            formalityLevel: 5,
             style: 'Standard American English, generally informal.',
             region: { connect: { id: regionUS.id } }
         },
         create: {
             key: 'standard-american-english',
-            formalityLevel: 5,
             style: 'Standard American English, generally informal.',
             project: { connect: { id: defaultProject.id } },
             region: { connect: { id: regionUS.id } }
@@ -331,8 +329,8 @@ async function main() {
             name: 'General Default Assets Prompt',
             description: 'A general prompt to house default project assets.',
             projectId: defaultProject.id,
-            content: 'Texto base del prompt',
             tenantId: defaultTenant.id,
+            type: 'USER'
         },
     });
 }

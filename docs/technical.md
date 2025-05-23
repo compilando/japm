@@ -191,4 +191,19 @@ Appropriate indexes will be defined within the schema files to optimize query pe
 5.  Ensure all tests and linters pass.
 6.  Make a Pull Request (PR) to the `develop` branch.
 7.  Code review by at least one other team member.
-8.  Merge the PR. 
+8.  Merge the PR.
+
+## 10. Inicialización de la Base de Datos
+
+Para inicializar la base de datos, aplicar todas las migraciones y ejecutar el seed, utiliza el script estándar:
+
+```bash
+./init_db.sh
+```
+
+Este script ejecuta:
+- Las migraciones de Prisma para crear o actualizar el esquema de la base de datos.
+- La generación del cliente Prisma.
+- El seed para poblar la base de datos con datos iniciales.
+
+> **Nota:** Si hay cambios en el esquema de Prisma, asegúrate de ejecutar este script para mantener la base de datos sincronizada y evitar errores de migración o seed. 

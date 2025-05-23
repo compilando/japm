@@ -13,6 +13,7 @@ import {
   UseGuards,
   Request,
   SetMetadata,
+  Query,
 } from '@nestjs/common';
 import { PromptAssetVersionService } from './prompt-asset-version.service';
 import { CreatePromptAssetVersionDto } from './dto/create-prompt-asset-version.dto';
@@ -41,7 +42,7 @@ import { Logger } from '@nestjs/common';
 export class PromptAssetVersionController {
   private readonly logger = new Logger(PromptAssetVersionController.name);
 
-  constructor(private readonly service: PromptAssetVersionService) {}
+  constructor(private readonly service: PromptAssetVersionService) { }
 
   @Post()
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
@@ -98,8 +99,9 @@ export class PromptAssetVersionController {
     @Param('projectId') projectId: string,
     @Param('promptId') promptId: string,
     @Param('assetKey') assetKey: string,
+    @Query('languageCode') languageCode?: string,
   ): Promise<PromptAssetVersion[]> {
-    return this.service.findAllForAsset(projectId, promptId, assetKey);
+    return this.service.findAllForAsset(projectId, promptId, assetKey, languageCode);
   }
 
   @Get(':versionTag')
@@ -127,8 +129,9 @@ export class PromptAssetVersionController {
     @Param('promptId') promptId: string,
     @Param('assetKey') assetKey: string,
     @Param('versionTag') versionTag: string,
+    @Query('languageCode') languageCode?: string,
   ): Promise<PromptAssetVersion> {
-    return this.service.findOneByTag(projectId, promptId, assetKey, versionTag);
+    return this.service.findOneByTag(projectId, promptId, assetKey, versionTag, languageCode);
   }
 
   @Patch(':versionTag')

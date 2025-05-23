@@ -365,7 +365,6 @@ export class PromptController {
       name: r.name,
       languageCode: r.languageCode,
       timeZone: r.timeZone,
-      defaultFormalityLevel: r.defaultFormalityLevel,
     }));
   }
 

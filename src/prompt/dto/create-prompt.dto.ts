@@ -8,8 +8,10 @@ import {
   ValidateNested,
   ArrayUnique,
   Length,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PromptType } from '@prisma/client';
 
 // Auxiliary DTO moved here or imported from a common place
 class InitialTranslationDto {
@@ -55,6 +57,9 @@ export class CreatePromptDto {
   @IsString({ each: true })
   @ArrayUnique()
   tags?: string[];
+
+  @ApiProperty({ description: 'The type of prompt' })
+  type: PromptType;
 
   @ApiProperty({
     description: 'Base prompt text for the first version (1.0.0)',

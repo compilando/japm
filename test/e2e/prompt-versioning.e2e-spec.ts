@@ -38,7 +38,7 @@ describe('Prompt Versioning E2E Tests', () => {
   beforeEach(async () => {
     // Usar IDs únicos para evitar conflictos entre tests
     currentUniqueId = Date.now();
-    
+
     // Crear tenant primero
     testTenant = await prisma.tenant.upsert({
       where: { id: `test-tenant-id-3-${currentUniqueId}` },
@@ -173,7 +173,7 @@ describe('Prompt Versioning E2E Tests', () => {
         .send({
           name: 'Test Base Prompt 3',
           description: 'Base prompt 3 for testing',
-          content: 'This is a base prompt with {{asset1-3}} and {{asset2-3}}',
+          promptText: 'This is a base prompt with {{asset1-3}} and {{asset2-3}}',
           type: 'SYSTEM',
         });
 
@@ -248,7 +248,7 @@ describe('Prompt Versioning E2E Tests', () => {
         .send({
           name: 'Test Base Prompt 4',
           description: 'Base prompt 4 for testing',
-          content: 'This is a base prompt with {{asset1-4}} and {{asset2-4}}',
+          promptText: 'This is a base prompt with {{asset1-4}} and {{asset2-4}}',
           type: 'SYSTEM',
         });
 
