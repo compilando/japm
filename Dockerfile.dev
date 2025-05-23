@@ -1,0 +1,47 @@
+# =====================================
+# Development Dockerfile for JAPM API
+# =====================================
+
+FROM node:20-slim
+
+# Install necessary tools for development
+RUN apt-get update && apt-get install -y \
+    sqlite3 \
+    openssl \
+    ca-certificates \
+    git \
+    curl \
+    --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Create non-root user for development
+RUN addgroup --gid 1001 nodejs && \
+    adduser --uid 1001 --gid 1001 --disabled-password --gecos "" japm
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install all dependencies (including devDependencies for development)
+RUN npm ci
+
+# Change ownership of the node_modules to the japm user
+RUN chown -R japm:nodejs /app
+
+# Switch to non-root user
+USER japm
+
+# Expose application and debug ports
+EXPOSE 3001 9229
+
+# Set environment variables for development
+ENV NODE_ENV=development
+ENV PORT=3001
+
+# Add health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3001/health || exit 1
+
+# Default command for development with hot reload and debug
+CMD ["npm", "run", "start:debug"] 

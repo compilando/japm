@@ -15,6 +15,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ExecuteLlmDto } from './dto/execute-llm.dto';
 import { PromptResolverService } from '../prompt/prompt-resolver.service';
+import { ServePromptService } from '../serve-prompt/serve-prompt.service';
 
 @Injectable()
 export class LlmExecutionService {
@@ -25,6 +26,7 @@ export class LlmExecutionService {
     private prisma: PrismaService,
     private configService: ConfigService,
     private promptResolver: PromptResolverService,
+    private servePromptService: ServePromptService,
   ) {}
 
   async execute(
@@ -48,8 +50,38 @@ export class LlmExecutionService {
       resolvedPrompt = resolved.resolvedText;
       promptMetadata = resolved.metadata;
     } else if (dto.promptText) {
-      resolvedPrompt = dto.promptText as string;
-      promptMetadata = null;
+      // Cuando se usa promptText directamente, también necesitamos procesar variables y referencias
+      if (projectId) {
+        try {
+          // Usar el ServePromptService para procesar el texto completo
+          const tempPromptId = 'temp-prompt';
+          
+          // Resolver assets y variables usando el ServePromptService
+          const { processedText } = await this.servePromptService.resolveAssets(
+            dto.promptText,
+            tempPromptId,
+            projectId,
+            languageCode,
+            variables || {}
+          );
+          resolvedPrompt = processedText;
+        } catch (error) {
+          this.logger.warn(
+            `Error processing promptText with ServePromptService: ${error.message}. Falling back to simple variable substitution.`
+          );
+          resolvedPrompt = this.simpleVariableSubstitution(dto.promptText, variables || {});
+        }
+      } else {
+        // Sin projectId, solo procesamiento simple de variables
+        resolvedPrompt = this.simpleVariableSubstitution(dto.promptText, variables || {});
+      }
+      
+      promptMetadata = {
+        source: 'direct_prompt_text',
+        variables: Object.keys(variables || {}),
+        originalLength: dto.promptText.length,
+        processedLength: resolvedPrompt.length
+      };
     } else {
       throw new BadRequestException('Either promptId with projectId or promptText must be provided');
     }
@@ -176,5 +208,27 @@ export class LlmExecutionService {
         `Failed to get response from LLM ${aiModel.name}: ${errorMessage}`,
       );
     }
+  }
+
+  private simpleVariableSubstitution(text: string, variables: Record<string, any>): string {
+    return text.replace(/\{\{(.*?)\}\}/g, (match, p1) => {
+      const variableName = p1.trim();
+      
+      // Skip if it's an asset or prompt reference
+      if (variableName.startsWith('asset:') || 
+          variableName.startsWith('prompt:') || 
+          variableName.startsWith('variable:')) {
+        return match;
+      }
+      
+      const value = variables[variableName];
+      if (value !== undefined) {
+        this.logger.debug(`Substituting variable "${variableName}" = "${value}"`);
+        return value.toString();
+      } else {
+        this.logger.warn(`Variable "${variableName}" not found in provided variables`);
+        return match;
+      }
+    });
   }
 }

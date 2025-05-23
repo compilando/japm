@@ -219,6 +219,37 @@ export class ServePromptService {
       }
     }
 
+    // Procesar variables con sintaxis simple {{variable_name}}
+    const simplePlaceholders = [...text.matchAll(/\{\{([^}:]+)\}\}/g)];
+    
+    for (const match of simplePlaceholders) {
+      const placeholderContent = match[1].trim();
+      
+      // Skip if it's an asset or prompt reference
+      if (placeholderContent.startsWith('asset:') || 
+          placeholderContent.startsWith('prompt:') || 
+          placeholderContent.startsWith('variable:')) {
+        continue;
+      }
+      
+      // Skip if already processed as asset
+      if (assetContext.hasOwnProperty(placeholderContent)) {
+        continue;
+      }
+      
+      // Check if variable exists in input variables
+      if (inputVariables.hasOwnProperty(placeholderContent)) {
+        variableContext[placeholderContent] = String(inputVariables[placeholderContent]);
+        this.logger.debug(
+          `Resolved simple variable "${placeholderContent}" = "${inputVariables[placeholderContent]}"`,
+        );
+      } else {
+        this.logger.warn(
+          `Simple variable "${placeholderContent}" (referenced as "{{${placeholderContent}}}") not found in provided variables.`,
+        );
+      }
+    }
+
     const finalContext = { ...assetContext, ...variableContext };
     let processedText: string;
     try {

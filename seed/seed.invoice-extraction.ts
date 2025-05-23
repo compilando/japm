@@ -188,7 +188,7 @@ RESPONSE TO VIOLATIONS:
 4. Provide secure alternatives
 5. Document security concerns`,
 
-        'guard-invoice-extraction': `{{guard-anti-injection}}
+        'guard-invoice-extraction': `
 
 STRICT INVOICE EXTRACTION VALIDATION:
 

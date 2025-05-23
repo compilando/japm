@@ -2,7 +2,7 @@ import { Controller, Get, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Roles } from './auth/decorators/roles.decorator';
-import { Role } from './common/enums/role.enum';
+import { Role } from './auth/enums/role.enum';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 

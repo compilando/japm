@@ -9,6 +9,8 @@ describe('AppController (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let authToken: string;
+  let testUser: any;
+  let testTenant: any;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -19,9 +21,12 @@ describe('AppController (e2e)', () => {
     await app.init();
 
     prisma = app.get<PrismaService>(PrismaService);
+  });
 
+  // Crear usuario y token antes de cada test para asegurar que exista
+  beforeEach(async () => {
     // Crear tenant primero
-    const testTenant = await prisma.tenant.upsert({
+    testTenant = await prisma.tenant.upsert({
       where: { id: 'test-tenant-id-4' },
       update: {},
       create: {
@@ -33,13 +38,17 @@ describe('AppController (e2e)', () => {
     // Crear usuario de prueba
     const SALT_ROUNDS = 10;
     const hashedPassword = await bcrypt.hash('password123', SALT_ROUNDS);
-    const testUser = await prisma.user.upsert({
+    testUser = await prisma.user.upsert({
       where: { email: 'test4@example.com' },
-      update: {},
+      update: {
+        password: hashedPassword,
+        tenantId: testTenant.id,
+        role: 'user',
+      },
       create: {
         email: 'test4@example.com',
         name: 'Test User 4',
-        password: hashedPassword, // hash de 'password123'
+        password: hashedPassword,
         tenantId: testTenant.id,
         role: 'user',
       },
@@ -56,105 +65,69 @@ describe('AppController (e2e)', () => {
     authToken = loginResponse.body.access_token;
   });
 
-  it('/user-check (GET) - sin autenticación', () => {
-    return supertest(app.getHttpServer())
-      .get('/user-check')
-      .expect(401);
-  });
+  describe('Endpoint /user-check', () => {
+    it('debería retornar 401 sin autenticación', () => {
+      return supertest(app.getHttpServer())
+        .get('/user-check')
+        .expect(401);
+    });
 
-  it('/user-check (GET) - con autenticación', () => {
-    return supertest(app.getHttpServer())
-      .get('/user-check')
-      .set('Authorization', `Bearer ${authToken}`)
-      .expect(200);
-  });
+    it('debería retornar 200 con autenticación válida', () => {
+      return supertest(app.getHttpServer())
+        .get('/user-check')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200)
+        .expect((res) => {
+          expect(res.body).toHaveProperty('message');
+          expect(res.body.message).toBe('¡Acceso de usuario concedido!');
+        });
+    });
 
-  afterAll(async () => {
-    try {
-      await prisma.assetTranslation.deleteMany();
-      await prisma.promptAssetVersion.deleteMany();
-      await prisma.promptAsset.deleteMany();
-      await prisma.promptTranslation.deleteMany();
-      await prisma.promptVersion.deleteMany();
-      await prisma.promptExecutionLog.deleteMany();
-      await prisma.prompt.deleteMany();
-      await prisma.tag.deleteMany();
-      await prisma.culturalData.deleteMany();
-      await prisma.ragDocumentMetadata.deleteMany();
-      await prisma.environment.deleteMany();
-      await prisma.aIModel.deleteMany();
-      await prisma.region.deleteMany();
-      await prisma.project.deleteMany();
-      await prisma.user.deleteMany();
-      await prisma.asset.deleteMany();
-      await prisma.tenant.deleteMany();
-      console.log('Limpieza de base de datos completada en afterAll');
-    } catch (err) {
-      console.error('Error durante la limpieza en afterAll:', err);
-    }
-    await app.close();
-    console.log('App cerrada en afterAll');
-  });
-
-  describe('AppController (e2e)', () => {
-    it('/user-check (GET) - con autenticación', async () => {
-      // Crear tenant
-      const testTenant = await prisma.tenant.upsert({
-        where: { id: 'test-tenant-id-4' },
-        update: {},
-        create: {
-          id: 'test-tenant-id-4',
-          name: 'Test Tenant 4',
-        },
+    it('debería retornar 403 con rol incorrecto', async () => {
+      // Actualizar usuario a rol admin
+      await prisma.user.update({
+        where: { id: testUser.id },
+        data: { role: 'admin' },
       });
-      // Crear usuario
-      const SALT_ROUNDS = 10;
-      const hashedPassword = await bcrypt.hash('password123', SALT_ROUNDS);
-      const testUser = await prisma.user.upsert({
-        where: { email: 'test4@example.com' },
-        update: {},
-        create: {
-          email: 'test4@example.com',
-          name: 'Test User 4',
-          password: hashedPassword,
-          tenantId: testTenant.id,
-          role: 'admin',
-        },
-      });
-      // Obtener token
+
+      // Obtener nuevo token con el rol actualizado
       const loginResponse = await supertest(app.getHttpServer())
         .post('/auth/login')
         .send({
           email: 'test4@example.com',
           password: 'password123',
         });
-      if (!loginResponse.body.access_token) {
-        console.error('No se pudo obtener el token de autenticación', loginResponse.body);
-        throw new Error('No se pudo obtener el token de autenticación');
-      }
-      const authToken = loginResponse.body.access_token;
-      console.log('Token obtenido:', authToken);
-      // Crear proyecto
-      const testProject = await prisma.project.upsert({
-        where: { id: 'test-project-4' },
-        update: {},
-        create: {
-          id: 'test-project-4',
-          name: 'Test Project 4',
-          description: 'Project 4 for E2E testing',
-          ownerUserId: testUser.id,
-          tenantId: testUser.tenantId,
-        },
-      });
-      console.log('Proyecto creado:', testProject);
-      // Probar endpoint /user-check
-      const response = await supertest(app.getHttpServer())
+
+      const adminToken = loginResponse.body.access_token;
+
+      // Intentar acceder con rol admin (debería fallar para endpoint user-check)
+      await supertest(app.getHttpServer())
         .get('/user-check')
-        .set('Authorization', `Bearer ${authToken}`);
-      if (response.status !== 200) {
-        console.error('Error al verificar usuario:', response.status, response.body, response.text);
-      }
-      expect(response.status).toBe(200);
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(403);
+
+      // Restaurar rol original para otros tests
+      await prisma.user.update({
+        where: { id: testUser.id },
+        data: { role: 'user' },
+      });
     });
+  });
+
+  afterAll(async () => {
+    try {
+      // Limpiar datos específicos de este test
+      await prisma.user.deleteMany({
+        where: { email: 'test4@example.com' }
+      });
+      await prisma.tenant.deleteMany({
+        where: { id: 'test-tenant-id-4' }
+      });
+      console.log('Limpieza de datos específicos completada en afterAll');
+    } catch (err) {
+      console.error('Error durante la limpieza en afterAll:', err);
+    }
+    await app.close();
+    console.log('App cerrada en afterAll');
   });
 });

@@ -125,20 +125,20 @@ A prompt for code generation might look like this:
 
 ## FAQ (Frequently Asked Questions)
 
-**Q: ¿Cómo puedo añadir un nuevo tipo de prompt?**
-A: Actualmente, la clasificación se realiza por nombre y descripción. Si necesitas un campo dedicado, sigue la sección "How to Reintroduce the `type` Field".
+**Q: How can I add a new type of prompt?**
+A: Currently, classification is done by name and description. If you need a dedicated field, follow the "How to Reintroduce the `type` Field" section.
 
-**Q: ¿Qué ocurre si hago referencia a un prompt o asset que no existe?**
-A: El sistema lo registrará como advertencia y continuará, pero es recomendable validar las referencias en desarrollo.
+**Q: What happens if I reference a prompt or asset that doesn't exist?**
+A: The system will log it as a warning and continue, but it's recommended to validate references during development.
 
-**Q: ¿Puedo anidar referencias?**
-A: Sí, las referencias se resuelven recursivamente, pero se previenen los bucles circulares.
+**Q: Can I nest references?**
+A: Yes, references are resolved recursively, but circular loops are prevented.
 
-**Q: ¿Cómo gestiono versiones y traducciones?**
-A: Usa el campo `versionTag` para versiones y el modelo `PromptTranslation` para traducciones. El sistema puede buscar la traducción adecuada automáticamente.
+**Q: How do I manage versions and translations?**
+A: Use the `versionTag` field for versions and the `PromptTranslation` model for translations. The system can automatically find the appropriate translation.
 
-**Q: ¿Puedo usar variables dinámicas en los prompts?**
-A: Sí, usa la sintaxis `{{variable:nombreVariable}}` y asegúrate de pasar el valor en el contexto de ejecución.
+**Q: Can I use dynamic variables in prompts?**
+A: Yes, use the `{{variable:variableName}}` syntax and make sure to pass the value in the execution context.
 
 ## Conclusion
 

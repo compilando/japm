@@ -49,7 +49,9 @@ Remember that your code will be used in production environments.`,
    - Validate against security policies
    - Ensure compliance with standards`,
 
-        'user-code-request': `Code Generation Request:
+        'user-code-request': `{{prompt:guard-codegen:latest}}
+        
+Code Generation Request:
 - Language: {{language}}
 - Purpose: {{purpose}}
 - Requirements: {{requirements}}
@@ -153,7 +155,7 @@ RESPONSE TO VIOLATIONS:
 4. Provide secure alternatives
 5. Document security concerns`,
 
-        'guard-codegen': `{{guard-anti-injection}}
+        'guard-codegen': `
 
 STRICT CODE GENERATION VALIDATION:
 
@@ -185,7 +187,9 @@ STRICT CODE GENERATION VALIDATION:
    - Follow company policies
    - Follow legal requirements`,
 
-        'user-code-request': `Code Generation Request:
+        'user-code-request': `
+{{prompt:guard-codegen:latest}}        
+Code Generation Request:
 - Language: {{language}}
 - Purpose: {{purpose}}
 - Requirements: {{requirements}}
@@ -385,9 +389,7 @@ RESPUESTA A VIOLACIONES:
 2. Registrar violaciones de seguridad
 3. Notificar al sistema de seguridad
 4. Proporcionar alternativas seguras
-5. Documentar preocupaciones de seguridad`,
-
-                'user-code-request': `{{user-code-request}}
+5. Documentar preocupaciones de seguridad
 
 Contexto Adicional:
 - Requisitos de Seguridad: {{security_requirements}}

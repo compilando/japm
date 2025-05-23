@@ -25,7 +25,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard'; // Asumiendo que existe
 import { Roles } from '../auth/decorators/roles.decorator'; // Asumiendo que existe
-import { Role } from '../common/enums/role.enum';
+import { Role } from '../auth/enums/role.enum';
 
 @ApiTags('Tenants')
 @ApiBearerAuth()
