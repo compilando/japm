@@ -355,9 +355,6 @@ export class PromptService {
   async remove(id: string, projectId: string, userId?: string, tenantId?: string): Promise<void> {
     this.logger.log(`Attempting to delete prompt "${id}" from project "${projectId}"`);
 
-    // Get the prompt details before deletion for audit logging
-    const prompt = await this.findOne(id, projectId);
-
     // Prepare audit context
     const auditContext: LogContext = {
       userId: userId || 'system',
@@ -367,6 +364,42 @@ export class PromptService {
       resourceId: id,
       operation: 'DELETE_PROMPT',
     };
+
+    let prompt: PromptWithRelations;
+    try {
+      // Get the prompt details before deletion for audit logging
+      prompt = await this.findOne(id, projectId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        // Prompt already doesn't exist - this is idempotent behavior
+        this.logger.log(`Prompt "${id}" not found in project "${projectId}" - already deleted or never existed`);
+        
+        // Log as successful deletion with minimal data (idempotent operation)
+        this.auditLogger.logDeletion(
+          auditContext,
+          'Prompt',
+          id,
+          undefined, // resourceName unknown
+          { id, projectId, note: 'Already deleted or never existed' },
+        );
+        
+        return; // Exit successfully - DELETE is idempotent
+      }
+      
+      // For other errors, log and re-throw
+      this.logger.error(`Error finding prompt "${id}" for deletion in project "${projectId}": ${error.message}`, error.stack);
+      
+      this.auditLogger.logDeletion(
+        auditContext,
+        'Prompt',
+        id,
+        undefined,
+        undefined,
+        error,
+      );
+      
+      throw error;
+    }
 
     // Store prompt data for audit log before deletion
     const promptDataForAudit = {
@@ -405,6 +438,23 @@ export class PromptService {
       );
 
     } catch (error) {
+      // Handle specific Prisma errors
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        // Prompt was deleted by another process between findOne and delete
+        this.logger.log(`Prompt "${id}" was already deleted by another process during deletion attempt`);
+        
+        // Log as successful deletion (idempotent behavior)
+        this.auditLogger.logDeletion(
+          auditContext,
+          'Prompt',
+          id,
+          prompt.name,
+          { ...promptDataForAudit, note: 'Deleted by concurrent operation' },
+        );
+        
+        return; // Exit successfully - goal achieved
+      }
+
       this.logger.error(`Failed to delete prompt "${id}" from project "${projectId}": ${error.message}`, error.stack);
 
       // Log failed deletion
@@ -417,7 +467,7 @@ export class PromptService {
         error,
       );
 
-      // Re-throw the error
+      // Re-throw the error for non-idempotent cases
       throw error;
     }
   }

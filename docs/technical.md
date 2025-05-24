@@ -14,8 +14,10 @@ This document provides more specific technical details about the Prompt Manageme
 *   **Database (Local Development)**: Dockerized (e.g., PostgreSQL, MongoDB)
 *   **Linting**: ESLint
 *   **Formatting**: Prettier
+*   **Development Port**: 3001 (NestJS API Server)
+*   **Frontend Port**: 3000 (Next.js Frontend)
 
-### 2.1. Initial Project Setup
+### 2.4. Initial Project Setup
 
 ```bash
 # Install NestJS CLI (if not already installed)
@@ -31,6 +33,84 @@ npm install @nestjs/swagger swagger-ui-express class-validator class-transformer
 npm install @nestjs/config # For configuration management
 # npm install @nestjs/typeorm typeorm pg # Example for PostgreSQL with TypeORM
 # npm install @nestjs/mongoose mongoose # Example for MongoDB with Mongoose
+```
+
+### 2.2. Development Server
+
+En desarrollo, el servidor de NestJS corre en el puerto **3001**, mientras que el frontend de Next.js corre en el puerto **3000**.
+
+Para iniciar el servidor de desarrollo:
+
+```bash
+# Inicio del servidor backend (NestJS) en puerto 3001
+npm run start:dev
+
+# Verificar que el servidor está corriendo
+curl http://localhost:3001/api/health
+```
+
+### 2.3. Autenticación en Desarrollo
+
+Para realizar peticiones autenticadas a la API durante el desarrollo, sigue estos pasos:
+
+#### 1. Obtener Token JWT
+
+```bash
+# Obtener token de autenticación usando las credenciales de prueba
+curl -X POST "http://localhost:3001/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "password123"
+  }'
+```
+
+**Respuesta esperada:**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+#### 2. Usar Token en Peticiones
+
+```bash
+# Ejemplo de petición autenticada
+curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -X GET "http://localhost:3001/api/projects/codegen-examples/prompts"
+```
+
+#### 3. Ejemplos de Endpoints Comunes
+
+```bash
+# Variables de ejemplo para facilitar testing
+export TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+export BASE_URL="http://localhost:3001/api"
+
+# Listar prompts de un proyecto
+curl -H "Authorization: Bearer $TOKEN" \
+  -X GET "$BASE_URL/projects/codegen-examples/prompts"
+
+# Obtener versión de prompt procesada (con referencias resueltas)
+curl -H "Authorization: Bearer $TOKEN" \
+  -X GET "$BASE_URL/projects/codegen-examples/prompts/user-code-request/versions/latest?processed=true"
+
+# Ejecutar prompt con variables
+curl -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -X POST "$BASE_URL/serve-prompt/execute/codegen-examples/user-code-request/latest/base" \
+  -d '{"variables": {"userInput": "Crear una función para sumar números"}}'
+```
+
+#### 4. Renovación de Token
+
+Los tokens JWT tienen una expiración limitada. Si recibes un error `401 Unauthorized`, necesitas obtener un nuevo token:
+
+```bash
+# El token expira, obtener uno nuevo
+curl -X POST "$BASE_URL/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@example.com", "password": "password123"}'
 ```
 
 ## 3. API Design (RESTful)

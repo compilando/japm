@@ -176,7 +176,7 @@ model PromptVersion {
 
 model PromptTranslation {
   id           String        @id @default(cuid())
-  version      PromptVersion @relation("PromptTranslation_version", fields: [versionId], references: [id])
+  version      PromptVersion @relation("PromptTranslation_version", fields: [versionId], references: [id], onDelete: Cascade)
   versionId    String        @map("version")
   languageCode String
   promptText   String        @default("")
@@ -241,7 +241,7 @@ model PromptAssetVersion {
 
 model AssetTranslation {
   id           String             @id @default(cuid())
-  version      PromptAssetVersion @relation("AssetTranslation_version", fields: [versionId], references: [id])
+  version      PromptAssetVersion @relation("AssetTranslation_version", fields: [versionId], references: [id], onDelete: Cascade)
   versionId    String             @map("version")
   languageCode String
   value        String             @default("")

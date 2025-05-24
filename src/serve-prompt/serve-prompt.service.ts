@@ -59,35 +59,53 @@ export class ServePromptService {
     inputVariables: Record<string, any> = {},
   ): Promise<{ processedText: string; resolvedAssetsMetadata: any[] }> {
     this.logger.debug(
-      `Resolving assets for prompt "${promptIdInput}" (project: "${projectIdInput}")${languageCode ? ` with language "${languageCode}"` : ''}`,
+      `🔧 [RESOLVE ASSETS] Starting asset resolution for prompt "${promptIdInput}" in project "${projectIdInput}"${languageCode ? ` with language "${languageCode}"` : ''}`,
     );
-    const potentialPlaceholders = [...text.matchAll(/\{\{([^}]+)\}\}/g)];
+    this.logger.debug(
+      `🔧 [RESOLVE ASSETS] Input text: "${text.substring(0, 200)}${text.length > 200 ? '...' : ''}"`,
+    );
+    this.logger.debug(
+      `🔧 [RESOLVE ASSETS] Input variables: ${JSON.stringify(inputVariables)}`,
+    );
 
-    const assetSpecifications = potentialPlaceholders
-      .map((match) => {
-        const placeholderContent = match[1].trim();
-        const parts = placeholderContent.split(':');
-        const type = parts[0];
-        const key = parts[1];
-        const versionTag = parts.length > 2 ? parts[2] : undefined;
-        return { placeholderContent, type, key, versionTag };
-      })
-      .filter(
-        (spec) =>
-          spec.type === 'asset' && // Solo procesar assets aquí
-          !inputVariables.hasOwnProperty(spec.key) &&
-          !inputVariables.hasOwnProperty(spec.placeholderContent),
-      );
-
+    let processedText = text;
     const assetContext: Record<string, string> = {};
     const resolvedAssetsMetadata: any[] = [];
+
+    // Buscar placeholders de activos, excluyendo aquellos que corresponden a variables del input
+    const allAssetMatches = [...text.matchAll(/\{\{asset:([^}]+)\}\}/g)];
+    this.logger.debug(
+      `🔧 [RESOLVE ASSETS] Found ${allAssetMatches.length} asset placeholder(s): ${allAssetMatches.map(m => m[0]).join(', ')}`,
+    );
+
+    const assetSpecifications = allAssetMatches
+      .filter((match) => {
+        const placeholderContent = match[1].trim();
+        const [key] = placeholderContent.split(':');
+        const isVariable = inputVariables.hasOwnProperty(key);
+        if (isVariable) {
+          this.logger.debug(
+            `🔧 [RESOLVE ASSETS] Skipping asset placeholder "${match[0]}" because "${key}" is provided as a variable`,
+          );
+        }
+        return !isVariable;
+      })
+      .map((match) => {
+        const placeholderContent = match[1].trim();
+        const [key, versionTag] = placeholderContent.split(':');
+        return { key, versionTag, placeholderContent };
+      });
+
+    this.logger.debug(
+      `🔧 [RESOLVE ASSETS] After filtering variables, ${assetSpecifications.length} asset(s) to resolve: ${assetSpecifications.map(s => s.key).join(', ')}`,
+    );
 
     if (assetSpecifications.length > 0) {
       const uniqueAssetKeys = [
         ...new Set(assetSpecifications.map((spec) => spec.key)),
       ];
       this.logger.debug(
-        `Potential asset keys to resolve from text: ${uniqueAssetKeys.join(', ')} after filtering against input variables.`,
+        `🔧 [RESOLVE ASSETS] Unique asset keys to search: ${uniqueAssetKeys.join(', ')}`,
       );
 
       const foundAssets = await this.prisma.promptAsset.findMany({
@@ -105,23 +123,18 @@ export class ServePromptService {
       });
 
       this.logger.debug(
-        `Found ${foundAssets.length} asset(s) in DB for prompt "${promptIdInput}" (project: "${projectIdInput}") matching keys: [${uniqueAssetKeys.join(', ')}]`,
+        `🔧 [RESOLVE ASSETS] Found ${foundAssets.length} asset(s) in database for prompt "${promptIdInput}"`,
       );
 
       for (const asset of foundAssets) {
         if (asset.versions && asset.versions.length > 0) {
           const latestVersion = asset.versions[0];
           this.logger.debug(
-            `  - Asset Key: "${asset.key}" (for prompt "${promptIdInput}"), ` +
-            `Latest Version ID: "${latestVersion.id}", ` +
-            `Tag: "${latestVersion.versionTag}", ` +
-            `Status: "${latestVersion.status}", ` +
-            `Value: "${latestVersion.value.substring(0, 50)}${latestVersion.value.length > 50 ? '...' : ''}", ` +
-            `Translations: ${latestVersion.translations.length > 0 ? latestVersion.translations.map((t) => t.languageCode).join(', ') : 'none'}`,
+            `🔧 [RESOLVE ASSETS] Asset "${asset.key}": Latest version ID="${latestVersion.id}", tag="${latestVersion.versionTag}", status="${latestVersion.status}", translations=${latestVersion.translations.length}`,
           );
         } else {
           this.logger.debug(
-            `  - Asset Key: "${asset.key}" (No versions found)`,
+            `🔧 [RESOLVE ASSETS] Asset "${asset.key}": No versions found`,
           );
         }
       }
@@ -130,40 +143,39 @@ export class ServePromptService {
         const asset = foundAssets.find((a) => a.key === spec.key);
         if (!asset) {
           this.logger.warn(
-            `Asset with key "${spec.key}" (referenced as "{{${spec.placeholderContent}}}") not found for prompt "${promptIdInput}" in project "${projectIdInput}".`,
+            `⚠️ [RESOLVE ASSETS] Asset with key "${spec.key}" (referenced as "{{${spec.placeholderContent}}}") not found for prompt "${promptIdInput}" in project "${projectIdInput}".`,
           );
           continue;
         }
 
-        const assetVersions =
-          asset.versions as Prisma.PromptAssetVersionGetPayload<{
-            include: { translations: true };
-          }>[];
+        const assetVersions = asset.versions;
         if (!assetVersions) {
           this.logger.warn(
-            `Asset key "${spec.key}" for prompt "${promptIdInput}" found, but versions array is unexpectedly undefined.`,
+            `⚠️ [RESOLVE ASSETS] Asset key "${spec.key}" for prompt "${promptIdInput}" found, but versions array is unexpectedly undefined.`,
           );
           continue;
         }
 
-        let targetVersion:
-          | Prisma.PromptAssetVersionGetPayload<{
-            include: { translations: true };
-          }>
-          | undefined = undefined;
+        let targetVersion: typeof assetVersions[0] | undefined = undefined;
 
         if (spec.versionTag) {
+          this.logger.debug(
+            `🔧 [RESOLVE ASSETS] Looking for specific version "${spec.versionTag}" for asset "${spec.key}"`,
+          );
           targetVersion = assetVersions.find(
             (v) => v.versionTag === spec.versionTag,
           );
           if (!targetVersion) {
             this.logger.warn(
-              `Asset key "${spec.key}", version "${spec.versionTag}" (referenced as "{{${spec.placeholderContent}}}") not found. Falling back to latest active version.`,
+              `⚠️ [RESOLVE ASSETS] Asset key "${spec.key}", version "${spec.versionTag}" not found. Falling back to latest active version.`,
             );
           }
         }
 
         if (!targetVersion) {
+          this.logger.debug(
+            `🔧 [RESOLVE ASSETS] Looking for active version for asset "${spec.key}"`,
+          );
           targetVersion = assetVersions.find((v) => v.status === 'active');
         }
 
@@ -171,16 +183,26 @@ export class ServePromptService {
           let assetValue = targetVersion.value;
           let languageSource = 'base_asset';
 
+          this.logger.debug(
+            `✅ [RESOLVE ASSETS] Found target version for asset "${spec.key}": version="${targetVersion.versionTag}", value="${assetValue.substring(0, 100)}${assetValue.length > 100 ? '...' : ''}"`,
+          );
+
           if (languageCode) {
+            this.logger.debug(
+              `🌐 [RESOLVE ASSETS] Looking for translation in language "${languageCode}" for asset "${spec.key}"`,
+            );
             const translation = targetVersion.translations.find(
               (t) => t.languageCode === languageCode,
             );
             if (translation) {
               assetValue = translation.value;
               languageSource = languageCode;
+              this.logger.debug(
+                `✅ [RESOLVE ASSETS] Found translation for asset "${spec.key}" in "${languageCode}": "${assetValue.substring(0, 100)}${assetValue.length > 100 ? '...' : ''}"`,
+              );
             } else {
               this.logger.warn(
-                `Asset key "${spec.key}" v${targetVersion.versionTag} (referenced as "{{${spec.placeholderContent}}}"): No translation found for "${languageCode}". Using base value.`,
+                `⚠️ [RESOLVE ASSETS] Asset key "${spec.key}" v${targetVersion.versionTag}: No translation found for "${languageCode}". Using base value.`,
               );
               languageSource = 'base_asset_fallback';
             }
@@ -194,9 +216,13 @@ export class ServePromptService {
             versionTag: targetVersion.versionTag,
             languageUsed: languageSource,
           });
+
+          this.logger.debug(
+            `✅ [RESOLVE ASSETS] Asset "${spec.key}" resolved successfully. Value will replace "{{${spec.placeholderContent}}}"`,
+          );
         } else {
           this.logger.warn(
-            `Asset key "${spec.key}" (referenced as "{{${spec.placeholderContent}}}") for prompt "${promptIdInput}" (project "${projectIdInput}") found, but no suitable version (specified: ${spec.versionTag || 'any active'}) could be resolved.`,
+            `⚠️ [RESOLVE ASSETS] Asset key "${spec.key}" for prompt "${promptIdInput}" found, but no suitable version (specified: ${spec.versionTag || 'any active'}) could be resolved.`,
           );
         }
       }
@@ -205,70 +231,58 @@ export class ServePromptService {
     // Procesar variables con la nueva sintaxis
     const variableContext: Record<string, string> = {};
     const variablePlaceholders = [...text.matchAll(/\{\{variable:([^}]+)\}\}/g)];
+    
+    this.logger.debug(
+      `🔧 [RESOLVE ASSETS] Found ${variablePlaceholders.length} variable placeholder(s): ${variablePlaceholders.map(m => m[0]).join(', ')}`,
+    );
 
     for (const match of variablePlaceholders) {
-      const placeholderContent = match[1].trim();
-      const variableName = placeholderContent.split(':')[0];
-
+      const placeholder = match[0];
+      const variableName = match[1].trim();
+      
       if (inputVariables.hasOwnProperty(variableName)) {
-        variableContext[`variable:${placeholderContent}`] = String(inputVariables[variableName]);
-      } else {
-        this.logger.warn(
-          `Variable "${variableName}" (referenced as "{{variable:${placeholderContent}}}") not found in provided variables.`,
-        );
-      }
-    }
-
-    // Procesar variables con sintaxis simple {{variable_name}}
-    const simplePlaceholders = [...text.matchAll(/\{\{([^}:]+)\}\}/g)];
-    
-    for (const match of simplePlaceholders) {
-      const placeholderContent = match[1].trim();
-      
-      // Skip if it's an asset or prompt reference
-      if (placeholderContent.startsWith('asset:') || 
-          placeholderContent.startsWith('prompt:') || 
-          placeholderContent.startsWith('variable:')) {
-        continue;
-      }
-      
-      // Skip if already processed as asset
-      if (assetContext.hasOwnProperty(placeholderContent)) {
-        continue;
-      }
-      
-      // Check if variable exists in input variables
-      if (inputVariables.hasOwnProperty(placeholderContent)) {
-        variableContext[placeholderContent] = String(inputVariables[placeholderContent]);
+        const variableValue = String(inputVariables[variableName]);
+        variableContext[variableName] = variableValue;
         this.logger.debug(
-          `Resolved simple variable "${placeholderContent}" = "${inputVariables[placeholderContent]}"`,
+          `✅ [RESOLVE ASSETS] Variable "${variableName}" resolved: "${variableValue.substring(0, 100)}${variableValue.length > 100 ? '...' : ''}"`,
         );
       } else {
         this.logger.warn(
-          `Simple variable "${placeholderContent}" (referenced as "{{${placeholderContent}}}") not found in provided variables.`,
+          `⚠️ [RESOLVE ASSETS] Variable "${variableName}" (referenced as "${placeholder}") not provided in input variables. Available variables: ${Object.keys(inputVariables).join(', ') || 'none'}`,
         );
       }
     }
 
-    const finalContext = { ...assetContext, ...variableContext };
-    let processedText: string;
-    try {
-      processedText = text.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
-        const trimmedKey = key.trim();
-        if (finalContext.hasOwnProperty(trimmedKey)) {
-          return String(finalContext[trimmedKey]);
-        }
-        this.logger.warn(
-          `Placeholder {{${trimmedKey}}} not found in provided variables or resolved assets.`,
-        );
-        return match;
-      });
-    } catch (error) {
-      this.logger.error('Error during placeholder substitution:', error);
-      throw new BadRequestException(
-        `Failed to substitute placeholders: ${error.message}`,
+    // Reemplazar assets primero
+    this.logger.debug(
+      `🔄 [RESOLVE ASSETS] Replacing ${Object.keys(assetContext).length} asset placeholder(s)`,
+    );
+    for (const [placeholderContent, assetValue] of Object.entries(assetContext)) {
+      const placeholder = `{{asset:${placeholderContent}}}`;
+      processedText = processedText.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), assetValue);
+      this.logger.debug(
+        `🔄 [RESOLVE ASSETS] Replaced "${placeholder}" with asset value`,
       );
     }
+
+    // Luego reemplazar variables
+    this.logger.debug(
+      `🔄 [RESOLVE ASSETS] Replacing ${Object.keys(variableContext).length} variable placeholder(s)`,
+    );
+    for (const [variableName, variableValue] of Object.entries(variableContext)) {
+      const placeholder = `{{variable:${variableName}}}`;
+      processedText = processedText.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), variableValue);
+      this.logger.debug(
+        `🔄 [RESOLVE ASSETS] Replaced "${placeholder}" with variable value`,
+      );
+    }
+
+    this.logger.debug(
+      `🎯 [RESOLVE ASSETS] Asset and variable resolution completed. Final text: "${processedText.substring(0, 200)}${processedText.length > 200 ? '...' : ''}"`,
+    );
+    this.logger.debug(
+      `📊 [RESOLVE ASSETS] Summary - Assets resolved: ${resolvedAssetsMetadata.length}, Variables resolved: ${Object.keys(variableContext).length}`,
+    );
 
     return { processedText, resolvedAssetsMetadata };
   }
@@ -295,6 +309,9 @@ export class ServePromptService {
   ): Promise<{ processedText: string; resolvedPromptsMetadata: any[] }> {
     const { currentPromptType, maxDepth = 5, currentDepth = 0 } = context;
 
+    // 🔥🔥🔥 CRITICAL DEBUG LOG - This should appear every time 🔥🔥🔥
+    console.log(`🔥🔥🔥 [CRITICAL DEBUG] resolvePromptReferences called! Depth: ${currentDepth}, Text preview: "${text.substring(0, 100)}", Project: "${projectId}"`);
+
     if (currentDepth >= maxDepth) {
       this.logger.warn(
         `Maximum prompt reference depth (${maxDepth}) reached. Stopping resolution.`,
@@ -303,13 +320,23 @@ export class ServePromptService {
     }
 
     this.logger.debug(
-      `Resolving prompt references for project "${projectId}"${languageCode ? ` with language "${languageCode}"` : ''} (depth: ${currentDepth})`,
+      `🔍 [PROMPT RESOLUTION] Starting to resolve prompt references for project "${projectId}"${languageCode ? ` with language "${languageCode}"` : ''} (depth: ${currentDepth})`,
+    );
+    this.logger.debug(
+      `🔍 [PROMPT RESOLUTION] Input text to process: "${text.substring(0, 200)}${text.length > 200 ? '...' : ''}"`,
     );
 
     const promptReferences = [...text.matchAll(/\{\{prompt:([^}]+)\}\}/g)];
     const resolvedPromptsMetadata: any[] = [];
 
+    this.logger.debug(
+      `🔍 [PROMPT RESOLUTION] Found ${promptReferences.length} prompt reference(s) in text`,
+    );
+
     if (promptReferences.length === 0) {
+      this.logger.debug(
+        `🔍 [PROMPT RESOLUTION] No prompt references found. Returning original text.`,
+      );
       return { processedText: text, resolvedPromptsMetadata };
     }
 
@@ -320,15 +347,25 @@ export class ServePromptService {
       const referenceContent = match[1].trim();
       const [promptName, versionTag, refLanguageCode] = referenceContent.split(':');
 
-      if (processedPrompts.has(promptName)) {
+      this.logger.debug(
+        `🔍 [PROMPT RESOLUTION] Processing reference: "${fullMatch}" -> promptName: "${promptName}", versionTag: "${versionTag || 'latest'}", refLanguageCode: "${refLanguageCode || 'none'}"`,
+      );
+
+      const promptNameSlug = slugify(promptName);
+      
+      // Check for circular references using slug for consistency
+      if (processedPrompts.has(promptNameSlug)) {
         this.logger.warn(
-          `Circular reference detected for prompt "${promptName}". Skipping.`,
+          `⚠️ [PROMPT RESOLUTION] Circular reference detected for prompt "${promptName}" (slug: "${promptNameSlug}"). Skipping.`,
         );
         continue;
       }
 
-      const promptNameSlug = slugify(promptName);
       const targetLanguageCode = refLanguageCode || languageCode;
+
+      this.logger.debug(
+        `🔍 [PROMPT RESOLUTION] Searching for prompt with slug "${promptNameSlug}" (from name "${promptName}") in project "${projectId}"`,
+      );
 
       try {
         // Obtener el prompt referenciado para validar su tipo
@@ -347,32 +384,58 @@ export class ServePromptService {
         });
 
         if (!referencedPrompt) {
+          this.logger.error(
+            `❌ [PROMPT RESOLUTION] Referenced prompt "${promptName}" (slug: "${promptNameSlug}") not found in project "${projectId}".`,
+          );
           throw new NotFoundException(
             `Referenced prompt "${promptName}" not found in project "${projectId}".`,
           );
         }
 
+        this.logger.debug(
+          `✅ [PROMPT RESOLUTION] Found referenced prompt: ID="${referencedPrompt.id}", name="${referencedPrompt.name}", type="${referencedPrompt.type}"`,
+        );
+
         // Validaciones específicas por tipo de prompt
         if (currentPromptType === 'GUARD' && referencedPrompt.type !== 'GUARD') {
+          this.logger.error(
+            `❌ [PROMPT RESOLUTION] Guard prompt type validation failed: Guard prompts can only reference other guard prompts. Attempted to reference "${promptName}" of type ${referencedPrompt.type}.`,
+          );
           throw new BadRequestException(
             `Guard prompts can only reference other guard prompts. Attempted to reference "${promptName}" of type ${referencedPrompt.type}.`,
           );
         }
 
         if (currentPromptType === 'SYSTEM' && referencedPrompt.type === 'USER') {
+          this.logger.error(
+            `❌ [PROMPT RESOLUTION] System prompt type validation failed: System prompts cannot reference user prompts. Attempted to reference "${promptName}".`,
+          );
           throw new BadRequestException(
             `System prompts cannot reference user prompts. Attempted to reference "${promptName}".`,
           );
         }
 
+        this.logger.debug(
+          `🔄 [PROMPT RESOLUTION] Recursively executing prompt "${promptName}" (slug: "${promptNameSlug}") with version "${versionTag || 'latest'}" and language "${targetLanguageCode || 'none'}"`,
+        );
+
         const { processedPrompt, metadata } = await this.executePromptVersion(
           {
             projectId,
-            promptName: promptName,
+            promptName: promptNameSlug,
             versionTag: versionTag || 'latest',
             languageCode: targetLanguageCode,
           },
           { variables: {} },
+          processedPrompts,
+          {
+            currentDepth: currentDepth + 1,
+            maxDepth,
+          },
+        );
+
+        this.logger.debug(
+          `✅ [PROMPT RESOLUTION] Successfully resolved prompt "${promptName}". Processed content: "${processedPrompt.substring(0, 100)}${processedPrompt.length > 100 ? '...' : ''}"`,
         );
 
         processedText = processedText.replace(fullMatch, processedPrompt);
@@ -384,13 +447,23 @@ export class ServePromptService {
           metadata,
         });
 
-        processedPrompts.add(promptName);
+        this.logger.debug(
+          `🔄 [PROMPT RESOLUTION] Replaced "${fullMatch}" with resolved content. Text after replacement: "${processedText.substring(0, 200)}${processedText.length > 200 ? '...' : ''}"`,
+        );
       } catch (error) {
+        this.logger.error(
+          `❌ [PROMPT RESOLUTION] Failed to resolve prompt reference "${fullMatch}": ${error.message}`,
+          error.stack,
+        );
         this.logger.warn(
-          `Failed to resolve prompt reference "${fullMatch}": ${error.message}`,
+          `⚠️ [PROMPT RESOLUTION] Leaving placeholder "${fullMatch}" unresolved due to error.`,
         );
       }
     }
+
+    this.logger.debug(
+      `🎯 [PROMPT RESOLUTION] Completed resolving ${promptReferences.length} prompt reference(s). Final processed text: "${processedText.substring(0, 200)}${processedText.length > 200 ? '...' : ''}"`,
+    );
 
     return { processedText, resolvedPromptsMetadata };
   }
@@ -403,12 +476,55 @@ export class ServePromptService {
   async executePromptVersion(
     params: ExecutePromptParamsDto,
     body: ExecutePromptBodyDto,
+    processedPrompts: Set<string> = new Set(),
+    context: {
+      currentDepth?: number;
+      maxDepth?: number;
+    } = {},
   ): Promise<{ processedPrompt: string; metadata: any }> {
     const { projectId, promptName, versionTag, languageCode } = params;
     const { variables } = body;
+    const { currentDepth = 0, maxDepth = 5 } = context;
+
+    // 🚨🚨🚨 SUPER OBVIOUS LOG TO CONFIRM CODE IS UPDATED 🚨🚨🚨
+    console.log(`🚨🚨🚨 [SUPER OBVIOUS] executePromptVersion called with promptName: "${promptName}", project: "${projectId}", depth: ${currentDepth} 🚨🚨🚨`);
+    
+    this.logger.debug(
+      `🚀 [EXECUTE PROMPT] Starting execution of prompt "${promptName}" v${versionTag} in project "${projectId}"${languageCode ? ` with language "${languageCode}"` : ''} (depth: ${currentDepth})`,
+    );
+    this.logger.debug(
+      `🚀 [EXECUTE PROMPT] Variables provided: ${JSON.stringify(variables || {})}`,
+    );
+
+    // Check for circular references and max depth
+    if (currentDepth >= maxDepth) {
+      this.logger.warn(
+        `⚠️ [EXECUTE PROMPT] Maximum depth (${maxDepth}) reached for prompt "${promptName}". Stopping execution.`,
+      );
+      throw new BadRequestException(
+        `Maximum prompt reference depth (${maxDepth}) reached. Possible circular reference involving "${promptName}".`,
+      );
+    }
 
     const promptNameSlug = slugify(promptName);
     const currentProjectId = projectId;
+
+    this.logger.debug(
+      `🚀 [EXECUTE PROMPT] Converted prompt name "${promptName}" to slug "${promptNameSlug}"`,
+    );
+
+    // Check for circular references using the slug for consistency
+    if (processedPrompts.has(promptNameSlug)) {
+      this.logger.warn(
+        `⚠️ [EXECUTE PROMPT] Circular reference detected for prompt "${promptName}" (slug: "${promptNameSlug}"). Stopping execution.`,
+      );
+      throw new BadRequestException(
+        `Circular reference detected for prompt "${promptName}".`,
+      );
+    }
+
+    // Add current prompt to processed set using slug for consistency
+    processedPrompts.add(promptNameSlug);
 
     const prompt = await this.prisma.prompt.findUnique({
       where: {
@@ -426,13 +542,23 @@ export class ServePromptService {
     });
 
     if (!prompt) {
+      this.logger.error(
+        `❌ [EXECUTE PROMPT] Prompt "${promptName}" (slug: "${promptNameSlug}") not found in project "${currentProjectId}".`,
+      );
       throw new NotFoundException(
         `Prompt "${promptName}" (slug: "${promptNameSlug}") not found in project "${currentProjectId}".`,
       );
     }
 
+    this.logger.debug(
+      `✅ [EXECUTE PROMPT] Found prompt: ID="${prompt.id}", name="${prompt.name}", type="${prompt.type}", projectId="${prompt.projectId}"`,
+    );
+
     // Validaciones específicas por tipo de prompt
     if (prompt.type === 'GUARD' && Object.keys(variables || {}).length > 0) {
+      this.logger.error(
+        `❌ [EXECUTE PROMPT] Guard prompt validation failed: Guard prompts cannot accept variables for security reasons.`,
+      );
       throw new BadRequestException(
         'Guard prompts cannot accept variables for security reasons.',
       );
@@ -440,6 +566,10 @@ export class ServePromptService {
 
     let versionToUse;
     if (versionTag === 'latest') {
+      this.logger.debug(
+        `🔍 [EXECUTE PROMPT] Searching for latest version of prompt "${prompt.id}"`,
+      );
+      
       versionToUse = await this.prisma.promptVersion.findFirst({
         where: {
           promptId: prompt.id,
@@ -451,11 +581,18 @@ export class ServePromptService {
       });
 
       if (!versionToUse) {
+        this.logger.error(
+          `❌ [EXECUTE PROMPT] No versions found for prompt "${promptName}" (ID: ${prompt.id}) in project "${currentProjectId}".`,
+        );
         throw new NotFoundException(
           `No versions found for prompt "${promptName}" (ID: ${prompt.id}) in project "${currentProjectId}".`,
         );
       }
     } else {
+      this.logger.debug(
+        `🔍 [EXECUTE PROMPT] Searching for specific version "${versionTag}" of prompt "${prompt.id}"`,
+      );
+      
       versionToUse = await this.prisma.promptVersion.findUnique({
         where: {
           promptId_versionTag: { promptId: prompt.id, versionTag },
@@ -464,40 +601,74 @@ export class ServePromptService {
       });
 
       if (!versionToUse) {
+        this.logger.error(
+          `❌ [EXECUTE PROMPT] Version "${versionTag}" for prompt "${promptName}" (ID: ${prompt.id}) in project "${currentProjectId}" not found.`,
+        );
         throw new NotFoundException(
           `Version "${versionTag}" for prompt "${promptName}" (ID: ${prompt.id}) in project "${currentProjectId}" not found.`,
         );
       }
     }
 
+    this.logger.debug(
+      `✅ [EXECUTE PROMPT] Found version: ID="${versionToUse.id}", tag="${versionToUse.versionTag}", translations=${versionToUse.translations.length}`,
+    );
+
     const finalLanguageCode = languageCode;
     let basePromptText = versionToUse.promptText;
 
+    this.logger.debug(
+      `📝 [EXECUTE PROMPT] Base prompt text: "${basePromptText.substring(0, 200)}${basePromptText.length > 200 ? '...' : ''}"`,
+    );
+
     if (finalLanguageCode) {
+      this.logger.debug(
+        `🌐 [EXECUTE PROMPT] Looking for translation for language "${finalLanguageCode}"`,
+      );
+      
       const promptTranslation = versionToUse.translations.find(
         (t) => t.languageCode === finalLanguageCode,
       );
       if (promptTranslation) {
         basePromptText = promptTranslation.promptText;
+        this.logger.debug(
+          `✅ [EXECUTE PROMPT] Found translation for "${finalLanguageCode}": "${basePromptText.substring(0, 200)}${basePromptText.length > 200 ? '...' : ''}"`,
+        );
       } else {
         this.logger.warn(
-          `Translation for languageCode "${finalLanguageCode}" not found for prompt "${promptName}" v${versionTag}. Falling back to base text.`,
+          `⚠️ [EXECUTE PROMPT] Translation for languageCode "${finalLanguageCode}" not found for prompt "${promptName}" v${versionTag}. Falling back to base text.`,
         );
       }
     }
 
-    // First resolve prompt references
+    this.logger.debug(
+      `🔄 [EXECUTE PROMPT] Starting prompt reference resolution with text: "${basePromptText.substring(0, 200)}${basePromptText.length > 200 ? '...' : ''}"`,
+    );
+
+    // First resolve prompt references - pass the existing processedPrompts and incremented depth
     const { processedText: textWithResolvedPrompts, resolvedPromptsMetadata } =
       await this.resolvePromptReferences(
         basePromptText,
         prompt.projectId,
         finalLanguageCode,
-        new Set([promptNameSlug]),
+        processedPrompts, // Use the existing set
         {
           currentPromptType: prompt.type,
-          currentDepth: 0,
+          currentDepth: currentDepth + 1, // Increment depth
+          maxDepth,
         },
       );
+
+    this.logger.debug(
+      `✅ [EXECUTE PROMPT] Prompt references resolved. Result: "${textWithResolvedPrompts.substring(0, 200)}${textWithResolvedPrompts.length > 200 ? '...' : ''}"`,
+    );
+    this.logger.debug(
+      `📊 [EXECUTE PROMPT] Resolved ${resolvedPromptsMetadata.length} prompt reference(s): ${resolvedPromptsMetadata.map(p => p.promptName).join(', ')}`,
+    );
+
+    this.logger.debug(
+      `🔄 [EXECUTE PROMPT] Starting asset and variable resolution`,
+    );
 
     // Then resolve assets and variables
     const { processedText, resolvedAssetsMetadata } = await this.resolveAssets(
@@ -506,6 +677,13 @@ export class ServePromptService {
       prompt.projectId,
       finalLanguageCode,
       variables,
+    );
+
+    this.logger.debug(
+      `✅ [EXECUTE PROMPT] Asset and variable resolution completed. Final result: "${processedText.substring(0, 200)}${processedText.length > 200 ? '...' : ''}"`,
+    );
+    this.logger.debug(
+      `📊 [EXECUTE PROMPT] Resolved ${resolvedAssetsMetadata.length} asset(s): ${resolvedAssetsMetadata.map(a => a.key).join(', ')}`,
     );
 
     const metadata = {
@@ -526,6 +704,10 @@ export class ServePromptService {
       variablesProvided: Object.keys(variables || {}),
       resolvedPrompts: resolvedPromptsMetadata,
     };
+
+    this.logger.debug(
+      `🎯 [EXECUTE PROMPT] Execution completed successfully. Metadata: ${JSON.stringify(metadata, null, 2)}`,
+    );
 
     return { processedPrompt: processedText, metadata };
   }

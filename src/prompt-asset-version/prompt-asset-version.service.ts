@@ -10,9 +10,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, PromptAssetVersion, PromptAsset } from '@prisma/client';
 import { TenantService } from '../tenant/tenant.service';
 import { MarketplacePublishStatus } from '@prisma/client';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class PromptAssetVersionService {
+  private readonly logger = new Logger(PromptAssetVersionService.name);
+
   constructor(
     private prisma: PrismaService,
     private tenantService: TenantService,
@@ -214,36 +217,75 @@ export class PromptAssetVersionService {
     assetKey: string,
     versionTag: string,
   ): Promise<PromptAssetVersion> {
-    const existingVersion = await this.findOneByTag(
-      projectId,
-      promptId,
-      assetKey,
-      versionTag,
-    );
+    this.logger.log(`Attempting to delete asset version "${versionTag}" for asset "${assetKey}" in prompt "${promptId}" (project "${projectId}")`);
+
+    let existingVersion: PromptAssetVersion;
+    try {
+      existingVersion = await this.findOneByTag(
+        projectId,
+        promptId,
+        assetKey,
+        versionTag,
+      );
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        // Version already doesn't exist - this is idempotent behavior
+        this.logger.log(`Asset version "${versionTag}" not found for asset "${assetKey}" in prompt "${promptId}" - already deleted or never existed`);
+        
+        // Return a mock asset version object to maintain API compatibility
+        const mockVersion: PromptAssetVersion = {
+          id: `deleted-${versionTag}-${assetKey}-${Date.now()}`,
+          assetId: `unknown-asset-${Date.now()}`,
+          value: '',
+          versionTag,
+          changeMessage: 'Already deleted or never existed',
+          status: 'active',
+          languageCode: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          marketplaceStatus: 'NOT_PUBLISHED' as any,
+          marketplacePublishedAt: null,
+          marketplaceRequestedAt: null,
+          marketplaceApprovedAt: null,
+          marketplaceRejectionReason: null,
+          marketplaceRequesterId: null,
+          marketplaceApproverId: null,
+        };
+        
+        return mockVersion; // Return successfully (idempotent)
+      }
+      
+      this.logger.error(`Error finding asset version "${versionTag}" for deletion: ${error.message}`, error.stack);
+      throw error;
+    }
 
     try {
-      return await this.prisma.promptAssetVersion.delete({
+      const deletedVersion = await this.prisma.promptAssetVersion.delete({
         where: {
           id: existingVersion.id, // Usar el CUID id de la PromptAssetVersion para la eliminación
         },
       });
+
+      this.logger.log(`Successfully deleted asset version "${versionTag}" (ID: ${existingVersion.id}) for asset "${assetKey}"`);
+      return deletedVersion;
+
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2025') {
-          throw new NotFoundException(
-            `PromptAssetVersion with ID "${existingVersion.id}" not found during deletion.`,
-          );
-        }
-        if (error.code === 'P2003') {
-          throw new ConflictException(
-            `Cannot delete AssetVersion ID "${existingVersion.id}" (Tag: "${versionTag}", AssetKey: "${assetKey}") because it is still referenced.`,
-          );
-        }
+      // Handle specific Prisma errors for idempotent behavior
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        // Version was deleted by another process between findOneByTag and delete
+        this.logger.log(`Asset version "${versionTag}" was already deleted by another process during deletion attempt`);
+        
+        // Return the existing version data (successful idempotent operation)
+        return existingVersion;
       }
-      console.error(
-        `Error deleting version ID "${existingVersion.id}" for asset "${assetKey}" with tag "${versionTag}":`,
-        error,
-      );
+
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new ConflictException(
+          `Cannot delete AssetVersion ID "${existingVersion.id}" (Tag: "${versionTag}", AssetKey: "${assetKey}") because it is still referenced.`,
+        );
+      }
+
+      this.logger.error(`Error deleting version ID "${existingVersion.id}" for asset "${assetKey}" with tag "${versionTag}":`, error);
       throw error;
     }
   }

@@ -149,6 +149,21 @@ export class PromptVersionService {
 
     // Si se solicita el prompt procesado, usamos el ServePromptService
     if (query.processed) {
+      this.logger.debug(
+        `🚀 [PROCESSED PROMPT] Processing prompt "${promptId}" v${versionTag} in project "${projectId}" with regionCode="${query.regionCode || 'none'}" and variables="${query.variables || 'none'}"`,
+      );
+      
+      this.logger.debug(
+        `🔍 [PROCESSED PROMPT] About to call ServePromptService.executePromptVersion with parameters:`,
+      );
+      this.logger.debug(`  - projectId: "${projectId}"`);
+      this.logger.debug(`  - promptName: "${prompt.id}"`);
+      this.logger.debug(`  - versionTag: "${versionTag}"`);
+      this.logger.debug(`  - languageCode: "${query.regionCode}"`);
+      this.logger.debug(`  - variables: ${JSON.stringify(query.variables ? JSON.parse(query.variables) : {})}`);
+      this.logger.debug(`  - processedPrompts: new Set() (empty)`);
+      this.logger.debug(`  - context: {currentDepth: 0, maxDepth: 5}`);
+      
       const { processedPrompt } = await this.servePromptService.executePromptVersion(
         {
           projectId,
@@ -159,7 +174,31 @@ export class PromptVersionService {
         {
           variables: query.variables ? JSON.parse(query.variables) : {},
         },
+        new Set(), // processedPrompts - empty set for new resolution chain
+        {
+          currentDepth: 0,
+          maxDepth: 5, // context with depth control
+        },
       );
+
+      this.logger.debug(
+        `✅ [PROCESSED PROMPT] ServePromptService returned. Result length: ${processedPrompt.length}`,
+      );
+      this.logger.debug(
+        `✅ [PROCESSED PROMPT] Result preview: "${processedPrompt.substring(0, 300)}${processedPrompt.length > 300 ? '...' : ''}"`,
+      );
+      
+      // Check if prompt references were resolved by looking for remaining placeholders
+      const remainingPlaceholders = processedPrompt.match(/\{\{prompt:[^}]+\}\}/g);
+      if (remainingPlaceholders) {
+        this.logger.warn(
+          `⚠️ [PROCESSED PROMPT] Found ${remainingPlaceholders.length} unresolved prompt placeholder(s): ${remainingPlaceholders.join(', ')}`,
+        );
+      } else {
+        this.logger.debug(
+          `✅ [PROCESSED PROMPT] All prompt references appear to have been resolved successfully`,
+        );
+      }
 
       // Creamos una copia del objeto version y reemplazamos el promptText con el procesado
       return {
@@ -213,38 +252,80 @@ export class PromptVersionService {
     promptId: string,
     versionTag: string,
   ): Promise<PromptVersion> {
-    // Verify access and find the specific version by tag first
-    const existingVersion = await this.findOneByTag(
-      projectId,
-      promptId,
-      versionTag,
-    );
+    this.logger.log(`Attempting to delete version "${versionTag}" from prompt "${promptId}" in project "${projectId}"`);
+
+    let existingVersion: PromptVersion;
+    try {
+      // Verify access and find the specific version by tag first
+      existingVersion = await this.findOneByTag(
+        projectId,
+        promptId,
+        versionTag,
+      );
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        // Version already doesn't exist - this is idempotent behavior
+        this.logger.log(`Version "${versionTag}" not found for prompt "${promptId}" in project "${projectId}" - already deleted or never existed`);
+        
+        // Return a mock version object to maintain API compatibility
+        // Since the original method returns PromptVersion, we create a minimal mock
+        const mockVersion: PromptVersion = {
+          id: `deleted-${versionTag}-${Date.now()}`,
+          promptId,
+          versionTag,
+          promptText: '',
+          languageCode: 'en',
+          changeMessage: 'Already deleted or never existed',
+          status: 'active' as any,
+          aiModelId: null,
+          marketplaceStatus: 'NOT_PUBLISHED' as any,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          marketplaceRequestedAt: null,
+          marketplaceRequesterId: null,
+          marketplaceApprovedAt: null,
+          marketplaceApproverId: null,
+          marketplacePublishedAt: null,
+          marketplaceRejectionReason: null,
+        };
+        
+        return mockVersion; // Return successfully (idempotent)
+      }
+      
+      this.logger.error(`Error finding version "${versionTag}" for deletion: ${error.message}`, error.stack);
+      throw error;
+    }
 
     // TODO: Add logic? Prevent deleting the last version? Prevent deleting active versions?
 
     try {
-      return await this.prisma.promptVersion.delete({
+      const deletedVersion = await this.prisma.promptVersion.delete({
         where: {
           id: existingVersion.id, // Use the CUID of the version found
         },
       });
+
+      this.logger.log(`Successfully deleted version "${versionTag}" (ID: ${existingVersion.id}) from prompt "${promptId}"`);
+      return deletedVersion;
+
     } catch (error) {
-      // P2025 should be caught by findOneByTag
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
-      ) {
-        throw new NotFoundException(`PromptVersion not found.`);
+      // Handle specific Prisma errors for idempotent behavior
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        // Version was deleted by another process between findOneByTag and delete
+        this.logger.log(`Version "${versionTag}" was already deleted by another process during deletion attempt`);
+        
+        // Return the existing version data (successful idempotent operation)
+        return existingVersion;
       }
+
       // P2003 could happen if translations, links, logs, etc., block deletion
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2003'
-      ) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
         throw new ConflictException(
           `Cannot delete PromptVersion "${versionTag}" because it is still referenced by other entities (e.g., translations, links, logs).`,
         );
       }
+
+      this.logger.error(`Failed to delete version "${versionTag}" from prompt "${promptId}": ${error.message}`, error.stack);
       throw error;
     }
   }

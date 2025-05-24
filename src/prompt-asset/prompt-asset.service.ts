@@ -8,6 +8,7 @@ import { CreatePromptAssetDto } from './dto/create-prompt-asset.dto';
 import { UpdatePromptAssetDto } from './dto/update-prompt-asset.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, PromptAsset, PromptAssetVersion } from '@prisma/client';
+import { Logger } from '@nestjs/common';
 
 // Type helper: Asset with its initial version
 export type AssetWithInitialVersion = PromptAsset & {
@@ -34,6 +35,8 @@ type PromptAssetWithDetails = Prisma.PromptAssetGetPayload<{
 
 @Injectable()
 export class PromptAssetService {
+  private readonly logger = new Logger(PromptAssetService.name);
+
   constructor(private prisma: PrismaService) { }
 
   async create(
@@ -236,35 +239,64 @@ export class PromptAssetService {
     promptIdInput: string,
     projectIdInput: string,
   ): Promise<PromptAsset> {
-    const assetToDelete = await this.findAndValidateAsset(
-      key,
-      promptIdInput,
-      projectIdInput,
-    );
+    this.logger.log(`Attempting to delete asset "${key}" from prompt "${promptIdInput}" in project "${projectIdInput}"`);
+
+    let assetToDelete: PromptAsset;
+    try {
+      assetToDelete = await this.findAndValidateAsset(
+        key,
+        promptIdInput,
+        projectIdInput,
+      );
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        // Asset already doesn't exist - this is idempotent behavior
+        this.logger.log(`Asset "${key}" not found in prompt "${promptIdInput}" (project "${projectIdInput}") - already deleted or never existed`);
+        
+        // Return a mock asset object to maintain API compatibility
+        const mockAsset: PromptAsset = {
+          id: `deleted-${key}-${Date.now()}`,
+          key,
+          promptId: promptIdInput,
+          projectId: projectIdInput,
+          enabled: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        
+        return mockAsset; // Return successfully (idempotent)
+      }
+      
+      this.logger.error(`Error finding asset "${key}" for deletion: ${error.message}`, error.stack);
+      throw error;
+    }
 
     try {
       await this.prisma.promptAsset.delete({
         where: { id: assetToDelete.id }, // Assets are deleted by their CUID (id)
       });
+
+      this.logger.log(`Successfully deleted asset "${key}" (ID: ${assetToDelete.id}) from prompt "${promptIdInput}"`);
       return assetToDelete;
+
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2025') {
-          throw new NotFoundException(
-            `PromptAsset with KEY "${key}" (ID: ${assetToDelete.id}) not found during deletion in prompt "${promptIdInput}".`,
-          );
-        }
-        if (error.code === 'P2003') {
-          // Foreign key constraint failed
-          throw new ConflictException(
-            `Cannot delete asset '${key}' (ID: ${assetToDelete.id}) in prompt '${promptIdInput}' as it is still referenced by other entities (e.g., active versions, logs).`,
-          );
-        }
+      // Handle specific Prisma errors for idempotent behavior
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        // Asset was deleted by another process between findAndValidateAsset and delete
+        this.logger.log(`Asset "${key}" was already deleted by another process during deletion attempt`);
+        
+        // Return the existing asset data (successful idempotent operation)
+        return assetToDelete;
       }
-      console.error(
-        `Error deleting asset with key "${key}" (ID: ${assetToDelete.id}) in prompt ${promptIdInput} (project ${projectIdInput}):`,
-        error,
-      );
+
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        // Foreign key constraint failed
+        throw new ConflictException(
+          `Cannot delete asset '${key}' (ID: ${assetToDelete.id}) in prompt '${promptIdInput}' as it is still referenced by other entities (e.g., active versions, logs).`,
+        );
+      }
+
+      this.logger.error(`Error deleting asset with key "${key}" (ID: ${assetToDelete.id}) in prompt ${promptIdInput} (project ${projectIdInput}):`, error);
       throw error;
     }
   }

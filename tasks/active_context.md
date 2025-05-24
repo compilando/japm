@@ -298,3 +298,107 @@ LOG_LEVEL=info
 
 The project now includes a comprehensive audit logging system that provides full traceability of all business operations, enhancing security, compliance, and operational visibility. The system is production-ready with Docker and Kubernetes support, maintaining flexibility for local development with SQLite.
 
+## 🐛 Recent Bug Fixes
+
+### Prompt Deletion Race Condition Fix (2025-05-24)
+
+**Issue**: Users experienced confusing errors when deleting prompts that appeared to fail but actually succeeded due to race conditions.
+
+**Solution Implemented**:
+- **Idempotent DELETE Operations**: DELETE requests now handle cases where resources are already deleted gracefully
+- **Improved Audit Logging**: Distinguishes between actual failures and successful idempotent operations
+- **Better Error Handling**: Specific handling for concurrent deletion scenarios
+
+**Impact**:
+- Improved user experience during concurrent operations
+- More accurate audit trail
+- Reduced confusion from misleading error messages
+
+**Files Modified**:
+- `src/prompt/prompt.service.ts`: Enhanced `remove()` method with race condition handling
+- `.cursor/rules/error-documentation.mdc`: Documented the issue and solution
+
+**Prevention**: This pattern should be applied to other DELETE operations across the system to ensure consistent idempotent behavior.
+
+### System-wide Idempotent DELETE Implementation (2025-05-24)
+
+**Extension**: Applied the idempotent DELETE pattern across all services in the system.
+
+**Services Updated**:
+- **PromptService**: ✅ Enhanced with comprehensive audit logging
+- **PromptVersionService**: ✅ Applied idempotent pattern with mock version objects
+- **PromptAssetService**: ✅ Applied idempotent pattern + Logger integration
+- **PromptTranslationService**: ✅ Applied idempotent pattern for translations
+- **PromptAssetVersionService**: ✅ Applied idempotent pattern + Logger integration
+- **AssetTranslationService**: ✅ Applied idempotent pattern + Logger integration
+
+**Consistent Implementation**:
+- All DELETE operations now handle `NotFoundException` gracefully
+- Consistent error handling for Prisma `P2025` errors (record not found)
+- Mock object returns to maintain API compatibility
+- Comprehensive logging for all DELETE operations
+- Race condition handling across the entire system
+
+### Cascade Delete Configuration (2025-05-24)
+
+**Feature**: Implemented comprehensive cascade delete for prompt hierarchies.
+
+**Database Schema Changes** (`prisma/schema.prisma`):
+- **PromptTranslation** -> PromptVersion: Added `onDelete: Cascade`
+- **AssetTranslation** -> PromptAssetVersion: Added `onDelete: Cascade`
+- **Existing cascades maintained**: PromptVersion -> Prompt, PromptAsset -> Prompt, etc.
+
+**Cascade Delete Hierarchy**:
+```
+Prompt (DELETE)
+├── PromptVersions (CASCADE)
+│   ├── PromptTranslations (CASCADE)
+│   └── ExecutionLogs (CASCADE)
+├── PromptAssets (CASCADE)
+│   └── PromptAssetVersions (CASCADE)
+│       └── AssetTranslations (CASCADE)
+└── Tags (MANY-TO-MANY - disconnected)
+```
+
+**Preserved Restrictions** (as requested):
+- Project -> Prompts: `onDelete: Restrict` 
+- Tenant -> Projects: `onDelete: Restrict`
+
+**Benefits**:
+- Single DELETE operation removes entire prompt hierarchy
+- Prevents orphaned data in the database  
+- Maintains data integrity
+- Simplifies cleanup operations
+
+### Migration Requirements
+
+⚠️ **Database Migration Pending**:
+```bash
+# Run when Node.js environment is available:
+npx prisma migrate dev --name add-cascade-delete-relations
+```
+
+**Migration includes**:
+- Cascade delete relations for PromptTranslation and AssetTranslation
+- Database constraint updates for proper referential integrity
+
+### Overall Impact
+
+**User Experience**:
+- ✅ No more confusing DELETE errors
+- ✅ Consistent behavior across all resource types
+- ✅ Proper cascade deletion of related data
+- ✅ Improved audit trail accuracy
+
+**System Reliability**:
+- ✅ Race condition handling system-wide
+- ✅ Idempotent operations reduce user confusion
+- ✅ Better error logging for debugging
+- ✅ Consistent patterns across all services
+
+**Data Integrity**:
+- ✅ Cascade delete prevents orphaned records
+- ✅ Referential integrity maintained
+- ✅ Clean database state after deletions
+- ✅ Proper hierarchical data removal
+

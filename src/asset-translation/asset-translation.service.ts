@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { CreateAssetTranslationDto } from './dto/create-asset-translation.dto';
 import { UpdateAssetTranslationDto } from './dto/update-asset-translation.dto';
@@ -12,6 +13,8 @@ import { CreateOrUpdateAssetTranslationDto } from './dto/create-or-update-asset-
 
 @Injectable()
 export class AssetTranslationService {
+  private readonly logger = new Logger(AssetTranslationService.name);
+
   constructor(private prisma: PrismaService) {}
 
   // Helper to verify access to the parent asset version
@@ -180,26 +183,60 @@ export class AssetTranslationService {
     versionTag: string,
     languageCode: string,
   ): Promise<AssetTranslation> {
-    const existingTranslation = await this.findOneByLanguage(
-      projectId,
-      promptId,
-      assetKey,
-      versionTag,
-      languageCode,
-    );
+    this.logger.log(`Attempting to delete asset translation "${languageCode}" for version "${versionTag}" of asset "${assetKey}" in prompt "${promptId}" (project "${projectId}")`);
+
+    let existingTranslation: AssetTranslation;
     try {
-      return await this.prisma.assetTranslation.delete({
+      existingTranslation = await this.findOneByLanguage(
+        projectId,
+        promptId,
+        assetKey,
+        versionTag,
+        languageCode,
+      );
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        // Translation already doesn't exist - this is idempotent behavior
+        this.logger.log(`Asset translation "${languageCode}" not found for version "${versionTag}" of asset "${assetKey}" - already deleted or never existed`);
+        
+        // Return a mock translation object to maintain API compatibility
+        const mockTranslation: AssetTranslation = {
+          id: `deleted-${languageCode}-${versionTag}-${assetKey}-${Date.now()}`,
+          versionId: `unknown-version-${Date.now()}`,
+          languageCode,
+          value: '',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        
+        return mockTranslation; // Return successfully (idempotent)
+      }
+      
+      this.logger.error(`Error finding asset translation "${languageCode}" for deletion: ${error.message}`, error.stack);
+      throw error;
+    }
+
+    try {
+      const deletedTranslation = await this.prisma.assetTranslation.delete({
         where: {
           id: existingTranslation.id, // Use CUID
         },
       });
+
+      this.logger.log(`Successfully deleted asset translation "${languageCode}" (ID: ${existingTranslation.id}) for version "${versionTag}" of asset "${assetKey}"`);
+      return deletedTranslation;
+
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
-      ) {
-        throw new NotFoundException(`AssetTranslation not found.`);
+      // Handle specific Prisma errors for idempotent behavior
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        // Translation was deleted by another process between findOneByLanguage and delete
+        this.logger.log(`Asset translation "${languageCode}" was already deleted by another process during deletion attempt`);
+        
+        // Return the existing translation data (successful idempotent operation)
+        return existingTranslation;
       }
+
+      this.logger.error(`Failed to delete asset translation "${languageCode}" for version "${versionTag}" of asset "${assetKey}": ${error.message}`, error.stack);
       throw error;
     }
   }
