@@ -45,6 +45,13 @@ import {
   ThrottleLLM,
   ThrottleApi
 } from '../common/decorators/throttle.decorator';
+import {
+  AuditCreate,
+  AuditUpdate,
+  AuditDelete,
+  AuditView,
+  AuditList,
+} from '../common/decorators/audit.decorator';
 
 interface RequestWithUser extends ExpressRequest {
   user: {
@@ -93,6 +100,7 @@ export class PromptController {
     description: 'Forbidden - Insufficient permissions to create prompts'
   })
   @ThrottleCreation()
+  @AuditCreate('Prompt', { resourceNameField: 'name' })
   create(
     @Param('projectId') projectId: string,
     @Body() createPromptDto: CreatePromptDto,
@@ -122,6 +130,7 @@ export class PromptController {
   @CacheKey('prompts')
   @CacheTTL(3600)
   @ThrottleRead()
+  @AuditList('Prompt')
   findAll(
     @Param('projectId') projectId: string,
     @Req() req: any
@@ -162,6 +171,7 @@ export class PromptController {
   @CacheKey('prompt')
   @CacheTTL(3600)
   @ThrottleRead()
+  @AuditView('Prompt', { resourceIdParam: 'id', resourceNameField: 'name' })
   findOne(
     @Param('projectId') projectId: string,
     @Param('id') id: string,
@@ -212,6 +222,7 @@ export class PromptController {
     required: true
   })
   @ThrottleCreation()
+  @AuditUpdate('Prompt', { resourceIdParam: 'id', resourceNameField: 'name' })
   update(
     @Param('projectId') projectId: string,
     @Param('id') id: string,
@@ -255,12 +266,18 @@ export class PromptController {
     required: true
   })
   @ThrottleCreation()
+  @AuditDelete('Prompt', { resourceIdParam: 'id' })
   remove(
     @Param('projectId') projectId: string,
     @Param('id') id: string,
     @Req() req: any,
   ): Promise<void> {
-    return this.promptService.remove(id, projectId);
+    return this.promptService.remove(
+      id,
+      projectId,
+      req.user?.userId || req.user?.id,
+      req.user?.tenantId
+    );
   }
 
   @Post('generate-structure')

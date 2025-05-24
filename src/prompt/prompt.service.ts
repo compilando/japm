@@ -29,6 +29,11 @@ import * as path from 'node:path';
 import { RawExecutionService } from '../raw-execution/raw-execution.service';
 import { ExecuteRawDto } from '../raw-execution/dto/execute-raw.dto';
 import { LoadPromptStructureDto } from './dto/load-prompt-structure.dto';
+import { AuditLoggerService } from '../common/services/audit-logger.service';
+import { LogContext } from '../common/services/structured-logger.service';
+import { TenantService } from '../tenant/tenant.service';
+import { TagService } from '../tag/tag.service';
+import { EnvironmentService } from '../environment/environment.service';
 
 // Asumiendo que tenemos acceso a la función slugify (igual que en ProjectService)
 function slugify(text: string): string {
@@ -84,10 +89,13 @@ export class PromptService {
 
   constructor(
     private prisma: PrismaService,
-    private configService: ConfigService,
+    private tenantService: TenantService,
+    private tagService: TagService,
+    private environmentService: EnvironmentService,
     private projectService: ProjectService,
     private systemPromptService: SystemPromptService,
     private rawExecutionService: RawExecutionService,
+    private auditLogger: AuditLoggerService,
   ) { }
 
   // Helper to substitute variables (copied from RawExecutionService for now)
@@ -344,11 +352,74 @@ export class PromptService {
     }
   }
 
-  async remove(id: string, projectId: string): Promise<void> {
+  async remove(id: string, projectId: string, userId?: string, tenantId?: string): Promise<void> {
+    this.logger.log(`Attempting to delete prompt "${id}" from project "${projectId}"`);
+
+    // Get the prompt details before deletion for audit logging
     const prompt = await this.findOne(id, projectId);
-    await this.prisma.prompt.delete({
-      where: { id: prompt.id },
-    });
+
+    // Prepare audit context
+    const auditContext: LogContext = {
+      userId: userId || 'system',
+      tenantId: tenantId || 'unknown',
+      projectId: projectId,
+      resourceType: 'Prompt',
+      resourceId: id,
+      operation: 'DELETE_PROMPT',
+    };
+
+    // Store prompt data for audit log before deletion
+    const promptDataForAudit = {
+      id: prompt.id,
+      name: prompt.name,
+      description: prompt.description,
+      type: prompt.type,
+      projectId: prompt.projectId,
+      tenantId: prompt.tenantId,
+      createdAt: prompt.createdAt,
+      updatedAt: prompt.updatedAt,
+      versionsCount: prompt.versions?.length || 0,
+      tagsCount: prompt.tags?.length || 0,
+    };
+
+    try {
+      // Perform the deletion
+      await this.prisma.prompt.delete({
+        where: {
+          prompt_id_project_unique: {
+            id: prompt.id,
+            projectId: projectId,
+          }
+        },
+      });
+
+      this.logger.log(`Successfully deleted prompt "${id}" (${prompt.name}) from project "${projectId}"`);
+
+      // Log successful deletion
+      this.auditLogger.logDeletion(
+        auditContext,
+        'Prompt',
+        id,
+        prompt.name,
+        promptDataForAudit,
+      );
+
+    } catch (error) {
+      this.logger.error(`Failed to delete prompt "${id}" from project "${projectId}": ${error.message}`, error.stack);
+
+      // Log failed deletion
+      this.auditLogger.logDeletion(
+        auditContext,
+        'Prompt',
+        id,
+        prompt.name,
+        promptDataForAudit,
+        error,
+      );
+
+      // Re-throw the error
+      throw error;
+    }
   }
 
   // --- Version and Translation Methods --- //

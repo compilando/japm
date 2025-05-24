@@ -15,6 +15,8 @@ import { ServePromptModule } from './serve-prompt/serve-prompt.module';
 import { ProjectModule } from './project/project.module';
 import { AiModelModule } from './ai-model/ai-model.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
+import { StructuredLoggerMiddleware } from './common/middleware/structured-logger.middleware';
+import { LoggingModule } from './common/logging.module';
 import { TagModule } from './tag/tag.module';
 import { PromptVersionModule } from './prompt-version/prompt-version.module';
 import { PromptTranslationModule } from './prompt-translation/prompt-translation.module';
@@ -30,7 +32,8 @@ import { SystemPromptModule } from './system-prompt/system-prompt.module';
 import { RawExecutionModule } from './raw-execution/raw-execution.module';
 import { TenantModule } from './tenant/tenant.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 
 @Module({
   imports: [
@@ -87,6 +90,7 @@ import { APP_GUARD } from '@nestjs/core';
       },
     }),
     */
+    LoggingModule,
     PrismaModule,
     UserModule,
     AuthModule,
@@ -115,6 +119,11 @@ import { APP_GUARD } from '@nestjs/core';
   controllers: [AppController],
   providers: [
     AppService,
+    // Global Audit Interceptor
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
+    },
     // TEMPORALMENTE DESHABILITADO - THROTTLING CAUSANDO PROBLEMAS EN DESARROLLO
     /*
     // Aplicar ThrottlerGuard globalmente
@@ -127,6 +136,9 @@ import { APP_GUARD } from '@nestjs/core';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggerMiddleware).forRoutes('*');
+    consumer.apply(StructuredLoggerMiddleware).forRoutes('*');
+
+    // Optionally, you can also keep the original one for comparison during development
+    // consumer.apply(LoggerMiddleware).forRoutes('*');
   }
 }
