@@ -7,6 +7,10 @@ import { SystemPromptModule } from '../system-prompt/system-prompt.module';
 import { ConfigModule } from '@nestjs/config';
 import { RawExecutionModule } from '../raw-execution/raw-execution.module';
 import { RegionModule } from '../region/region.module';
+import { TenantModule } from '../tenant/tenant.module';
+import { TagModule } from '../tag/tag.module';
+import { EnvironmentModule } from '../environment/environment.module';
+import { LoggingModule } from '../common/logging.module';
 
 @Module({
   imports: [
@@ -16,6 +20,10 @@ import { RegionModule } from '../region/region.module';
     ConfigModule,
     RawExecutionModule,
     RegionModule,
+    TenantModule,
+    TagModule,
+    EnvironmentModule,
+    LoggingModule,
   ],
   controllers: [PromptController],
   providers: [PromptService],

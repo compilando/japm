@@ -82,21 +82,50 @@ export class StructuredLoggerService {
     }
 
     private logStructured(entry: StructuredLogEntry): void {
-        const logMessage = JSON.stringify(entry, null, this.environment === 'development' ? 2 : 0);
+        // Replacer para manejar referencias circulares y objetos problemáticos
+        const replacer = (key: string, value: any) => {
+            // Evitar referencias circulares creando un Set para trackear objetos visitados
+            if (value && typeof value === 'object') {
+                // Filtrar objetos problemáticos específicos
+                if (value.constructor && (
+                    value.constructor.name === 'Socket' ||
+                    value.constructor.name === 'HTTPParser' ||
+                    value.constructor.name === 'TLSSocket' ||
+                    value.constructor.name === 'IncomingMessage' ||
+                    value.constructor.name === 'ServerResponse'
+                )) {
+                    return '[Filtered Object]';
+                }
 
-        switch (entry.level) {
-            case 'error':
-                this.logger.error(logMessage, entry.context?.operation || 'StructuredLog');
-                break;
-            case 'warn':
-                this.logger.warn(logMessage, entry.context?.operation || 'StructuredLog');
-                break;
-            case 'info':
-                this.logger.log(logMessage, entry.context?.operation || 'StructuredLog');
-                break;
-            case 'debug':
-                this.logger.debug(logMessage, entry.context?.operation || 'StructuredLog');
-                break;
+                // Si el objeto tiene propiedades circulares comunes, filtrarlas
+                if (key === 'socket' || key === 'parser' || key === 'req' || key === 'res') {
+                    return '[Filtered Circular Reference]';
+                }
+            }
+            return value;
+        };
+
+        try {
+            const logMessage = JSON.stringify(entry, replacer, this.environment === 'development' ? 2 : 0);
+
+            switch (entry.level) {
+                case 'error':
+                    this.logger.error(logMessage, entry.context?.operation || 'StructuredLog');
+                    break;
+                case 'warn':
+                    this.logger.warn(logMessage, entry.context?.operation || 'StructuredLog');
+                    break;
+                case 'info':
+                    this.logger.log(logMessage, entry.context?.operation || 'StructuredLog');
+                    break;
+                case 'debug':
+                    this.logger.debug(logMessage, entry.context?.operation || 'StructuredLog');
+                    break;
+            }
+        } catch (error) {
+            // Fallback si aún hay problemas de serialización
+            const fallbackMessage = `[JSON Serialization Error] ${entry.message} - Context: ${JSON.stringify(entry.context, null, 0)}`;
+            this.logger.error(fallbackMessage, entry.context?.operation || 'StructuredLog');
         }
     }
 

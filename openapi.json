@@ -1924,6 +1924,853 @@
         ]
       }
     },
+    "/api/tenants": {
+      "post": {
+        "description": "Creates a new tenant in the system. This operation requires global admin privileges.",
+        "operationId": "TenantController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tenant successfully created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data - Check the request body format"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Global admin role required"
+          },
+          "409": {
+            "description": "Tenant name already exists - The provided name is already in use"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create new tenant",
+        "tags": [
+          "Tenants"
+        ]
+      },
+      "get": {
+        "description": "Retrieves a list of all tenants in the system. This operation requires global admin privileges.",
+        "operationId": "TenantController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of tenants retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenantDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Global admin role required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all tenants",
+        "tags": [
+          "Tenants"
+        ]
+      }
+    },
+    "/api/tenants/{tenantId}": {
+      "get": {
+        "description": "Retrieves a specific tenant by their unique ID. Accessible by global admins or tenant admins of the specified tenant.",
+        "operationId": "TenantController_findOne",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "Unique tenant identifier (UUID)",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant found successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions to access this tenant"
+          },
+          "404": {
+            "description": "Tenant not found - The specified ID does not exist"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get tenant by ID",
+        "tags": [
+          "Tenants"
+        ]
+      },
+      "patch": {
+        "description": "Updates an existing tenant's information. Accessible by global admins or tenant admins of the specified tenant.",
+        "operationId": "TenantController_update",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "Unique tenant identifier to update (UUID)",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tenant updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data - Check the request body format"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions to update this tenant"
+          },
+          "404": {
+            "description": "Tenant not found - The specified ID does not exist"
+          },
+          "409": {
+            "description": "Tenant name already exists - The provided name is already in use"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update tenant",
+        "tags": [
+          "Tenants"
+        ]
+      },
+      "delete": {
+        "description": "Permanently deletes a tenant from the system. This is a destructive operation that requires global admin privileges.",
+        "operationId": "TenantController_remove",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "description": "Unique tenant identifier to delete (UUID)",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Tenant successfully deleted"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - Global admin role required"
+          },
+          "404": {
+            "description": "Tenant not found - The specified ID does not exist"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete tenant",
+        "tags": [
+          "Tenants"
+        ]
+      }
+    },
+    "/api/projects/{projectId}/tags": {
+      "post": {
+        "operationId": "TagController_create",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "ID del proyecto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTagDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Etiqueta creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos."
+          },
+          "404": {
+            "description": "Proyecto no encontrado."
+          },
+          "409": {
+            "description": "Conflicto, ya existe una etiqueta con ese nombre en el proyecto."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crea una nueva etiqueta para un proyecto",
+        "tags": [
+          "Tags"
+        ]
+      },
+      "get": {
+        "operationId": "TagController_findAll",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "ID del proyecto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de etiquetas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TagDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Proyecto no encontrado."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtiene todas las etiquetas de un proyecto",
+        "tags": [
+          "Tags"
+        ]
+      }
+    },
+    "/api/projects/{projectId}/tags/{tagId}": {
+      "get": {
+        "operationId": "TagController_findOne",
+        "parameters": [
+          {
+            "name": "tagId",
+            "required": true,
+            "in": "path",
+            "description": "ID único de la etiqueta (CUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "ID del proyecto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Etiqueta encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Proyecto o Etiqueta no encontrada."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtiene una etiqueta por su ID dentro de un proyecto",
+        "tags": [
+          "Tags"
+        ]
+      },
+      "patch": {
+        "operationId": "TagController_update",
+        "parameters": [
+          {
+            "name": "tagId",
+            "required": true,
+            "in": "path",
+            "description": "ID único de la etiqueta a actualizar (CUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "ID del proyecto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTagDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Etiqueta actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos."
+          },
+          "404": {
+            "description": "Proyecto o Etiqueta no encontrada."
+          },
+          "409": {
+            "description": "Conflicto, ya existe una etiqueta con el nuevo nombre en el proyecto."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualiza una etiqueta existente en un proyecto",
+        "tags": [
+          "Tags"
+        ]
+      },
+      "delete": {
+        "operationId": "TagController_remove",
+        "parameters": [
+          {
+            "name": "tagId",
+            "required": true,
+            "in": "path",
+            "description": "ID único de la etiqueta a eliminar (CUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "ID del proyecto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Etiqueta eliminada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Proyecto o Etiqueta no encontrada."
+          },
+          "409": {
+            "description": "Conflicto, la etiqueta está en uso."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elimina una etiqueta de un proyecto",
+        "tags": [
+          "Tags"
+        ]
+      }
+    },
+    "/api/projects/{projectId}/tags/by-name/{name}": {
+      "get": {
+        "operationId": "TagController_findByName",
+        "parameters": [
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "description": "Nombre único de la etiqueta en el proyecto",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "ID del proyecto",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Etiqueta encontrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Proyecto o Etiqueta no encontrada."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Obtiene una etiqueta por su nombre dentro de un proyecto",
+        "tags": [
+          "Tags"
+        ]
+      }
+    },
+    "/api/projects/{projectId}/environments": {
+      "post": {
+        "operationId": "EnvironmentController_create",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEnvironmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Environment created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateEnvironmentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid data."
+          },
+          "404": {
+            "description": "Project not found."
+          },
+          "409": {
+            "description": "Conflict, an environment with this name already exists in the project."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Creates a new environment for a project",
+        "tags": [
+          "Environments"
+        ]
+      },
+      "get": {
+        "operationId": "EnvironmentController_findAll",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of environments.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CreateEnvironmentDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Gets all environments for a project",
+        "tags": [
+          "Environments"
+        ]
+      }
+    },
+    "/api/projects/{projectId}/environments/{environmentId}": {
+      "get": {
+        "operationId": "EnvironmentController_findOne",
+        "parameters": [
+          {
+            "name": "environmentId",
+            "required": true,
+            "in": "path",
+            "description": "Unique environment ID (CUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Environment found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateEnvironmentDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project or Environment not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Gets an environment by its ID within a project",
+        "tags": [
+          "Environments"
+        ]
+      },
+      "patch": {
+        "operationId": "EnvironmentController_update",
+        "parameters": [
+          {
+            "name": "environmentId",
+            "required": true,
+            "in": "path",
+            "description": "Unique ID of the environment to update (CUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEnvironmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Environment updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateEnvironmentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid data."
+          },
+          "404": {
+            "description": "Project or Environment not found."
+          },
+          "409": {
+            "description": "Conflict, an environment with the new name already exists in the project."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Updates an existing environment in a project",
+        "tags": [
+          "Environments"
+        ]
+      },
+      "delete": {
+        "operationId": "EnvironmentController_remove",
+        "parameters": [
+          {
+            "name": "environmentId",
+            "required": true,
+            "in": "path",
+            "description": "Unique ID of the environment to delete (CUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Environment deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateEnvironmentDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project or Environment not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Deletes an environment from a project",
+        "tags": [
+          "Environments"
+        ]
+      }
+    },
+    "/api/projects/{projectId}/environments/by-name/{name}": {
+      "get": {
+        "operationId": "EnvironmentController_findByName",
+        "parameters": [
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "description": "Unique environment name in the project",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "description": "Project ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Environment found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateEnvironmentDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project or Environment not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Gets an environment by its name within a project",
+        "tags": [
+          "Environments"
+        ]
+      }
+    },
     "/api/projects/{projectId}/prompts/{promptId}/assets": {
       "post": {
         "operationId": "PromptAssetController_create",
@@ -3066,314 +3913,6 @@
         ]
       }
     },
-    "/api/projects/{projectId}/tags": {
-      "post": {
-        "operationId": "TagController_create",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "ID del proyecto",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTagDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Etiqueta creada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TagDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos inválidos."
-          },
-          "404": {
-            "description": "Proyecto no encontrado."
-          },
-          "409": {
-            "description": "Conflicto, ya existe una etiqueta con ese nombre en el proyecto."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Crea una nueva etiqueta para un proyecto",
-        "tags": [
-          "Tags"
-        ]
-      },
-      "get": {
-        "operationId": "TagController_findAll",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "ID del proyecto",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Lista de etiquetas.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TagDto"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Proyecto no encontrado."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Obtiene todas las etiquetas de un proyecto",
-        "tags": [
-          "Tags"
-        ]
-      }
-    },
-    "/api/projects/{projectId}/tags/{tagId}": {
-      "get": {
-        "operationId": "TagController_findOne",
-        "parameters": [
-          {
-            "name": "tagId",
-            "required": true,
-            "in": "path",
-            "description": "ID único de la etiqueta (CUID)",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "ID del proyecto",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Etiqueta encontrada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TagDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Proyecto o Etiqueta no encontrada."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Obtiene una etiqueta por su ID dentro de un proyecto",
-        "tags": [
-          "Tags"
-        ]
-      },
-      "patch": {
-        "operationId": "TagController_update",
-        "parameters": [
-          {
-            "name": "tagId",
-            "required": true,
-            "in": "path",
-            "description": "ID único de la etiqueta a actualizar (CUID)",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "ID del proyecto",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateTagDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Etiqueta actualizada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TagDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Datos inválidos."
-          },
-          "404": {
-            "description": "Proyecto o Etiqueta no encontrada."
-          },
-          "409": {
-            "description": "Conflicto, ya existe una etiqueta con el nuevo nombre en el proyecto."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Actualiza una etiqueta existente en un proyecto",
-        "tags": [
-          "Tags"
-        ]
-      },
-      "delete": {
-        "operationId": "TagController_remove",
-        "parameters": [
-          {
-            "name": "tagId",
-            "required": true,
-            "in": "path",
-            "description": "ID único de la etiqueta a eliminar (CUID)",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "ID del proyecto",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Etiqueta eliminada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TagDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Proyecto o Etiqueta no encontrada."
-          },
-          "409": {
-            "description": "Conflicto, la etiqueta está en uso."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Elimina una etiqueta de un proyecto",
-        "tags": [
-          "Tags"
-        ]
-      }
-    },
-    "/api/projects/{projectId}/tags/by-name/{name}": {
-      "get": {
-        "operationId": "TagController_findByName",
-        "parameters": [
-          {
-            "name": "name",
-            "required": true,
-            "in": "path",
-            "description": "Nombre único de la etiqueta en el proyecto",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "ID del proyecto",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Etiqueta encontrada.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TagDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Proyecto o Etiqueta no encontrada."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Obtiene una etiqueta por su nombre dentro de un proyecto",
-        "tags": [
-          "Tags"
-        ]
-      }
-    },
     "/api/projects/{projectId}/prompts/{promptId}/versions/{versionTag}": {
       "get": {
         "operationId": "PromptVersionController_findOneByTag",
@@ -3743,240 +4282,6 @@
         "summary": "Unpublish a prompt version from the marketplace",
         "tags": [
           "Prompt Versions (within Project/Prompt)"
-        ]
-      }
-    },
-    "/api/tenants": {
-      "post": {
-        "description": "Creates a new tenant in the system. This operation requires global admin privileges.",
-        "operationId": "TenantController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateTenantDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Tenant successfully created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid input data - Check the request body format"
-          },
-          "401": {
-            "description": "Unauthorized - Invalid or expired token"
-          },
-          "403": {
-            "description": "Forbidden - Global admin role required"
-          },
-          "409": {
-            "description": "Tenant name already exists - The provided name is already in use"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create new tenant",
-        "tags": [
-          "Tenants"
-        ]
-      },
-      "get": {
-        "description": "Retrieves a list of all tenants in the system. This operation requires global admin privileges.",
-        "operationId": "TenantController_findAll",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "List of tenants retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TenantDto"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - Invalid or expired token"
-          },
-          "403": {
-            "description": "Forbidden - Global admin role required"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get all tenants",
-        "tags": [
-          "Tenants"
-        ]
-      }
-    },
-    "/api/tenants/{tenantId}": {
-      "get": {
-        "description": "Retrieves a specific tenant by their unique ID. Accessible by global admins or tenant admins of the specified tenant.",
-        "operationId": "TenantController_findOne",
-        "parameters": [
-          {
-            "name": "tenantId",
-            "required": true,
-            "in": "path",
-            "description": "Unique tenant identifier (UUID)",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Tenant found successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - Invalid or expired token"
-          },
-          "403": {
-            "description": "Forbidden - Insufficient permissions to access this tenant"
-          },
-          "404": {
-            "description": "Tenant not found - The specified ID does not exist"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get tenant by ID",
-        "tags": [
-          "Tenants"
-        ]
-      },
-      "patch": {
-        "description": "Updates an existing tenant's information. Accessible by global admins or tenant admins of the specified tenant.",
-        "operationId": "TenantController_update",
-        "parameters": [
-          {
-            "name": "tenantId",
-            "required": true,
-            "in": "path",
-            "description": "Unique tenant identifier to update (UUID)",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateTenantDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Tenant updated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid input data - Check the request body format"
-          },
-          "401": {
-            "description": "Unauthorized - Invalid or expired token"
-          },
-          "403": {
-            "description": "Forbidden - Insufficient permissions to update this tenant"
-          },
-          "404": {
-            "description": "Tenant not found - The specified ID does not exist"
-          },
-          "409": {
-            "description": "Tenant name already exists - The provided name is already in use"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Update tenant",
-        "tags": [
-          "Tenants"
-        ]
-      },
-      "delete": {
-        "description": "Permanently deletes a tenant from the system. This is a destructive operation that requires global admin privileges.",
-        "operationId": "TenantController_remove",
-        "parameters": [
-          {
-            "name": "tenantId",
-            "required": true,
-            "in": "path",
-            "description": "Unique tenant identifier to delete (UUID)",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Tenant successfully deleted"
-          },
-          "401": {
-            "description": "Unauthorized - Invalid or expired token"
-          },
-          "403": {
-            "description": "Forbidden - Global admin role required"
-          },
-          "404": {
-            "description": "Tenant not found - The specified ID does not exist"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Delete tenant",
-        "tags": [
-          "Tenants"
         ]
       }
     },
@@ -5332,311 +5637,6 @@
         ]
       }
     },
-    "/api/projects/{projectId}/environments": {
-      "post": {
-        "operationId": "EnvironmentController_create",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "Project ID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateEnvironmentDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Environment created.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateEnvironmentDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid data."
-          },
-          "404": {
-            "description": "Project not found."
-          },
-          "409": {
-            "description": "Conflict, an environment with this name already exists in the project."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Creates a new environment for a project",
-        "tags": [
-          "Environments"
-        ]
-      },
-      "get": {
-        "operationId": "EnvironmentController_findAll",
-        "parameters": [
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "Project ID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of environments.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CreateEnvironmentDto"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Project not found."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Gets all environments for a project",
-        "tags": [
-          "Environments"
-        ]
-      }
-    },
-    "/api/projects/{projectId}/environments/{environmentId}": {
-      "get": {
-        "operationId": "EnvironmentController_findOne",
-        "parameters": [
-          {
-            "name": "environmentId",
-            "required": true,
-            "in": "path",
-            "description": "Unique environment ID (CUID)",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "Project ID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Environment found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateEnvironmentDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Project or Environment not found."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Gets an environment by its ID within a project",
-        "tags": [
-          "Environments"
-        ]
-      },
-      "patch": {
-        "operationId": "EnvironmentController_update",
-        "parameters": [
-          {
-            "name": "environmentId",
-            "required": true,
-            "in": "path",
-            "description": "Unique ID of the environment to update (CUID)",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "Project ID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateEnvironmentDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Environment updated.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateEnvironmentDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid data."
-          },
-          "404": {
-            "description": "Project or Environment not found."
-          },
-          "409": {
-            "description": "Conflict, an environment with the new name already exists in the project."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Updates an existing environment in a project",
-        "tags": [
-          "Environments"
-        ]
-      },
-      "delete": {
-        "operationId": "EnvironmentController_remove",
-        "parameters": [
-          {
-            "name": "environmentId",
-            "required": true,
-            "in": "path",
-            "description": "Unique ID of the environment to delete (CUID)",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "Project ID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Environment deleted.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateEnvironmentDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Project or Environment not found."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Deletes an environment from a project",
-        "tags": [
-          "Environments"
-        ]
-      }
-    },
-    "/api/projects/{projectId}/environments/by-name/{name}": {
-      "get": {
-        "operationId": "EnvironmentController_findByName",
-        "parameters": [
-          {
-            "name": "name",
-            "required": true,
-            "in": "path",
-            "description": "Unique environment name in the project",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projectId",
-            "required": true,
-            "in": "path",
-            "description": "Project ID",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Environment found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateEnvironmentDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Project or Environment not found."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Gets an environment by its name within a project",
-        "tags": [
-          "Environments"
-        ]
-      }
-    },
     "/api/llm-execution/execute": {
       "post": {
         "operationId": "LlmExecutionController_executeLlm",
@@ -6603,6 +6603,214 @@
           "aiModelId"
         ]
       },
+      "CreateTenantAdminUserDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email for the initial tenant admin user.",
+            "example": "admin@acme.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "description": "Password for the initial tenant admin user.",
+            "example": "Str0ngP@sswOrd!"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the initial tenant admin user.",
+            "example": "Admin User"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "CreateTenantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the tenant.",
+            "example": "Acme Corporation"
+          },
+          "marketplaceRequiresApproval": {
+            "type": "boolean",
+            "description": "Indicates if marketplace prompt versions require approval for this tenant. Defaults to true.",
+            "example": true
+          },
+          "initialAdminUser": {
+            "description": "Details for creating an initial admin user for this tenant.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CreateTenantAdminUserDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "initialAdminUser"
+        ]
+      },
+      "TenantDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The unique identifier of the tenant.",
+            "example": "clxrbspgy0000u0fwh8zgy17u"
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the tenant.",
+            "example": "Acme Corporation"
+          },
+          "marketplaceRequiresApproval": {
+            "type": "boolean",
+            "description": "Indicates if marketplace prompt versions require approval for this tenant.",
+            "example": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "The date and time the tenant was created.",
+            "example": "2024-01-01T12:00:00.000Z"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "The date and time the tenant was last updated.",
+            "example": "2024-01-02T15:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "marketplaceRequiresApproval",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateTenantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The new name of the tenant.",
+            "example": "Acme Corp Innovations"
+          },
+          "marketplaceRequiresApproval": {
+            "type": "boolean",
+            "description": "Set if marketplace prompt versions require approval for this tenant.",
+            "example": false
+          }
+        }
+      },
+      "CreateTagDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Nombre único de la etiqueta",
+            "example": "customer-feedback"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción opcional de la etiqueta",
+            "example": "Etiquetas relacionadas con comentarios de clientes."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "TagDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique ID of the tag (CUID)",
+            "example": "clxrb8rnr0000k4yl9k5l3w1e"
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique tag name within the project",
+            "example": "customer_feedback"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the tag",
+            "example": "Tags related to customer feedback."
+          },
+          "projectId": {
+            "type": "string",
+            "description": "ID of the project this tag belongs to (CUID)",
+            "example": "clxrb7t8h0000k4ylbafh4n6y"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "projectId"
+        ]
+      },
+      "UpdateTagDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Nuevo nombre único de la etiqueta (opcional)",
+            "example": "user-feedback"
+          },
+          "description": {
+            "type": "string",
+            "description": "Nueva descripción opcional de la etiqueta",
+            "example": "Comentarios generales de los usuarios."
+          }
+        }
+      },
+      "CreateEnvironmentDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Unique name of the environment",
+            "example": "production"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description of the environment",
+            "example": "Main production environment"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateEnvironmentDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "New unique name for the environment (optional)",
+            "example": "staging"
+          },
+          "description": {
+            "type": "string",
+            "description": "New optional description for the environment",
+            "example": "Pre-production testing environment"
+          }
+        }
+      },
       "CreatePromptAssetDto": {
         "type": "object",
         "properties": {
@@ -6903,72 +7111,6 @@
           }
         }
       },
-      "CreateTagDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 255,
-            "description": "Nombre único de la etiqueta",
-            "example": "customer-feedback"
-          },
-          "description": {
-            "type": "string",
-            "description": "Descripción opcional de la etiqueta",
-            "example": "Etiquetas relacionadas con comentarios de clientes."
-          }
-        },
-        "required": [
-          "name"
-        ]
-      },
-      "TagDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Unique ID of the tag (CUID)",
-            "example": "clxrb8rnr0000k4yl9k5l3w1e"
-          },
-          "name": {
-            "type": "string",
-            "description": "Unique tag name within the project",
-            "example": "customer_feedback"
-          },
-          "description": {
-            "type": "string",
-            "description": "Description of the tag",
-            "example": "Tags related to customer feedback."
-          },
-          "projectId": {
-            "type": "string",
-            "description": "ID of the project this tag belongs to (CUID)",
-            "example": "clxrb7t8h0000k4ylbafh4n6y"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "description",
-          "projectId"
-        ]
-      },
-      "UpdateTagDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 255,
-            "description": "Nuevo nombre único de la etiqueta (opcional)",
-            "example": "user-feedback"
-          },
-          "description": {
-            "type": "string",
-            "description": "Nueva descripción opcional de la etiqueta",
-            "example": "Comentarios generales de los usuarios."
-          }
-        }
-      },
       "UpdatePromptVersionDto": {
         "type": "object",
         "properties": {
@@ -7001,113 +7143,6 @@
             "items": {
               "$ref": "#/components/schemas/InitialTranslationDto"
             }
-          }
-        }
-      },
-      "CreateTenantAdminUserDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email",
-            "description": "Email for the initial tenant admin user.",
-            "example": "admin@acme.com"
-          },
-          "password": {
-            "type": "string",
-            "minLength": 8,
-            "description": "Password for the initial tenant admin user.",
-            "example": "Str0ngP@sswOrd!"
-          },
-          "name": {
-            "type": "string",
-            "description": "Name for the initial tenant admin user.",
-            "example": "Admin User"
-          }
-        },
-        "required": [
-          "email",
-          "password"
-        ]
-      },
-      "CreateTenantDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "The name of the tenant.",
-            "example": "Acme Corporation"
-          },
-          "marketplaceRequiresApproval": {
-            "type": "boolean",
-            "description": "Indicates if marketplace prompt versions require approval for this tenant. Defaults to true.",
-            "example": true
-          },
-          "initialAdminUser": {
-            "description": "Details for creating an initial admin user for this tenant.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/CreateTenantAdminUserDto"
-              }
-            ]
-          }
-        },
-        "required": [
-          "name",
-          "initialAdminUser"
-        ]
-      },
-      "TenantDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "The unique identifier of the tenant.",
-            "example": "clxrbspgy0000u0fwh8zgy17u"
-          },
-          "name": {
-            "type": "string",
-            "description": "The name of the tenant.",
-            "example": "Acme Corporation"
-          },
-          "marketplaceRequiresApproval": {
-            "type": "boolean",
-            "description": "Indicates if marketplace prompt versions require approval for this tenant.",
-            "example": true
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "The date and time the tenant was created.",
-            "example": "2024-01-01T12:00:00.000Z"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "The date and time the tenant was last updated.",
-            "example": "2024-01-02T15:30:00.000Z"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "marketplaceRequiresApproval",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "UpdateTenantDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "The new name of the tenant.",
-            "example": "Acme Corp Innovations"
-          },
-          "marketplaceRequiresApproval": {
-            "type": "boolean",
-            "description": "Set if marketplace prompt versions require approval for this tenant.",
-            "example": false
           }
         }
       },
@@ -7216,41 +7251,6 @@
           "value": {
             "type": "string",
             "description": "Valor del asset traducido a este idioma"
-          }
-        }
-      },
-      "CreateEnvironmentDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 255,
-            "description": "Unique name of the environment",
-            "example": "production"
-          },
-          "description": {
-            "type": "string",
-            "description": "Optional description of the environment",
-            "example": "Main production environment"
-          }
-        },
-        "required": [
-          "name"
-        ]
-      },
-      "UpdateEnvironmentDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 255,
-            "description": "New unique name for the environment (optional)",
-            "example": "staging"
-          },
-          "description": {
-            "type": "string",
-            "description": "New optional description for the environment",
-            "example": "Pre-production testing environment"
           }
         }
       },
