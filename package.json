@@ -18,7 +18,12 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.config.ts",
-    "test:e2e:watch": "jest --config ./test/jest-e2e.config.ts --watch",
+    "test:unit": "jest --testPathIgnorePatterns=e2e",
+    "test:services": "jest --testPathPattern=\".*\\.service\\.spec\\.ts$\" --verbose",
+    "test:prompt": "jest src/prompt/tests/prompt.service.spec.ts --verbose",
+    "test:tenant": "jest src/tenant/tests/tenant.service.spec.ts --verbose",
+    "test:llm": "jest src/llm-execution/tests/llm-execution.service.spec.ts --verbose",
+    "test:project": "jest src/project/tests/project.service.spec.ts --verbose",
     "seed:all": "ts-node seed/seed.ts && ts-node seed/seed.codegen.ts && ts-node seed/seed.invoice-extraction.ts && ts-node seed/seed.prompt-types.ts"
   },
   "prisma": {
