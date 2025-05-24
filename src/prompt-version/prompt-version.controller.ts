@@ -30,6 +30,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ProjectGuard } from '../common/guards/project.guard';
 import { CreatePromptVersionDto } from 'src/prompt/dto/create-prompt-version.dto';
 import { ResolveAssetsQueryDto } from '../serve-prompt/dto/resolve-assets-query.dto';
+import { ThrottleCreation, ThrottleRead } from '../common/decorators/throttle.decorator';
 
 @ApiTags('Prompt Versions (within Project/Prompt)')
 @ApiBearerAuth()
@@ -39,6 +40,7 @@ export class PromptVersionController {
   constructor(private readonly service: PromptVersionService) { }
 
   @Post()
+  @ThrottleCreation()
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   @ApiOperation({
     summary: 'Create a new version for a specific prompt within a project',
@@ -67,6 +69,7 @@ export class PromptVersionController {
   }
 
   @Get()
+  @ThrottleRead()
   @ApiOperation({
     summary: 'Get all versions for a specific prompt within a project',
   })
@@ -88,6 +91,7 @@ export class PromptVersionController {
   }
 
   @Get(':versionTag')
+  @ThrottleRead()
   @ApiOperation({
     summary:
       'Get a specific prompt version by its tag within a project/prompt. Allows resolving assets.',
@@ -151,6 +155,7 @@ export class PromptVersionController {
   }
 
   @Patch(':versionTag')
+  @ThrottleCreation()
   @UsePipes(
     new ValidationPipe({
       whitelist: true,
@@ -188,6 +193,7 @@ export class PromptVersionController {
   }
 
   @Delete(':versionTag')
+  @ThrottleCreation()
   @ApiOperation({
     summary:
       'Delete a specific prompt version by its tag within a project/prompt',
@@ -214,6 +220,7 @@ export class PromptVersionController {
   // --- Marketplace Endpoints ---
 
   @Post(':versionTag/request-publish')
+  @ThrottleCreation()
   @ApiOperation({
     summary: 'Request to publish a prompt version to the marketplace',
   })
@@ -245,6 +252,7 @@ export class PromptVersionController {
   }
 
   @Post(':versionTag/unpublish')
+  @ThrottleCreation()
   @ApiOperation({ summary: 'Unpublish a prompt version from the marketplace' })
   @ApiParam({ name: 'projectId', description: 'Project ID' })
   @ApiParam({ name: 'promptId', description: 'Prompt ID (slug)' })

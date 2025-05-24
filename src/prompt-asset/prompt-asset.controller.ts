@@ -34,6 +34,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request as ExpressRequest } from 'express';
 import { Logger } from '@nestjs/common';
 import { PROJECT_ID_PARAM_KEY } from '../common/guards/project.guard';
+import { ThrottleCreation, ThrottleRead } from '../common/decorators/throttle.decorator';
 
 interface RequestWithProject extends ExpressRequest {
   projectId: string;
@@ -47,9 +48,10 @@ interface RequestWithProject extends ExpressRequest {
 export class PromptAssetController {
   private readonly logger = new Logger(PromptAssetController.name);
 
-  constructor(private readonly service: PromptAssetService) {}
+  constructor(private readonly service: PromptAssetService) { }
 
   @Post()
+  @ThrottleCreation()
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   @ApiOperation({
     summary:
@@ -89,6 +91,7 @@ export class PromptAssetController {
   }
 
   @Get()
+  @ThrottleRead()
   @ApiOperation({
     summary: 'Obtiene todos los prompt assets de un prompt específico',
   })
@@ -115,6 +118,7 @@ export class PromptAssetController {
   }
 
   @Get(':assetKey')
+  @ThrottleRead()
   @ApiOperation({
     summary:
       'Obtiene un prompt asset por su key dentro de un prompt específico',
@@ -143,6 +147,7 @@ export class PromptAssetController {
   }
 
   @Patch(':assetKey')
+  @ThrottleCreation()
   @UsePipes(
     new ValidationPipe({
       whitelist: true,
@@ -181,6 +186,7 @@ export class PromptAssetController {
   }
 
   @Delete(':assetKey')
+  @ThrottleCreation()
   @ApiOperation({
     summary:
       'Elimina un prompt asset (y sus versiones/traducciones por Cascade) dentro de un prompt',

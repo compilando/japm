@@ -24,6 +24,7 @@ import {
   ApiProperty,
 } from '@nestjs/swagger';
 import { User } from '@prisma/client';
+import { ThrottleAuth, ThrottleRead } from '../common/decorators/throttle.decorator';
 
 // DTO for Login response
 class LoginResponse {
@@ -86,6 +87,7 @@ export class AuthController {
   })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   @HttpCode(HttpStatus.CREATED)
+  @ThrottleAuth() // 5 intentos por 15 minutos
   async register(
     @Body() registerDto: RegisterDto,
   ): Promise<Omit<User, 'password'>> {
@@ -113,6 +115,7 @@ export class AuthController {
     description: 'Invalid credentials - Email or password is incorrect'
   })
   @HttpCode(HttpStatus.OK) // Change from 201 to 200 for login
+  @ThrottleAuth() // 5 intentos por 15 minutos
   async login(@Request() req): Promise<{ access_token: string }> {
     // LocalAuthGuard (via LocalStrategy) already validated and attached user to req.user
     return this.authService.login(req.user); // user here does not have password
@@ -135,6 +138,7 @@ export class AuthController {
     status: 401,
     description: 'Unauthorized - Invalid or expired token'
   })
+  @ThrottleRead() // 50 requests por minuto
   getProfile(@Request() req): Promise<Omit<User, 'password'>> {
     // JwtAuthGuard (via JwtStrategy) validated the token and attached data to req.user
     // Assuming JwtStrategy.validate returns { userId: string, email: string }

@@ -5678,6 +5678,9 @@
           "404": {
             "description": "AI Model not found."
           },
+          "429": {
+            "description": "Too Many Requests - Rate limit exceeded."
+          },
           "500": {
             "description": "Internal server error (API Key config, LLM call failed, etc.)."
           }

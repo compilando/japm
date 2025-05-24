@@ -17,6 +17,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Assuming authentication is needed
+import { ThrottleLLM } from '../common/decorators/throttle.decorator';
 
 @ApiTags('LLM Execution')
 @ApiBearerAuth() // Add if authentication is required
@@ -25,10 +26,11 @@ export class LlmExecutionController {
   // Inject Logger with context
   private readonly logger = new Logger(LlmExecutionController.name);
 
-  constructor(private readonly llmExecutionService: LlmExecutionService) {}
+  constructor(private readonly llmExecutionService: LlmExecutionService) { }
 
   @Post('execute')
   @UseGuards(JwtAuthGuard) // Apply guard if needed
+  @ThrottleLLM() // 5 requests por minuto - muy restrictivo por costo
   @UsePipes(
     new ValidationPipe({
       transform: true,
@@ -63,6 +65,7 @@ export class LlmExecutionController {
       'Internal server error (API Key config, LLM call failed, etc.).',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' }) // If using JwtAuthGuard
+  @ApiResponse({ status: 429, description: 'Too Many Requests - Rate limit exceeded.' })
   async executeLlm(
     @Body() executeLlmDto: ExecuteLlmDto,
   ): Promise<{ result: string; modelUsed: string; providerUsed: string }> {

@@ -39,6 +39,12 @@ import { Role } from 'src/auth/enums/role.enum';
 import { CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { RegionService } from '../region/region.service';
 import { Request as ExpressRequest } from 'express';
+import {
+  ThrottleCreation,
+  ThrottleRead,
+  ThrottleLLM,
+  ThrottleApi
+} from '../common/decorators/throttle.decorator';
 
 interface RequestWithUser extends ExpressRequest {
   user: {
@@ -86,6 +92,7 @@ export class PromptController {
     status: HttpStatus.FORBIDDEN,
     description: 'Forbidden - Insufficient permissions to create prompts'
   })
+  @ThrottleCreation()
   create(
     @Param('projectId') projectId: string,
     @Body() createPromptDto: CreatePromptDto,
@@ -114,6 +121,7 @@ export class PromptController {
   })
   @CacheKey('prompts')
   @CacheTTL(3600)
+  @ThrottleRead()
   findAll(
     @Param('projectId') projectId: string,
     @Req() req: any
@@ -153,6 +161,7 @@ export class PromptController {
   })
   @CacheKey('prompt')
   @CacheTTL(3600)
+  @ThrottleRead()
   findOne(
     @Param('projectId') projectId: string,
     @Param('id') id: string,
@@ -202,6 +211,7 @@ export class PromptController {
     description: 'Unique prompt identifier to update (slug or UUID)',
     required: true
   })
+  @ThrottleCreation()
   update(
     @Param('projectId') projectId: string,
     @Param('id') id: string,
@@ -244,6 +254,7 @@ export class PromptController {
     description: 'Unique prompt identifier to delete (slug or UUID)',
     required: true
   })
+  @ThrottleCreation()
   remove(
     @Param('projectId') projectId: string,
     @Param('id') id: string,
@@ -288,6 +299,7 @@ export class PromptController {
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 404, description: 'Proyecto no encontrado' })
+  @ThrottleLLM()
   async generateStructure(
     @Param('projectId') projectId: string,
     @Body() generatePromptStructureDto: GeneratePromptStructureDto,
@@ -346,6 +358,7 @@ export class PromptController {
   @Post(':id/load-structure')
   @ApiOperation({ summary: 'Load prompt structure' })
   @ApiResponse({ status: 200, description: 'Prompt structure loaded successfully' })
+  @ThrottleRead()
   async loadStructure(
     @Param('id') id: string,
     @Req() req: RequestWithUser,
@@ -393,6 +406,7 @@ export class PromptController {
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 404, description: 'Proyecto o Prompt no encontrado' })
+  @ThrottleCreation()
   async createVersion(
     @Param('projectId') projectId: string,
     @Param('promptId') promptIdSlug: string,

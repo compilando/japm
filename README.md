@@ -186,6 +186,115 @@ LOG_LEVEL=info
 
 See `env.example` for complete configuration options.
 
+## Security Features
+
+### Rate Limiting
+
+> **⚠️ Current Status**: Rate limiting is **temporarily disabled** for smooth UX development. See `THROTTLING.md` for configuration details.
+
+JAPM includes comprehensive rate limiting capabilities to protect against abuse and ensure fair usage:
+
+#### Default Rate Limits
+
+| Operation Type | Limit | Window | Description |
+|---------------|-------|--------|-------------|
+| **General API** | 500 requests | 60 seconds | Default limit for most endpoints (very permissive for UX) |
+| **Authentication** | 20 attempts | 15 minutes | Login/register attempts per IP (permissive) |
+| **Creation Operations** | 100 requests | 60 seconds | Creating prompts, versions, etc. (permissive) |
+| **LLM/AI Operations** | 50 requests | 60 seconds | Expensive AI operations (controlled but permissive) |
+| **Read Operations** | 500 requests | 60 seconds | Fast read-only endpoints (very permissive) |
+| **Health Checks** | 1000 requests | 60 seconds | Monitoring endpoints (extremely permissive) |
+
+> **Note**: In development mode, rate limiting is automatically relaxed with very high limits (10,000 requests/minute) to ensure smooth UX development. Use `THROTTLE_FORCE_IN_DEV=true` to test production limits in development.
+
+#### Rate Limiting Configuration
+
+Configure via environment variables:
+
+```bash
+# General rate limiting
+THROTTLE_TTL=60                    # Window in seconds
+THROTTLE_LIMIT=500                 # Max requests per window (very permissive)
+
+# Authentication (moderately restrictive)
+THROTTLE_AUTH_TTL=900              # 15 minutes
+THROTTLE_AUTH_LIMIT=20             # 20 login attempts (permissive)
+
+# API operations
+THROTTLE_API_TTL=60                # 1 minute
+THROTTLE_API_LIMIT=300             # 300 requests (very permissive)
+
+# Creation operations (permissive)
+THROTTLE_CREATION_TTL=60           # 1 minute  
+THROTTLE_CREATION_LIMIT=100        # 100 creations (permissive)
+
+# LLM operations (controlled but permissive)
+THROTTLE_LLM_TTL=60                # 1 minute
+THROTTLE_LLM_LIMIT=50              # 50 AI requests (controlled but permissive)
+
+# Development settings
+THROTTLE_ENABLED=true              # Enable/disable rate limiting
+THROTTLE_FORCE_IN_DEV=false        # Force rate limiting in development
+
+# Skip rate limiting for specific IPs
+THROTTLE_SKIP_IPS=127.0.0.1,::1   # Comma-separated list
+```
+
+#### Rate Limiting Headers
+
+When rate limits are approached or exceeded, the API returns helpful headers:
+
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 45  
+X-RateLimit-Reset: 2024-03-20T10:31:00Z
+```
+
+#### Testing Rate Limits
+
+Use the included test script:
+
+```bash
+# Test rate limiting (requires server running)
+node test-rate-limiting.js
+```
+
+#### Development Mode
+
+For smooth development experience, rate limiting is automatically relaxed in development:
+
+```bash
+# In your .env file for development:
+NODE_ENV=development
+THROTTLE_ENABLED=false  # Disables rate limiting completely
+
+# Or keep it enabled but with very high limits:
+NODE_ENV=development
+THROTTLE_ENABLED=true   # Uses 10,000 requests/minute limit
+```
+
+To test production rate limits in development:
+
+```bash
+NODE_ENV=development
+THROTTLE_ENABLED=true
+THROTTLE_FORCE_IN_DEV=true  # Forces production limits in development
+```
+
+#### Rate Limiting by Endpoint Type
+
+- **Health checks** (`/health`): Very permissive for monitoring
+- **Authentication** (`/auth/*`): Very restrictive to prevent brute force
+- **LLM operations** (`/llm-execution/*`): Restrictive to control API costs
+- **CRUD operations**: Moderate limits for normal usage
+- **Read operations**: Higher limits for browsing
+
+For production, consider implementing:
+- Redis-based rate limiting for distributed systems
+- User-specific rate limits (higher for premium users)
+- Custom rate limits per tenant
+- Dynamic rate limiting based on system load
+
 ## Development Commands
 
 ```bash
