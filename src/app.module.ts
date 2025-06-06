@@ -74,26 +74,6 @@ import configuration from './config/configuration';
             ttl: parseInt(configService.get('THROTTLE_TTL') || '60') * 1000,
             limit: parseInt(configService.get('THROTTLE_LIMIT') || '500'),
           },
-          {
-            name: 'auth',
-            ttl:
-              parseInt(configService.get('THROTTLE_AUTH_TTL') || '900') * 1000,
-            limit: parseInt(configService.get('THROTTLE_AUTH_LIMIT') || '20'),
-          },
-          {
-            name: 'api',
-            ttl: parseInt(configService.get('THROTTLE_API_TTL') || '60') * 1000,
-            limit: parseInt(configService.get('THROTTLE_API_LIMIT') || '300'),
-          },
-          {
-            name: 'creation',
-            ttl:
-              parseInt(configService.get('THROTTLE_CREATION_TTL') || '60') *
-              1000,
-            limit: parseInt(
-              configService.get('THROTTLE_CREATION_LIMIT') || '100',
-            ),
-          },
         ];
       },
     }),
