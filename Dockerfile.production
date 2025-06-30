@@ -18,7 +18,7 @@ COPY package*.json ./
 RUN npm install
 # Copy Prisma schema and pre-generated client
 COPY prisma ./prisma/
-COPY node_modules/.prisma ./node_modules/.prisma
+RUN npx prisma generate
 
 # ---- Builder ----
 FROM dependencies AS builder
